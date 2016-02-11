@@ -454,6 +454,7 @@ class Cypress:
 
         # Make sure the resulting lists are sorted by time
         for i in xrange(n):
+            res[i] = np.array(res[i], dtype=np.float32)
             res[i].sort()
         return res
 
@@ -461,33 +462,22 @@ class Cypress:
     def _convert_pyNN8_spikes(spikes):
         """
         Converts a pyNN8 spike train (some custom datastructure), into a list
-        of lists containing the spike times for each neuron individually.
+        of arrays containing the spike times for each neuron individually.
         """
-        return [
-            [float(spikes[i][j]) for j in xrange(len(spikes[i]))]
-            for i in xrange(len(spikes))]
+        return [np.array(spikes[i], dtype=np.float32)
+                for i in xrange(len(spikes))]
 
     @staticmethod
     def _convert_pyNN7_signal(data, idx, n):
         """
         Converts a pyNN7 data array, list of (nid, time, d1, ..., dN)-tuples
-        into a matrix containing the data for each neuron and timestep.
-        Unfortunately this mapping step is non-trivial, as we'd like uniformly
-        sampled output.
+        into a matrix containing the time stamps and the data for each neuron.
         """
 
         # Create a list containing all timepoints and a mapping from time to
         # index
-        ts = np.asarray(sorted(set([a[1] for a in data])), dtype=np.float32)
-        tsidx = dict((ts[i], i) for i in xrange(len(ts)))
-
-        # Create one result list for each neuron, containing exactly ts entries
-        ds = np.zeros((n, len(ts)), dtype=np.float32)
-        ds.fill(np.nan)
-        for row in data:
-            ds[int(row[0]), tsidx[np.float32(row[1])]] = row[idx]
-
-        return {"data": ds, "time": ts}
+        return [np.array(map(lambda row: [row[0], row[idx + 2]], filter(
+            lambda row: row[0] == i, data)), dtype=np.float32) for i in xrange(n)]
 
     def _fetch_spikey_voltage(self, population):
         """
@@ -495,10 +485,7 @@ class Cypress:
         """
         vs = self.sim.membraneOutput
         ts = self.sim.timeMembraneOutput
-
-        res = np.zeros((population.size, len(ts)))
-        res[0] = vs
-        return {"data": res, "time": ts}
+        return np.array(np.vstack((ts, vs)), dtype=np.float32)
 
     def _fetch_spikes(self, population):
         """
@@ -535,8 +522,7 @@ class Cypress:
         :param signal: name of the signal that should be returned.
         """
         if (self.simulator == "nmpm1"):
-            return {"data": np.zeros((population.size, 0), dtype=np.float32),
-                    "time": np.zeros((0), dtype=np.float32)}
+            return []
         if (self.version <= 7):
             if (signal == constants.SIG_V):
                 # Special handling for the spikey simulator
@@ -556,13 +542,11 @@ class Cypress:
                     return self._convert_pyNN7_signal(population.get_gsyn(), 3,
                                                       population.size)
         elif (self.version == 8):
-            for array in population.get_data().segments[0].analogsignalarrays:
-                if (array.name == signal):
-                    return {
-                        "data": np.asarray(array, dtype=np.float32).transpose(),
-                        "time": np.asarray(array.times, dtype=np.float32)}
-        return {"data": np.zeros((population.size, 0), dtype=np.float32),
-                "time": np.zeros((0), dtype=np.float32)}
+            for data in population.get_data().segments[0].analogsignalarrays:
+                if (data.name == signal):
+                    return [np.array(np.vstack((data.times, data.transpose()[0])).transpose(
+                    ), dtype=np.float32) for i in xrange(population.size)]
+        return []
 
     @staticmethod
     def _get_default_time_step():
@@ -686,9 +670,8 @@ class Cypress:
                 if (signal == constants.SIG_SPIKES):
                     res[i][signal] = self._fetch_spikes(populations[i]["obj"])
                 else:
-                    data = self._fetch_signal(populations[i]["obj"], signal)
-                    res[i][signal] = data["data"]
-                    res[i][signal + "_t"] = data["time"]
+                    res[i][signal] = self._fetch_signal(
+                        populations[i]["obj"], signal)
 
         # End the simulation if this has not been done yet
         if (not (self.simulator in self.PREMATURE_END_SIMULATORS)):

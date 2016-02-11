@@ -344,6 +344,36 @@ def read_network(fd):
 
     return network
 
+# Headers used during serialisation
+HEADER_TARGET = [{"name": "pid", "type": TYPE_INT},
+                 {"name": "nid", "type": TYPE_INT}]
+HEADER_TARGET_DTYPE = header_to_dtype(HEADER_TARGET)
+
+HEADER_SPIKE_TIMES = [{"name": "times", "type": TYPE_FLOAT}]
+HEADER_SPIKE_TIMES_DTYPE = header_to_dtype(HEADER_SPIKE_TIMES)
+
+HEADER_TRACE = [{"name": "times", "type": TYPE_FLOAT},
+                {"name": "values", "type": TYPE_FLOAT}]
+HEADER_TRACE_DTYPE = header_to_dtype(HEADER_TRACE)
+
+def write_result(fd, res):
+    """
+    Serialises the simulation result to binnf.
+
+    :param fd: target file descriptor.
+    :param res: simulation result.
+    """
+    for pid in xrange(len(res)):
+        for signal in res[pid]:
+            for nid in xrange(len(res[pid][signal])):
+                serialise(fd, "target", HEADER_TARGET, np.array(
+                    [(pid, nid)], dtype=HEADER_TARGET_DTYPE))
+                matrix = res[pid][signal][nid]
+                if signal == "spikes":
+                    serialise(fd, "spike_times", HEADER_SPIKE_TIMES, matrix)
+                else:
+                    serialise(fd, "trace_" + signal, HEADER_TRACE, matrix)
+
 # Export definitions
 
 __all__ = ["serialise", "deserialise", "read_network", "BinnfException"]
