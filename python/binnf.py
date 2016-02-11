@@ -21,10 +21,9 @@ Reader of the binnf serialisation format. Note that this format is not
 standardised and always in sync with the corresponding implementation in CppNAM.
 """
 
-import os
+import numpy as np
 import struct
 
-import numpy as np
 
 class BinnfException(Exception):
     """
