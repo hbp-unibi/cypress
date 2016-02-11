@@ -26,11 +26,11 @@
  */
 
 #pragma once
-#ifndef CYPRESS_H
-#define CYPRESS_H
+#ifndef CYPRESS_HPP
+#define CYPRESS_HPP
 
-#include <cypress/binnf/binnf.hpp>
+#include <cypress/core/binnf.hpp>
 #include <cypress/util/matrix.hpp>
 
-#endif /* CYPRESS_H */
+#endif /* CYPRESS_HPP */
 
