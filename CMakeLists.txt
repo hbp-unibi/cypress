@@ -34,6 +34,14 @@ add_library(cypress
 )
 
 #
+# Example programs
+#
+
+add_executable(raw_binnf examples/raw_binnf)
+
+target_link_libraries(raw_binnf cypress)
+
+#
 # Unit tests -- only enable if gtest is present
 #
 if(${GTEST_FOUND})
