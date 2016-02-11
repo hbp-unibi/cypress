@@ -69,9 +69,9 @@ int main()
 {
 	serialise(std::cout, {"populations", POPULATIONS_HEADER,
 	                      make_matrix<Number, 3, 6>({{
-	                          {3, TYPE_SOURCE, true, false, false, false},
-	                          {3, TYPE_SOURCE, true, false, false, false},
-	                          {4, TYPE_IF_COND_EXP, true, false, false, false},
+	                          {3, TYPE_SOURCE, false, false, false, false},
+	                          {3, TYPE_SOURCE, false, false, false, false},
+	                          {4, TYPE_IF_COND_EXP, true, true, false, false},
 	                      }})});
 
 	serialise(std::cout,
