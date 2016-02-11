@@ -25,15 +25,7 @@ allow the description of a network independent of the actual PyNN version.
 # PyNN libraries
 import pyNN
 import pyNN.common
-
-# Numpy
 import numpy as np
-
-# Standard libraries
-import os
-import sys
-
-# Own classes
 import constants
 
 
@@ -224,25 +216,6 @@ class Cypress:
             sim.setup(**setup)
         return setup
 
-    def _default_parameters(self, type_name):
-        """
-        Returns the default parameters for a certain neuron type.
-
-        :param type_name: is the neuron type name
-        """
-
-        # In case we're dealing with PyNN 0.6, use the "cells" module,
-        # otherwise the "standardmodels.cells"
-        if self.version == 6:
-            import pyNN.cells
-            module = pyNN.cells
-        else:
-            import pyNN.standardmodels.cells
-            module = pyNN.standardmodels.cells
-
-        # The "dict" makes sure a copy is returned
-        return dict(getattr(module, type_name).default_parameters)
-
     def _build_population(self, count, type_name, record):
         """
         Used internally to creates a PyNN neuron population according to the
@@ -261,8 +234,7 @@ class Cypress:
         is_source = type_name == constants.TYPE_SOURCE
 
         # Create the population and setup recording
-        res = self.sim.Population(
-            count, type_, self._default_parameters(type_name))
+        res = self.sim.Population(count, type_, {})
 
         # Increment the neuron counter needed to work around a bug in spikey,
         # store the neuron index in the created population
