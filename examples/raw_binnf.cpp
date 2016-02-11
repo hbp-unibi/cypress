@@ -16,6 +16,13 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+/**
+ * This example demonstrates low-level communication between the C++ code and
+ * the Python backend via the binnf serialisation format. You should not use
+ * the interfaces exposed here, instead rely on higher level abstractions, such
+ * as cypress::Network.
+ */
+
 #include <array>
 #include <iostream>
 #include <limits>
