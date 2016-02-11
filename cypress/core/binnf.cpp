@@ -22,7 +22,6 @@
 #include <cypress/core/binnf.hpp>
 
 namespace cypress {
-namespace core {
 namespace binnf {
 
 namespace {
@@ -243,7 +242,6 @@ void deserialise(std::istream &is, const Callback &callback)
 			    callback(res.second.name, res.second.header, res.second.matrix);
 		}
 	} while (res.first);
-}
 }
 }
 }

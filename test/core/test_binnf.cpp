@@ -23,7 +23,6 @@
 #include <cypress/core/binnf.hpp>
 
 namespace cypress {
-namespace core {
 namespace binnf {
 
 static Block generate_test_block()
@@ -72,7 +71,6 @@ TEST(serialiser, read_write)
 		EXPECT_EQ(block_in.header.names[i], block_out.header.names[i]);
 		EXPECT_EQ(block_in.header.types[i], block_out.header.types[i]);
 	}
-}
 }
 }
 }

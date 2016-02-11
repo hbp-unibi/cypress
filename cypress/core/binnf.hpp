@@ -32,7 +32,6 @@
 #include <cypress/util/matrix.hpp>
 
 namespace cypress {
-namespace core {
 namespace binnf {
 /**
  * The Number union represents a number which either is a 32-bit integer or
@@ -143,7 +142,6 @@ std::pair<bool, Block> deserialise(std::istream &is);
  * function for each deserialised block.
  */
 void deserialise(std::istream &is, const Callback &callback);
-}
 }
 }
 
