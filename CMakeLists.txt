@@ -31,7 +31,10 @@ include_directories(${CMAKE_SOURCE_DIR})
 add_library(cypress
 	cypress/core/binnf
 	cypress/util/matrix
+	cypress/util/process
 )
+
+target_link_libraries(cypress pthread)
 
 #
 # Example programs
@@ -49,6 +52,7 @@ if(${GTEST_FOUND})
 
 	add_executable(test_cypress
 		test/core/test_binnf
+		test/util/test_process
 	)
 
 	target_link_libraries(test_cypress
