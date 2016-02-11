@@ -31,6 +31,7 @@
 
 #include <cypress/core/binnf.hpp>
 #include <cypress/util/matrix.hpp>
+#include <cypress/util/process.hpp>
 
 #endif /* CYPRESS_HPP */
 

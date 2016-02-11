@@ -32,7 +32,9 @@
 
 namespace cypress {
 
-/* Actual implementation of the Process class */
+/*
+ * Class ProcessImpl
+ */
 
 class ProcessImpl {
 private:
@@ -172,10 +174,12 @@ public:
 		return m_exitcode;
 	}
 
-	bool signal(int signal) {return (kill(m_pid, signal) == 0; }
+	bool signal(int signal) {return kill(m_pid, signal) == 0; }
 };
 
-/* Process class */
+/*
+ * Class Process
+ */
 
 Process::Process(const std::string &cmd, const std::vector<std::string> &args)
     : impl(std::make_unique<ProcessImpl>(cmd, args))
@@ -221,7 +225,7 @@ std::tuple<int, std::string, std::string> Process::exec(
 	                        std::ostream &output) -> void {
 		static constexpr size_t BUF_SIZE = PIPE_BUF;
 		char buf[BUF_SIZE];
-		while (!source.good()) {
+		while (source.good()) {
 			source.read(buf, BUF_SIZE);
 			output.write(buf, source.gcount());
 		}

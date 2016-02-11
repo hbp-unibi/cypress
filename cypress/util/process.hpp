@@ -47,7 +47,7 @@ class ProcessImpl;
 class Process {
 private:
 	/**
-	 * Pointer at the internal implementation of the Process class.
+	 * Pointer at the implementation of the Process class (Pimpl idiom.)
 	 */
 	std::unique_ptr<ProcessImpl> impl;
 
@@ -100,7 +100,7 @@ public:
 	/**
 	 * Returns true if the child process is still running, false otherwise.
 	 */
-	bool running() const;
+	bool running();
 
 	/**
 	 * Returns the exitcode of the process, as a value between 0 and 255. If the
@@ -112,7 +112,7 @@ public:
 	 * @return the exit code (positive number) or the signal number which killed
 	 * the child process (negative number).
 	 */
-	int exitcode() const;
+	int exitcode();
 
 	/**
 	 * Waits for the child process to exit. Returns the exitcode. See exitcode()
