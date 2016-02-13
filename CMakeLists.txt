@@ -30,6 +30,8 @@ include_directories(${CMAKE_SOURCE_DIR})
 
 add_library(cypress
 	cypress/core/binnf
+	cypress/core/neurons
+	cypress/core/network
 	cypress/util/matrix
 	cypress/util/process
 )
@@ -52,6 +54,7 @@ if(${GTEST_FOUND})
 
 	add_executable(test_cypress
 		test/core/test_binnf
+		test/core/test_network
 		test/util/test_process
 	)
 
