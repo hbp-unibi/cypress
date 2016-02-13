@@ -20,7 +20,8 @@
 TYPE_SOURCE = "SpikeSourceArray"
 TYPE_IF_COND_EXP = "IF_cond_exp"
 TYPE_AD_EX = "EIF_cond_exp_isfa_ista"
-TYPES = [TYPE_SOURCE, TYPE_IF_COND_EXP, TYPE_AD_EX]
+TYPE_IF_SPIKEY = "IF_facets_hardware1"
+TYPES = [TYPE_SOURCE, TYPE_IF_COND_EXP, TYPE_AD_EX, TYPE_IF_SPIKEY]
 
 # Constants for the quantities that can be recorded
 SIG_SPIKES = "spikes"
