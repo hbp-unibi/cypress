@@ -30,16 +30,17 @@
 #include <cypress/cypress.hpp>
 
 using namespace cypress;
-using namespace cypress::core::binnf;
+using namespace cypress::binnf;
 
-const auto INT = NumberType::INT;
-const auto FLOAT = NumberType::FLOAT;
+static const auto INT = NumberType::INT;
+static const auto FLOAT = NumberType::FLOAT;
 
-const int TYPE_SOURCE = 0;
-const int TYPE_IF_COND_EXP = 1;
-const int TYPE_AD_EX = 2;
+static const int TYPE_SOURCE = 0;
+static const int TYPE_IF_COND_EXP = 1;
+static const int TYPE_AD_EX = 2;
+static const int TYPE_IF_SPIKEY = 3;
 
-const int ALL_NEURONS = std::numeric_limits<int>::max();
+static const int ALL_NEURONS = std::numeric_limits<int>::max();
 
 static const Header POPULATIONS_HEADER = {
     {"count", "type", "record_spikes", "record_v", "record_gsyn_exc",
@@ -69,41 +70,41 @@ int main()
 {
 	serialise(std::cout, {"populations", POPULATIONS_HEADER,
 	                      make_matrix<Number, 3, 6>({{
-	                          {3, TYPE_SOURCE, false, false, false, false},
-	                          {3, TYPE_SOURCE, false, false, false, false},
-	                          {4, TYPE_IF_COND_EXP, true, true, false, false},
+	                          {{3, TYPE_SOURCE, false, false, false, false}},
+	                          {{3, TYPE_SOURCE, false, false, false, false}},
+	                          {{4, TYPE_IF_SPIKEY, true, true, false, false}},
 	                      }})});
 
 	serialise(std::cout,
 	          {"connections", CONNECTIONS_HEADER, make_matrix<Number, 4, 6>({{
-	                                                  {0, 2, 0, 3, 0.1, 0.1},
-	                                                  {1, 2, 0, 0, 0.1, 0.1},
-	                                                  {1, 2, 1, 1, 0.1, 0.1},
-	                                                  {1, 2, 2, 2, 0.1, 0.1},
+	                                                  {{0, 2, 0, 3, 0.1, 0.1}},
+	                                                  {{1, 2, 0, 0, 0.1, 0.1}},
+	                                                  {{1, 2, 1, 1, 0.1, 0.1}},
+	                                                  {{1, 2, 2, 2, 0.1, 0.1}},
 	                                              }})});
 
-	serialise(std::cout, {"parameters", PARAMETERS_HEADER,
-	                      make_matrix<Number, 4, 13>({{
-	                          {2, 0, -65.0, 1.0, 20.0, 0.0, 5.0, 5.0, 0.0,
-	                           -70.0, -50.0, -65.0, 0.0},
-	                          {2, 1, -65.0, 1.0, 20.0, 0.0, 5.0, 5.0, 0.0,
-	                           -70.0, -50.0, -65.0, 0.0},
-	                          {2, 2, -65.0, 1.0, 20.0, 0.0, 5.0, 5.0, 0.0,
-	                           -70.0, -50.0, -65.0, 0.0},
-	                          {2, 3, -65.0, 1.0, 20.0, 0.0, 5.0, 5.0, 0.0,
-	                           -70.0, -50.0, -65.0, 0.0},
-	                      }})});
+//	serialise(std::cout, {"parameters", PARAMETERS_HEADER,
+//	                      make_matrix<Number, 4, 13>({{
+//	                          {2, 0, -65.0, 1.0, 20.0, 0.0, 5.0, 5.0, 0.0,
+//	                           -70.0, -50.0, -65.0, 0.0},
+//	                          {2, 1, -65.0, 1.0, 20.0, 0.0, 5.0, 5.0, 0.0,
+//	                           -70.0, -50.0, -65.0, 0.0},
+//	                          {2, 2, -65.0, 1.0, 20.0, 0.0, 5.0, 5.0, 0.0,
+//	                           -70.0, -50.0, -65.0, 0.0},
+//	                          {2, 3, -65.0, 1.0, 20.0, 0.0, 5.0, 5.0, 0.0,
+//	                           -70.0, -50.0, -65.0, 0.0},
+//	                      }})});
 
-	//	serialise(std::cout, {"parameters", PARAMETERS_SPIKEY_HEADER,
-	//	                      make_matrix<Number, 4, 8>({{
-	//	                          {2, 0, -65.0, 20.0, 0.0, -70.0, -55.0, -65.0},
-	//	                          {2, 1, -65.0, 20.0, 0.0, -70.0, -55.0, -65.0},
-	//	                          {2, 2, -65.0, 20.0, 0.0, -70.0, -55.0, -65.0},
-	//	                          {2, 3, -65.0, 20.0, 0.0, -70.0, -55.0, -65.0},
-	//	                      }})});
+		serialise(std::cout, {"parameters", PARAMETERS_SPIKEY_HEADER,
+		                      make_matrix<Number, 4, 8>({{
+		                          {{2, 0, -65.0, 20.0, 0.0, -70.0, -55.0, -65.0}},
+		                          {{2, 1, -65.0, 20.0, 0.0, -70.0, -55.0, -65.0}},
+		                          {{2, 2, -65.0, 20.0, 0.0, -70.0, -55.0, -65.0}},
+		                          {{2, 3, -65.0, 20.0, 0.0, -70.0, -55.0, -65.0}},
+		                      }})});
 
 	serialise(std::cout, {"target", TARGET_HEADER,
-	                      make_matrix<Number, 1, 2>({{{0, ALL_NEURONS}}})});
+	                      make_matrix<Number, 1, 2>({{{{0, ALL_NEURONS}}}})});
 
 	serialise(
 	    std::cout,
@@ -111,19 +112,19 @@ int main()
 	     make_matrix<Number>({1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0})});
 
 	serialise(std::cout,
-	          {"target", TARGET_HEADER, make_matrix<Number, 1, 2>({{{1, 0}}})});
+	          {"target", TARGET_HEADER, make_matrix<Number, 1, 2>({{{{1, 0}}}})});
 
 	serialise(std::cout, {"spike_times", SPIKE_TIMES_HEADER,
 	                      make_matrix<Number>({10.0, 11.0, 12.0, 13.0})});
 
 	serialise(std::cout,
-	          {"target", TARGET_HEADER, make_matrix<Number, 1, 2>({{{1, 1}}})});
+	          {"target", TARGET_HEADER, make_matrix<Number, 1, 2>({{{{1, 1}}}})});
 
 	serialise(std::cout, {"spike_times", SPIKE_TIMES_HEADER,
 	                      make_matrix<Number>({20.0, 21.0, 22.0, 23.0})});
 
 	serialise(std::cout,
-	          {"target", TARGET_HEADER, make_matrix<Number, 1, 2>({{{1, 2}}})});
+	          {"target", TARGET_HEADER, make_matrix<Number, 1, 2>({{{{1, 2}}}})});
 
 	serialise(std::cout, {"spike_times", SPIKE_TIMES_HEADER,
 	                      make_matrix<Number>({30.0, 31.0, 32.0, 33.0})});
