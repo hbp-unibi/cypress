@@ -38,6 +38,9 @@
 #ifndef CYPRESS_CORE_NEURONS_HPP
 #define CYPRESS_CORE_NEURONS_HPP
 
+#include <string>
+#include <vector>
+
 #include <cypress/core/neurons.hpp>
 
 namespace cypress {
@@ -178,13 +181,13 @@ public:
 
 #define NAMED_VECTOR_ELEMENT(NAME, IDX)       \
 	static constexpr size_t idx_##NAME = IDX; \
-	auto &NAME(Val x)                         \
+	auto &NAME(float x)                       \
 	{                                         \
 		(*this)[IDX] = x;                     \
 		return *this;                         \
 	}                                         \
-	Val &NAME() { return (*this)[IDX]; }      \
-	Val NAME() const { return (*this)[IDX]; }
+	float &NAME() { return (*this)[IDX]; }    \
+	float NAME() const { return (*this)[IDX]; }
 
 class IfCondExpParameters final : public NeuronParametersBase {
 public:
@@ -205,7 +208,7 @@ public:
 
 class EifCondExpIsfaIstaParameters final : public NeuronParametersBase {
 public:
-	AdExpParameters();
+	EifCondExpIsfaIstaParameters();
 
 	NAMED_VECTOR_ELEMENT(cm, 0);
 	NAMED_VECTOR_ELEMENT(tau_m, 1);
@@ -226,7 +229,7 @@ public:
 
 #undef NAMED_VECTOR_ELEMENT
 
-struct SpikeSourceArray final : public NeuronType {
+class SpikeSourceArray final : public NeuronType {
 private:
 	SpikeSourceArray();
 
@@ -236,7 +239,7 @@ public:
 	static const SpikeSourceArray &inst();
 };
 
-struct IfCondExp final : public NeuronType {
+class IfCondExp final : public NeuronType {
 private:
 	IfCondExp();
 
@@ -246,7 +249,7 @@ public:
 	static const IfCondExp &inst();
 };
 
-struct EifCondExpIsfaIsta final : public NeuronType {
+class EifCondExpIsfaIsta final : public NeuronType {
 private:
 	EifCondExpIsfaIsta();
 

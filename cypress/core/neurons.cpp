@@ -16,86 +16,85 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <cypress/core/neurons.hpp>
+
 namespace cypress {
 
-/**
- * The NeuronType class contains data describing an individual neuron
- * type and its parameters.
+/*
+ * Class SpikeSourceArray
  */
-struct NeuronType {
-	/**
-	 * Type id as understood by the Python part of Cypress.
-	 */
-	int type_id;
 
-	/**
-	 * Name of the neuron type.
-	 */
-	std::string name;
+SpikeSourceArray::SpikeSourceArray()
+    : NeuronType(0, "SpikeSourceArray", {"spike_times"}, {"ms"}, {}, false,
+                 true)
+{
+}
 
-	/**
-	 * Name of all neuron parameters.
-	 */
-	std::vector<std::string> parameter_names;
-
-	/**
-	 * Contains default values for the neuron parameters.
-	 */
-	std::vector<float> parameter_defaults;
-
-	/**
-	 * Constructor of the NeuronTypeDescriptor structure.
-	 */
-	NeuronType(int type_id, const std::string &name,
-	           const std::vector<std::string> &parameter_names,
-	           const std::vector<float> &parameter_defaults)
-	    : type_id(type_id),
-	      name(name),
-	      parameter_names(parameter_names),
-	      parameter_defaults(parameter_defaults)
-	{
-	}
-};
+const SpikeSourceArray &SpikeSourceArray::inst()
+{
+	static SpikeSourceArray inst;
+	return inst;
+}
 
 /**
- * Base class for the storage of neuron parameters.
+ * Class IfCondExp
  */
-class NeuronParametersBase {
-private:
-	std::vector<float> m_parameters;
 
-protected:
-	std::vector<float> &parameters() { return m_parameters; }
+IfCondExp::IfCondExp()
+    : NeuronType(
+          1, "IfCondExp",
+          {"cm", "tau_m", "tau_syn_E", "tau_syn_I", "tau_refrac", "v_rest",
+           "v_thresh", "v_reset", "e_rev_E", "e_rev_I", "i_offset"},
+          {"nF", "ms", "ms", "ms", "ms", "mV", "mV", "mV", "mV", "mV", "nA"},
+          {1.0, 20.0, 5.0, 5.0, 0.1, -65.0, -50.0, -65.0, 0.0, -70.0, 0.0},
+          true, false)
+{
+}
 
-public:
-	NeuronParametersBase(const NeuronTypeDescriptor &descr)
-	    : m_parameters(descr.parameter_defaults)
-	{
-	}
+const IfCondExp &IfCondExp::inst()
+{
+	static IfCondExp inst;
+	return inst;
+}
 
-	float &operator[](size_t i) { return m_parameters[i]; }
+/**
+ * Class EifCondExpIsfaIsta
+ */
 
-	const float &operator[](size_t i) const { return m_parameters[i]; }
+EifCondExpIsfaIsta::EifCondExpIsfaIsta()
+    : NeuronType(2, "EifCondExpIsfaIsta",
+                 {"cm", "tau_m", "tau_syn_E", "tau_syn_I", "tau_refrac",
+                  "tau_w", "v_rest", "v_thresh", "v_reset", "e_rev_E",
+                  "e_rev_I", "i_offset", "a", "b", "delta_T"},
+                 {"nF", "ms", "ms", "ms", "ms", "ms", "mV", "mV", "mV", "mV",
+                  "mV", "nA", "nS", "nA", "mV"},
+                 {1.0, 20.0, 5.0, 5.0, 0.1, 144.0, -70.6, -50.4, -70.6, 0.0,
+                  -80.0, 0.0, 4.0, 0.0805, 2.0},
+                 true, false)
+{
+}
 
-	size_t size() { return m_parameters; }
-};
+const EifCondExpIsfaIsta &EifCondExpIsfaIsta::inst()
+{
+	static EifCondExpIsfaIsta inst;
+	return inst;
+}
 
-class SpikeSourceArrayParameters: public NeuronParametersBase {
-public:
-	SpikeSourceArrayParameters();
+/**
+ * Class IfCondExpParameters
+ */
 
-	std::vector<float> &spike_times() {return parameters();}
-};
+IfCondExpParameters::IfCondExpParameters()
+    : NeuronParametersBase(IfCondExp::inst().parameter_defaults)
+{
+}
 
-struct SpikeSourceArray: public NeuronType {
-private:
-	SpikeSourceArray();
+/**
+ * Class EifCondExpIsfaIstaParameters
+ */
 
-public:
-	using Parameters = SpikeSourceArrayParameters;
-
-	static const SpikeSourceArray &inst();
-};
-
-
+EifCondExpIsfaIstaParameters::EifCondExpIsfaIstaParameters()
+    : NeuronParametersBase(EifCondExpIsfaIsta::inst().parameter_defaults)
+{
+}
 }
