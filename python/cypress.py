@@ -448,7 +448,7 @@ class Cypress:
 
         # Create a list containing all timepoints and a mapping from time to
         # index
-        return [np.array(map(lambda row: [row[0], row[idx + 2]], filter(
+        return [np.array(map(lambda row: [row[1], row[idx]], filter(
             lambda row: row[0] == i, data)), dtype=np.float32) for i in xrange(n)]
 
     def _fetch_spikey_voltage(self, population):
@@ -457,7 +457,7 @@ class Cypress:
         """
         vs = self.sim.membraneOutput
         ts = self.sim.timeMembraneOutput
-        return np.array(np.vstack((ts, vs)), dtype=np.float32)
+        return [np.array(np.vstack((ts, vs)).transpose(), dtype=np.float32)]
 
     def _fetch_spikes(self, population):
         """
