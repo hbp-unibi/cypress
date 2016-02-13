@@ -105,6 +105,5 @@ TEST(process, signal)
 	EXPECT_FALSE(proc.running());
 	EXPECT_EQ(-9, proc.exitcode());
 }
-
 }
 
