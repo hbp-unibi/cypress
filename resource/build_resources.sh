@@ -63,4 +63,9 @@ build_resource PYNN_INTERFACE \
 	"$DIR/backend/pynn/cypress.py" \
 	"$DIR/backend/pynn/cli.py" > "$OUT_DIR/pynn_interface.hpp"
 
+# Build the PyNN script Python code into a resource
+build_resource PYNN_BINNF_LOOPBACK \
+	"$DIR/backend/pynn/binnf.py" \
+	"$DIR/backend/pynn/loopback.py" > "$OUT_DIR/pynn_binnf_loopback.hpp"
+
 

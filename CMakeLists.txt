@@ -32,6 +32,7 @@ include_directories(
 add_custom_command(
 	OUTPUT
 		"${CMAKE_BINARY_DIR}/resource/backend/pynn/pynn_interface.hpp"
+		"${CMAKE_BINARY_DIR}/resource/backend/pynn/pynn_binnf_loopback.hpp"
 	COMMAND
 		"${CMAKE_SOURCE_DIR}/resource/build_resources.sh" "${CMAKE_BINARY_DIR}/resource/backend/pynn/"
 	DEPENDS
@@ -40,11 +41,13 @@ add_custom_command(
 		"${CMAKE_SOURCE_DIR}/resource/backend/pynn/cli.py"
 		"${CMAKE_SOURCE_DIR}/resource/backend/pynn/constants.py"
 		"${CMAKE_SOURCE_DIR}/resource/backend/pynn/cypress.py"
+		"${CMAKE_SOURCE_DIR}/resource/backend/pynn/loopback.py"
 )
 
 # Compile the library itself
 add_library(cypress
 	"${CMAKE_BINARY_DIR}/resource/backend/pynn/pynn_interface.hpp"
+	"${CMAKE_BINARY_DIR}/resource/backend/pynn/pynn_binnf_loopback.hpp"
 	cypress/backend/resources
 	cypress/backend/binnf/binnf
 	cypress/core/neurons

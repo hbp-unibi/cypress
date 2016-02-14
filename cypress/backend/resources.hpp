@@ -39,6 +39,7 @@ namespace cypress {
  */
 struct Resources {
 	static const Resource PYNN_INTERFACE;
+	static const Resource PYNN_BINNF_LOOPBACK;
 };
 
 }
