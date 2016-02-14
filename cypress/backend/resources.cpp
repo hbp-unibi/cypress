@@ -16,25 +16,8 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/**
- * @file cypress.hpp
- *
- * Main header of cypress which includes all important headers from the
- * subfolders of the project.
- *
- * @author Andreas Stöckel
- */
-
-#pragma once
-#ifndef CYPRESS_HPP
-#define CYPRESS_HPP
-
-#include <cypress/backend/binnf/binnf.hpp>
 #include <cypress/backend/resources.hpp>
-#include <cypress/core/network.hpp>
-#include <cypress/core/neurons.hpp>
-#include <cypress/util/matrix.hpp>
-#include <cypress/util/process.hpp>
 
-#endif /* CYPRESS_HPP */
+// List all auto-generated resource files here
+#include <resource/backend/pynn/pynn_interface.hpp>
 

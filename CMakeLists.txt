@@ -45,10 +45,11 @@ add_custom_command(
 # Compile the library itself
 add_library(cypress
 	"${CMAKE_BINARY_DIR}/resource/backend/pynn/pynn_interface.hpp"
-	cypress/core/binnf
+	cypress/backend/resources
+	cypress/backend/binnf/binnf
 	cypress/core/neurons
 	cypress/core/network
-#	cypress/util/comperator
+	cypress/util/comperator
 	cypress/util/matrix
 	cypress/util/process
 	cypress/util/resource
@@ -73,7 +74,7 @@ if(${GTEST_FOUND})
 	include_directories(${GTEST_INCLUDE_DIR})
 
 	add_executable(test_cypress
-		test/core/test_binnf
+		test/backend/binnf/test_binnf
 		test/core/test_network
 #		test/util/test_comperator
 		test/util/test_process

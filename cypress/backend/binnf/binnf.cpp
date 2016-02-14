@@ -19,7 +19,7 @@
 #include <stdexcept>
 #include <sstream>
 
-#include <cypress/core/binnf.hpp>
+#include <cypress/backend/binnf/binnf.hpp>
 
 namespace cypress {
 namespace binnf {

@@ -17,24 +17,30 @@
  */
 
 /**
- * @file cypress.hpp
+ * @file resources.hpp
  *
- * Main header of cypress which includes all important headers from the
- * subfolders of the project.
+ * File containing declarations of all the resources embedded in the Cypress
+ * library.
  *
  * @author Andreas Stöckel
  */
 
 #pragma once
-#ifndef CYPRESS_HPP
-#define CYPRESS_HPP
 
-#include <cypress/backend/binnf/binnf.hpp>
-#include <cypress/backend/resources.hpp>
-#include <cypress/core/network.hpp>
-#include <cypress/core/neurons.hpp>
-#include <cypress/util/matrix.hpp>
-#include <cypress/util/process.hpp>
+#ifndef CYPRESS_BACKEND_RESOURCES_HPP
+#define CYPRESS_BACKEND_RESOURCES_HPP
 
-#endif /* CYPRESS_HPP */
+#include <cypress/util/resource.hpp>
 
+namespace cypress {
+
+/**
+ * Structure collecting all the globally available resource files.
+ */
+struct Resources {
+	static const Resource PYNN_INTERFACE;
+};
+
+}
+
+#endif /* CYPRESS_BACKEND_RESOURCES_HPP */

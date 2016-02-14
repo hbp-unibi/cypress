@@ -45,9 +45,10 @@ function build_resource {
 	echo "#ifndef RES_${RESOURCE_NAME}_HPP"
 	echo "#define RES_${RESOURCE_NAME}_HPP"
 	echo
-	echo "namespace cypress {"
 	echo "#include <cypress/util/resource.hpp>"
-	echo "static const Resource ${RESOURCE_NAME}(std::vector<char>({"
+	echo
+	echo "namespace cypress {"
+	echo "const Resource Resources::${RESOURCE_NAME}(std::vector<char>({"
 	cat $* | minify | hexdump -v -e '1 1 "0x%02x,"'
 	echo -n "}));"
 	echo "}"
