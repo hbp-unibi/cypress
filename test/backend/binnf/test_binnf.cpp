@@ -50,7 +50,7 @@ static Block generate_test_block()
 	return Block(name, header, matrix);
 }
 
-static bool check_equal(const Block &b1, const Block &b2)
+static void check_equal(const Block &b1, const Block &b2)
 {
 	EXPECT_EQ(b1.name, b2.name);
 	EXPECT_EQ(b1.matrix, b2.matrix);
