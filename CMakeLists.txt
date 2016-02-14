@@ -23,8 +23,6 @@ if(NOT CMAKE_BUILD_TYPE)
 	set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Choose the type of build, options are: Debug Release RelWithDebInfo MinSizeRel." FORCE)
 endif()
 
-enable_testing()
-find_package(GTest)
 
 include_directories(${CMAKE_SOURCE_DIR})
 
@@ -51,6 +49,8 @@ target_link_libraries(raw_binnf cypress)
 #
 # Unit tests -- only enable if gtest is present
 #
+enable_testing()
+find_package(GTest)
 if(${GTEST_FOUND})
 	include_directories(${GTEST_INCLUDE_DIR})
 
