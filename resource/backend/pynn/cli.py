@@ -17,15 +17,12 @@
 #   You should have received a copy of the GNU General Public License
 #   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-"""
-Reads a binary neural network specification from the specified file and executes
-it. Writes the recorded data to the specified binnf file. Used as a interface
-between C++ code and PyNN.
-"""
+# Required as the Python code is usually concatenated into a single file and
+# embedded in the Cypress C++ library.
+if __name__ != "__main__":
+    from cypress import *
 
 def do_run(args):
-    import binnf
-    import cypress
     import sys
 
     # Fetch the input/output file
@@ -35,20 +32,20 @@ def do_run(args):
     out_fd = sys.stdout if out_filename == '-' else open(out_filename, "rb")
 
     # Read the input data
-    network = binnf.read_network(in_fd)
+    network = read_network(in_fd)
 
     # Open the simulator and run the network
-    res = cypress.Cypress(
+    res = Cypress(
         args.simulator,
         args.library).run(
         network,
         duration=args.duration)
 
     # Write the recorded data back to binnf
-    binnf.write_result(out_fd, res)
+    write_result(out_fd, res)
+
 
 def do_dump(args):
-    import binnf
     import numpy as np
     import sys
 
@@ -62,7 +59,7 @@ def do_dump(args):
     # Dump the contents of the binnf stream
     while True:
         # Deserialise the input stream
-        name, header, matrix = binnf.deseralise(in_fd)
+        name, header, matrix = deseralise(in_fd)
         if name is None:
             return
 

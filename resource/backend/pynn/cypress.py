@@ -26,8 +26,9 @@ allow the description of a network independent of the actual PyNN version.
 import pyNN
 import pyNN.common
 import numpy as np
-import constants
 
+if __name__ != "__main__":
+    from constants import *
 
 class CypressException(Exception):
     """
@@ -231,7 +232,7 @@ class Cypress:
             raise CypressException("Neuron type '" + type_name
                                    + "' not supported by backend.")
         type_ = getattr(self.sim, type_name)
-        is_source = type_name == constants.TYPE_SOURCE
+        is_source = type_name == TYPE_SOURCE
 
         # Create the population and setup recording
         res = self.sim.Population(count, type_, {})
@@ -246,9 +247,9 @@ class Cypress:
         # Setup recording
         if (self.version <= 7):
             # Setup recording
-            if (constants.SIG_SPIKES in record):
+            if (SIG_SPIKES in record):
                 res.record()
-            if (constants.SIG_V in record):
+            if (SIG_V in record):
                 # Special handling for voltage recording with Spikey
                 if (self.simulator == "spikey"):
                     if self.record_v_count == 0:
@@ -259,7 +260,7 @@ class Cypress:
 
                 # Increment the record_v_count variable
                 self.record_v_count += count
-            if ((constants.SIG_GE in record) or (constants.SIG_GI in record)):
+            if ((SIG_GE in record) or (SIG_GI in record)):
                 res.record_gsyn()
         elif (self.version == 8):
             # Setup recording
@@ -284,7 +285,7 @@ class Cypress:
             # which a "1" is set in the corresponding structured array
             # entry
             count = populations[i]["count"]
-            type_name = constants.TYPES[populations[i]["type"]]
+            type_name = TYPES[populations[i]["type"]]
             record = map(lambda x: x[1][7:], filter(lambda x: x[0] == 1,
                                                     zip(map(lambda key: populations[i][key], record_keys),
                                                         record_keys)))
@@ -496,7 +497,7 @@ class Cypress:
         if (self.simulator == "nmpm1"):
             return []
         if (self.version <= 7):
-            if (signal == constants.SIG_V):
+            if (signal == SIG_V):
                 # Special handling for the spikey simulator
                 if (self.simulator == "spikey"):
                     if (hasattr(population, "__spikey_record_v")):
@@ -504,10 +505,10 @@ class Cypress:
                 else:
                     return self._convert_pyNN7_signal(population.get_v(), 2,
                                                       population.size)
-            elif (signal == constants.SIG_GE):
+            elif (signal == SIG_GE):
                 return self._convert_pyNN7_signal(population.get_gsyn(), 2,
                                                   population.size)
-            elif (signal == constants.SIG_GI):
+            elif (signal == SIG_GI):
                 # Workaround in bug #124 in sPyNNaker, see
                 # https://github.com/SpiNNakerManchester/sPyNNaker/issues/124
                 if (self.simulator != "nmmc1"):
@@ -639,7 +640,7 @@ class Cypress:
         res = [{} for _ in xrange(len(populations))]
         for i in xrange(len(populations)):
             for signal in populations[i]["record"]:
-                if (signal == constants.SIG_SPIKES):
+                if (signal == SIG_SPIKES):
                     res[i][signal] = self._fetch_spikes(populations[i]["obj"])
                 else:
                     res[i][signal] = self._fetch_signal(
