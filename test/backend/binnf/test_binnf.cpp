@@ -21,6 +21,8 @@
 #include <sstream>
 
 #include <cypress/backend/binnf/binnf.hpp>
+#include <cypress/backend/resources.hpp>
+#include <cypress/util/process.hpp>
 
 namespace cypress {
 namespace binnf {
@@ -48,7 +50,18 @@ static Block generate_test_block()
 	return Block(name, header, matrix);
 }
 
-TEST(serialiser, read_write)
+static bool check_equal(const Block &b1, const Block &b2)
+{
+	EXPECT_EQ(b1.name, b2.name);
+	EXPECT_EQ(b1.matrix, b2.matrix);
+	EXPECT_EQ(b1.header.size(), b2.header.size());
+	for (size_t i = 0; i < b2.header.size(); i++) {
+		EXPECT_EQ(b1.header.names[i], b2.header.names[i]);
+		EXPECT_EQ(b1.header.types[i], b2.header.types[i]);
+	}
+}
+
+TEST(binnf, read_write)
 {
 	std::stringstream ss;
 
@@ -63,14 +76,27 @@ TEST(serialiser, read_write)
 	ASSERT_TRUE(res.first);
 
 	// Make sure input and output data are equal
-	const Block &block_out = res.second;
-	EXPECT_EQ(block_in.name, block_out.name);
-	EXPECT_EQ(block_in.matrix, block_out.matrix);
-	EXPECT_EQ(block_in.header.size(), block_out.header.size());
-	for (size_t i = 0; i < block_in.header.size(); i++) {
-		EXPECT_EQ(block_in.header.names[i], block_out.header.names[i]);
-		EXPECT_EQ(block_in.header.types[i], block_out.header.types[i]);
-	}
+	check_equal(block_in, res.second);
+}
+
+TEST(binnf, python_communication)
+{
+	// Open the python loopback as a subprocess
+	Process proc("python", {Resources::PYNN_BINNF_LOOPBACK.open()});
+
+	// Generate a test data block
+	const Block block_in = generate_test_block();
+
+	// Send the data block to python
+	serialise(proc.child_stdin(), block_in);
+	proc.close_child_stdin();
+
+	// Read it back, expect the deserialisation to be successful
+	auto res = deserialise(proc.child_stdout());
+	ASSERT_TRUE(res.first);
+
+	// Make sure input and output data are equal
+	check_equal(block_in, res.second);
 }
 }
 }
