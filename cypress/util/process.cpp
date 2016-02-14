@@ -162,7 +162,11 @@ public:
 
 	std::ostream &child_stdin() { return *m_child_stdin; }
 
-	void close_child_stdin() { close(m_child_stdin_pipe[1]); }
+	void close_child_stdin()
+	{
+		m_child_stdin->flush();
+		close(m_child_stdin_pipe[1]);
+	}
 
 	bool running() { return update_status(false); }
 
@@ -216,7 +220,7 @@ std::tuple<int, std::string, std::string> Process::exec(
 	// Thread proc used to asynchronously write to a stream
 	auto writer_thread = [](Process &proc, std::ostream &target,
 	                        const std::string &input) -> void {
-		target << input << std::flush;
+		target << input;
 		proc.close_child_stdin();
 	};
 
