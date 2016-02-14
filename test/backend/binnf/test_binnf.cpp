@@ -97,6 +97,9 @@ TEST(binnf, python_communication)
 
 	// Make sure input and output data are equal
 	check_equal(block_in, res.second);
+
+	// Make sure the Python code does not crash
+	EXPECT_EQ(0, proc.wait());
 }
 }
 }
