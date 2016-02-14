@@ -1,5 +1,5 @@
 /*
- *  Cypress -- C++ Neural Associative Memory Simulator
+ *  Cypress -- C++ Spiking Neural Network Simulation Framework
  *  Copyright (C) 2016  Andreas Stöckel
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -95,6 +95,8 @@ public:
 	 * Allows to set the name of the underlying population.
 	 */
 	void name(const std::string &name);
+
+//	void connect(PopulationBase &tar, size_t nid_src0, size_t nid_src1, size_t nid_tar0, size_t nid_tar1, std::unique_ptr<Connector> connector);
 
 	/**
 	 * Returns a reference at the underlying network instance.
