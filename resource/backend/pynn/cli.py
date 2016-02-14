@@ -19,8 +19,11 @@
 
 # Required as the Python code is usually concatenated into a single file and
 # embedded in the Cypress C++ library.
-if __name__ != "__main__":
+try:
+    from binnf import *
     from cypress import *
+except:
+    pass
 
 def do_run(args):
     import sys
