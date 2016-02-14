@@ -34,6 +34,7 @@ add_library(cypress
 	cypress/core/network
 	cypress/util/matrix
 	cypress/util/process
+	cypress/util/resource
 )
 
 target_link_libraries(cypress pthread)
@@ -56,6 +57,7 @@ if(${GTEST_FOUND})
 		test/core/test_binnf
 		test/core/test_network
 		test/util/test_process
+		test/util/test_resource
 	)
 
 	target_link_libraries(test_cypress
