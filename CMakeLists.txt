@@ -23,10 +23,28 @@ if(NOT CMAKE_BUILD_TYPE)
 	set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Choose the type of build, options are: Debug Release RelWithDebInfo MinSizeRel." FORCE)
 endif()
 
+include_directories(
+	${CMAKE_SOURCE_DIR}
+	PRIVATE
+		${CMAKE_BINARY_DIR})
 
-include_directories(${CMAKE_SOURCE_DIR})
+# Compile the Python code into a C++ header
+add_custom_command(
+	OUTPUT
+		"${CMAKE_BINARY_DIR}/resource/backend/pynn/pynn_interface.hpp"
+	COMMAND
+		"${CMAKE_SOURCE_DIR}/resource/build_resources.sh" "${CMAKE_BINARY_DIR}/resource/backend/pynn/"
+	DEPENDS
+		"${CMAKE_SOURCE_DIR}/resource/build_resources.sh"
+		"${CMAKE_SOURCE_DIR}/resource/backend/pynn/binnf.py"
+		"${CMAKE_SOURCE_DIR}/resource/backend/pynn/cli.py"
+		"${CMAKE_SOURCE_DIR}/resource/backend/pynn/constants.py"
+		"${CMAKE_SOURCE_DIR}/resource/backend/pynn/cypress.py"
+)
 
+# Compile the library itself
 add_library(cypress
+	"${CMAKE_BINARY_DIR}/resource/backend/pynn/pynn_interface.hpp"
 	cypress/core/binnf
 	cypress/core/neurons
 	cypress/core/network
