@@ -178,7 +178,7 @@ public:
 		return m_exitcode;
 	}
 
-	bool signal(int signal) {return kill(m_pid, signal) == 0; }
+	bool signal(int signal) { return kill(m_pid, signal) == 0; }
 };
 
 /*
