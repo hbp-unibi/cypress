@@ -33,8 +33,8 @@ class BinnfException(Exception):
 
 # Numbers and constants defining the serialisation format
 
-BLOCK_START_SEQUENCE = 0x4b636c42
-BLOCK_END_SEQUENCE = 0x426c634b
+BLOCK_START_SEQUENCE = 0x665a8cda
+BLOCK_END_SEQUENCE = 0x420062cb
 BLOCK_TYPE_MATRIX = 0x01
 
 TYPE_INT = 0x00

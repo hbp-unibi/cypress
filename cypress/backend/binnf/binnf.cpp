@@ -30,8 +30,8 @@ namespace {
 
 using SizeType = uint32_t;
 
-static constexpr uint32_t BLOCK_START_SEQUENCE = 0x4b636c42;
-static constexpr uint32_t BLOCK_END_SEQUENCE = 0x426c634b;
+static constexpr uint32_t BLOCK_START_SEQUENCE = 0x665a8cda;
+static constexpr uint32_t BLOCK_END_SEQUENCE = 0x420062cb;
 static constexpr uint32_t BLOCK_TYPE_MATRIX = 0x01;
 static constexpr SizeType MAX_STR_SIZE = 1024;
 static constexpr SizeType BLOCK_TYPE_LEN = sizeof(uint32_t);
