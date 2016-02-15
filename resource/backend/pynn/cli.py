@@ -62,7 +62,7 @@ def do_dump(args):
     # Dump the contents of the binnf stream
     while True:
         # Deserialise the input stream
-        name, header, matrix = deseralise(in_fd)
+        name, header, matrix = deserialise(in_fd)
         if name is None:
             return
 

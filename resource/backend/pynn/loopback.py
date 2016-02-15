@@ -25,7 +25,7 @@ import sys
 
 # Simply read data from stdin and serialise it back
 while True:
-    name, matrix, header = deseralise(sys.stdin)
+    name, matrix, header = deserialise(sys.stdin)
     if name is None:
         break
     serialise(sys.stdout, name, matrix, header)

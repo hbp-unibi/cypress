@@ -189,7 +189,7 @@ def serialise(fd, name, header, matrix):
     _write_int(fd, BLOCK_END_SEQUENCE)
 
 
-def deseralise(fd):
+def deserialise(fd):
     name = ""
     header = []
     matrix = None
