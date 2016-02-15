@@ -170,9 +170,9 @@ public:
 	/**
 	 * Constructor allowing to specify an arbitrary number of spike times.
 	 */
-	SpikeSourceArrayParameters(const std::vector<float> &spike_times)
+	SpikeSourceArrayParameters(std::initializer_list<float> spike_times)
+	    : NeuronParametersBase(spike_times)
 	{
-		parameters() = spike_times;
 	}
 
 	std::vector<float> &spike_times() { return parameters(); }

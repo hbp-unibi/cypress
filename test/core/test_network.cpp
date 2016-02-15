@@ -498,21 +498,19 @@ TEST(network, duration)
 {
 	Network network;
 
-	network.create_population<SpikeSourceArray>(10, {{100.0, 200.0, 300.0}});
-	network.create_population<SpikeSourceArray>(20, {{}});
-	network.create_population<SpikeSourceArray>(30, {{100.0, 400.0}});
+	network.create_population<SpikeSourceArray>(10, {100.0, 200.0, 300.0});
+	network.create_population<SpikeSourceArray>(20, {});
+	network.create_population<SpikeSourceArray>(30, {100.0, 400.0});
 
 	EXPECT_EQ(400.0, network.duration());
 }
 
-
 TEST(network, clone)
 {
 	Network n1;
-	n1.create_population<SpikeSourceArray>(10, {{100.0, 200.0, 300.0}});
-	n1.create_population<SpikeSourceArray>(20, {{}});
-	n1.create_population<SpikeSourceArray>(30, {{100.0, 400.0}});
-
+	n1.create_population<SpikeSourceArray>(10, {100.0, 200.0, 300.0});
+	n1.create_population<SpikeSourceArray>(20, {});
+	n1.create_population<SpikeSourceArray>(30, {100.0, 400.0});
 
 	Network n2 = n1;
 
