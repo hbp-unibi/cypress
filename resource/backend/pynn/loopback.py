@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 #   Cypress -- A C++ interface to PyNN
@@ -17,7 +18,7 @@
 #   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 try:
-    import binnf
+    from binnf import *
 except:
     pass
 
