@@ -131,7 +131,11 @@ size_t PopulationBase::size() const { return m_impl.size(); }
 
 const std::string &PopulationBase::name() const { return m_impl.name(); }
 
-void PopulationBase::name(const std::string &name) { m_impl.name(name); }
+PopulationBase &PopulationBase::name(const std::string &name)
+{
+	m_impl.name(name);
+	return *this;
+}
 
 Network &PopulationBase::network() { return m_impl.network(); }
 

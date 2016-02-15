@@ -518,7 +518,7 @@ TEST(network, clone)
 	EXPECT_EQ(400.0, n2.duration());
 }
 
-TEST(network, names)
+TEST(network, population_by_name)
 {
 	Network n;
 	n.create_population<SpikeSourceArray>(10, {100.0, 120.0}, "spikes1");
@@ -536,6 +536,18 @@ TEST(network, names)
 	ASSERT_EQ(1, n.populations<SpikeSourceArray>("spikes1").size());
 	ASSERT_EQ(1, n.populations<SpikeSourceArray>("spikes2").size());
 	ASSERT_EQ(1, n.populations<IfCondExp>("neurons").size());
-}
 
+	EXPECT_EQ(10, n.population("spikes1").size());
+	EXPECT_EQ(20, n.population("spikes2").size());
+	EXPECT_EQ(30, n.population("neurons").size());
+	EXPECT_EQ(10, n.population<SpikeSourceArray>("spikes1").size());
+	EXPECT_EQ(20, n.population<SpikeSourceArray>("spikes2").size());
+	EXPECT_EQ(30, n.population<IfCondExp>("neurons").size());
+	EXPECT_EQ(20, n.population<SpikeSourceArray>().size());
+	EXPECT_EQ(40, n.population<IfCondExp>().size());
+
+	ASSERT_THROW(n.population("foo"), Network::NoSuchPopulationException);
+	ASSERT_THROW(n.population<IfCondExp>("foo"),
+	             Network::NoSuchPopulationException);
+}
 }

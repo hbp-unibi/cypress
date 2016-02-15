@@ -96,7 +96,7 @@ public:
 	/**
 	 * Allows to set the name of the underlying population.
 	 */
-	void name(const std::string &name);
+	PopulationBase &name(const std::string &name);
 
 	//	void connect(PopulationBase &tar, size_t nid_src0, size_t nid_src1,
 	// size_t nid_tar0, size_t nid_tar1, std::unique_ptr<Connector> connector);
@@ -737,6 +737,11 @@ private:
 	                                          const NeuronType *type);
 
 public:
+	class NoSuchPopulationException : public std::runtime_error {
+	public:
+		using std::runtime_error::runtime_error;
+	};
+
 	/**
 	 * Constructor of the network class -- returns an empty network.
 	 */
@@ -781,7 +786,8 @@ public:
 	 * name.
 	 *
 	 * @param name is the name of the population that is being searched for.
-	 * If an empty string is given, all populations are returned
+	 * If an empty string is given, all populations are returned.
+	 * @return a vector of population objects.
 	 */
 	std::vector<PopulationBase> populations(
 	    const std::string &name = std::string())
@@ -797,9 +803,10 @@ public:
 	 * Returns population objects pointing at the population with the given
 	 * name.
 	 *
+	 * @tparam T is the neuron type of the population that should be returned.
 	 * @param name is the name of the population that is being searched for. If
 	 * empty, all populations are matched.
-	 * @tparam T is the neuron type of the population that should be returned.
+	 * @return a vector of population objects.
 	 */
 	template <typename T>
 	std::vector<Population<T>> populations(
@@ -810,6 +817,48 @@ public:
 			res.push_back(Population<T>(*p));
 		}
 		return res;
+	}
+
+	/**
+	 * Returns a Population object pointing at the last created population with
+	 * the given name. If no such population exists, an exception is thrown.
+	 *
+	 * @param name is the name of the population that should be looked up. If
+	 * empty, the last created population is returned.
+	 * @return a population handle pointing at the requested population.
+	 */
+	PopulationBase population(const std::string &name = std::string())
+	{
+		auto pops = populations(name);
+		if (pops.empty()) {
+			std::stringstream ss;
+			ss << "Population with the given name \"" << name
+			   << "\" does not exist.";
+			throw NoSuchPopulationException(ss.str());
+		}
+		return pops.back();
+	}
+
+	/**
+	 * Returns a Population object pointing at the last created population with
+	 * the given name. If no such population exists, an exception is thrown.
+	 *
+	 * @tparam T is the neuron type of the population that should be returned.
+	 * @param name is the name of the population that should be looked up. If
+	 * empty, the last created population of the given type is returned.
+	 * @return a population handle pointing at the requested population.
+	 */
+	template <typename T>
+	Population<T> population(const std::string &name = std::string())
+	{
+		auto pops = populations<T>(name);
+		if (pops.empty()) {
+			std::stringstream ss;
+			ss << "Population of type \"" << T::inst().name
+			   << "\" with the given name \"" << name << "\" does not exist.";
+			throw NoSuchPopulationException(ss.str());
+		}
+		return pops.back();
 	}
 
 	/**
