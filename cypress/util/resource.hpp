@@ -35,6 +35,7 @@
 #ifndef CYPRESS_UTIL_RESOURCE_HPP
 #define CYPRESS_UTIL_RESOURCE_HPP
 
+#include <cstdint>
 #include <string>
 #include <vector>
 
@@ -44,7 +45,7 @@ namespace cypress {
  */
 class Resource {
 private:
-	const std::vector<char> m_data;
+	const std::vector<uint8_t> m_data;
 	mutable std::string m_filename;
 	mutable int m_fd;
 
@@ -52,7 +53,7 @@ public:
 	/**
 	 * Creates the resource.
 	 */
-	Resource(const std::vector<char> &data) : m_data(data), m_fd(-1) {}
+	Resource(const std::vector<uint8_t> &data) : m_data(data), m_fd(-1) {}
 
 	/**
 	 * Creates the resource.
@@ -70,7 +71,7 @@ public:
 	/**
 	 * Returns a reference at the vector containing the data.
 	 */
-	const std::vector<char> &data() const { return m_data; }
+	const std::vector<uint8_t> &data() const { return m_data; }
 
 	/**
 	 * Returns the name of a file which will contain the data stored in the

@@ -48,7 +48,7 @@ function build_resource {
 	echo "#include <cypress/util/resource.hpp>"
 	echo
 	echo "namespace cypress {"
-	echo "const Resource Resources::${RESOURCE_NAME}(std::vector<char>({"
+	echo "const Resource Resources::${RESOURCE_NAME}(std::vector<uint8_t>({"
 	cat $* | minify | hexdump -v -e '1 1 "0x%02x,"'
 	echo -n "}));"
 	echo "}"
