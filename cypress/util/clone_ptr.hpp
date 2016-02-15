@@ -34,41 +34,43 @@ namespace cypress {
 template <typename T>
 class clone_ptr {
 private:
-	T *ptr;
+	T *m_ptr;
 
-	T *clone() const { return new T(*ptr); }
+	T *clone() const { return new T(*m_ptr); }
 
 public:
-	explicit clone_ptr(T *p = 0) : ptr(p) {}
+	explicit clone_ptr(T *p = 0) : m_ptr(p) {}
 
-	~clone_ptr() { delete ptr; }
+	~clone_ptr() { delete m_ptr; }
 
-	clone_ptr(const clone_ptr &p) : ptr(p.ptr ? p.clone() : 0) {}
+	clone_ptr(const clone_ptr &p) : m_ptr(p.m_ptr ? p.clone() : 0) {}
 
 	clone_ptr &operator=(const clone_ptr &p)
 	{
 		if (this != &p) {
-			T *tmp = p.ptr ? p.clone() : 0;
-			delete ptr;
-			ptr = tmp;
+			T *tmp = p.m_ptr ? p.clone() : 0;
+			delete m_ptr;
+			m_ptr = tmp;
 		}
 		return *this;
 	}
 
-	clone_ptr(clone_ptr &&p) noexcept : ptr(p.ptr) { p.ptr = 0; }
+	clone_ptr(clone_ptr &&p) noexcept : m_ptr(p.m_ptr) { p.m_ptr = 0; }
 
 	clone_ptr &operator=(clone_ptr &&p)
 	{
-		std::swap(ptr, p.ptr);
-		delete p.ptr;
-		p.ptr = 0;
+		std::swap(m_ptr, p.m_ptr);
+		delete p.m_ptr;
+		p.m_ptr = 0;
 		return *this;
 	}
 
-	T *operator->() { return ptr; }
-	const T *operator->() const { return ptr; }
-	T &operator*() { return *ptr; }
-	const T &operator*() const { return *ptr; }
+	T *ptr() { return m_ptr; }
+	const T *ptr() const { return m_ptr; }
+	T *operator->() { return m_ptr; }
+	const T *operator->() const { return m_ptr; }
+	T &operator*() { return *m_ptr; }
+	const T &operator*() const { return *m_ptr; }
 };
 
 template <typename T, typename... Args>
