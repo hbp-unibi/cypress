@@ -53,6 +53,7 @@ add_library(cypress
 	cypress/core/backend
 	cypress/core/neurons
 	cypress/core/network
+	cypress/util/clone_ptr
 	cypress/util/comperator
 	cypress/util/matrix
 	cypress/util/process

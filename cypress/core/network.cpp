@@ -143,7 +143,7 @@ bool PopulationBase::homogeneous() const { return m_impl.homogeneous(); }
 
 class NetworkImpl {
 private:
-	std::vector<PopulationImpl> m_populations;
+	std::vector<clone_ptr<PopulationImpl>> m_populations;
 
 public:
 	PopulationImpl &create_population(Network *network, size_t size,
@@ -151,20 +151,20 @@ public:
 	                                  const NeuronParametersBase &params,
 	                                  const std::string &name)
 	{
-		m_populations.emplace_back(network, size, type, params, name);
-		return m_populations.back();
+		m_populations.emplace_back(
+		    make_clone<PopulationImpl>(network, size, type, params, name));
+		return *m_populations.back();
 	}
 
 	float duration() const
 	{
 		float res = 0.0;
 		for (const auto &population : m_populations) {
-			if (&population.type() == &SpikeSourceArray::inst()) {
-				// The spike times are supposed to be sorted!
-				const size_t spike_count = population.parameters().size();
-				if (spike_count > 0) {
-					res =
-					    std::max(res, population.parameters()[spike_count - 1]);
+			if (&population->type() == &SpikeSourceArray::inst()) {
+				auto &params = population->parameters();
+				if (params.size() > 0) {
+					// The spike times are supposed to be sorted!
+					res = std::max(res, params[params.size() - 1]);
 				}
 			}
 		}
@@ -176,7 +176,11 @@ public:
  * Class Network
  */
 
-Network::Network() : m_impl(std::make_unique<NetworkImpl>()) {}
+Network::Network() : m_impl(make_clone<NetworkImpl>()) {}
+Network::Network(const Network &) = default;
+Network::Network(Network &&) noexcept = default;
+Network &Network::operator=(const Network &) = default;
+Network &Network::operator=(Network &&) = default;
 
 Network::~Network()
 {

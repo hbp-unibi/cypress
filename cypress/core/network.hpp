@@ -32,6 +32,7 @@
 #endif
 
 #include <cypress/core/neurons.hpp>
+#include <cypress/util/clone_ptr.hpp>
 
 namespace cypress {
 
@@ -97,7 +98,8 @@ public:
 	 */
 	void name(const std::string &name);
 
-//	void connect(PopulationBase &tar, size_t nid_src0, size_t nid_src1, size_t nid_tar0, size_t nid_tar1, std::unique_ptr<Connector> connector);
+	//	void connect(PopulationBase &tar, size_t nid_src0, size_t nid_src1,
+	//size_t nid_tar0, size_t nid_tar1, std::unique_ptr<Connector> connector);
 
 	/**
 	 * Returns a reference at the underlying network instance.
@@ -698,16 +700,17 @@ public:
 class Network {
 private:
 	/**
-	 * Hidden implementation of the network.
+	 * Hidden implementation of the network. The clone_ptr is used instead of a
+	 * custom pointer to allow the network instance to be cloned.
 	 */
-	std::unique_ptr<NetworkImpl> m_impl;
+	clone_ptr<NetworkImpl> m_impl;
 
 	template <typename T>
 	friend class Population;
 
 	/**
 	 * Internally used to add a new population. Use the templated public
-	 * addPopulation method instead.
+	 * create_population method instead.
 	 */
 	PopulationImpl &create_population(size_t size, const NeuronType &type,
 	                                  const NeuronParametersBase &params,
@@ -718,6 +721,10 @@ public:
 	 * Constructor of the network class -- returns an empty network.
 	 */
 	Network();
+	Network(const Network &);
+	Network(Network &&) noexcept;
+	Network &operator=(const Network &);
+	Network &operator=(Network &&);
 
 	/**
 	 * Destructor of the network class -- destroys the network. All handles
