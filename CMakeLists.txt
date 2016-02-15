@@ -50,6 +50,7 @@ add_library(cypress
 	"${CMAKE_BINARY_DIR}/resource/backend/pynn/pynn_binnf_loopback.hpp"
 	cypress/backend/resources
 	cypress/backend/binnf/binnf
+	cypress/core/backend
 	cypress/core/neurons
 	cypress/core/network
 	cypress/util/comperator
