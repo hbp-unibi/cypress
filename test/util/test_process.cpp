@@ -93,7 +93,6 @@ TEST(process, running)
 	EXPECT_EQ(0, proc.exitcode());
 }
 
-
 TEST(process, signal)
 {
 	using namespace std::chrono_literals;
