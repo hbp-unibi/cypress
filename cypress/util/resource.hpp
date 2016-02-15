@@ -51,12 +51,12 @@ private:
 
 public:
 	/**
-	 * Creates the resource.
+	 * Creates a resource containing the given data.
 	 */
 	Resource(const std::vector<uint8_t> &data) : m_data(data), m_fd(-1) {}
 
 	/**
-	 * Creates the resource.
+	 * Creates a resource containing the given data.
 	 */
 	Resource(const std::string &data)
 	    : m_data(data.begin(), data.end()), m_fd(-1)
