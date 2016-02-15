@@ -25,12 +25,11 @@
 
 #include <iterator>
 #include <memory>
-#include <string>
-
-#ifndef NDEBUG
 #include <stdexcept>
-#endif
+#include <string>
+#include <sstream>
 
+#include <cypress/core/connector.hpp>
 #include <cypress/core/neurons.hpp>
 #include <cypress/util/clone_ptr.hpp>
 
@@ -53,12 +52,97 @@ template <typename T>
 class Neuron;
 
 /**
+ * Mixin class providing various methods for instanciating connections
+ * originating from a population.
+ */
+template <typename Impl>
+class PopulationConnections {
+private:
+	Impl &impl() { return static_cast<Impl &>(*this); }
+
+	uint32_t i0() const { return impl().begin()->idx(); }
+	uint32_t i1() const { return impl().end()->idx(); }
+
+public:
+	/**
+	 * Connects all neurons in this population with the range of neurons pointed
+	 * at by the target iterators.
+	 *
+	 * @param tar_begin is an iterator pointing at the first neuron in the
+	 * target population that should be connected.
+	 * @param tar_end is an iterator pointing at the first neuron in the
+	 * target population that should be connected.
+	 * @param connector is the object establishing the actual connections.
+	 */
+	template <typename TargetIterator>
+	Impl &connect(TargetIterator tar_begin, TargetIterator tar_end,
+	              std::unique_ptr<Connector> connector)
+	{
+		impl().connect(i0(), i1(), tar_begin->population(), tar_begin->idx(),
+		               tar_end->idx(), connector);
+		return impl();
+	}
+
+	/**
+	 * Connects all neurons in this population with the single neuron pointed
+	 * at by the target iterator.
+	 *
+	 * @param tar is an interator pointing at the target neuron.
+	 * @param connector is the object establishing the actual connections.
+	 */
+	template <typename TargetIterator,
+	          typename std::enable_if<std::is_base_of<
+	              std::iterator, TargetIterator>>::type * = nullptr>
+	Impl &connect(TargetIterator tar, std::unique_ptr<Connector> connector)
+	{
+		impl().connect(i0(), i1(), tar->population(), tar->idx(),
+		               tar->idx() + 1, connector);
+		return impl();
+	}
+
+	/**
+	 * Connects all neurons in this population with the given single neuron.
+	 *
+	 * @param tar is the target neuron.
+	 * @param connector is the object.
+	 */
+	template <typename TargetNeuron,
+	          typename std::enable_if<std::is_base_of<
+	              NeuronBase, TargetNeuron>>::type * = nullptr>
+	Impl &connect(TargetNeuron tar, std::unique_ptr<Connector> connector)
+	{
+		impl().connect(i0(), i1(), tar.population(), tar.idx(), tar.idx() + 1,
+		               connector);
+		return impl();
+	}
+
+	/**
+	 * Connects all neurons in this population with all neurons in the given
+	 * target population.
+	 *
+	 * @param nid_src0 is the index of the first neuron in this population that
+	 * is going to be connected.
+	 * @param nid_src1 is the index of the last-plus-one neuron in this
+	 * population being connected.
+	 * @param tar is an iterator pointing at the target neuron.
+	 */
+	/*	template <typename TargetPopulation>
+	    Impl &connect(TargetPopulation population,
+	                  std::unique_ptr<Connector> connector)
+	    {
+	        impl().connect(i0(), i1(), tar.population(), tar.begin()->idx(),
+	                       tar.end()->idx(), connector);
+	        return impl();
+	    }*/
+};
+
+/**
  * Class representing a neuron population of unspecified type. Note that this
  * instance is merely a handle at the actual population object. It can be
  * cheaply copied around. Do not directly use this class, but the more advanced,
  * templated Population<T> class.
  */
-class PopulationBase {
+class PopulationBase : public PopulationConnections<PopulationBase> {
 private:
 	friend class Network;
 
@@ -79,6 +163,14 @@ protected:
 
 public:
 	/**
+	 * Returns a NeuronBase instance pointing at the i-th neuron in this
+	 * population.
+	 *
+	 * @param idx is the index of the neuron accessed neuron in this population.
+	 */
+	NeuronBase operator[](size_t idx);
+
+	/**
 	 * Returns a reference at the neuron type descriptor.
 	 */
 	const NeuronType &type() const;
@@ -98,8 +190,26 @@ public:
 	 */
 	PopulationBase &name(const std::string &name);
 
-	//	void connect(PopulationBase &tar, size_t nid_src0, size_t nid_src1,
-	// size_t nid_tar0, size_t nid_tar1, std::unique_ptr<Connector> connector);
+	/**
+	 * Basic connection method. Connects a range of neurons in this population
+	 * to a range of neurons in the given target population. All connection
+	 * methods inherited from PopulationConnections are relayed to this method.
+	 *
+	 * @param nid_src0 is the index of the first neuron in this population that
+	 * is going to be connected.
+	 * @param nid_src1 is the index of the last-plus-one neuron in this
+	 * population being connected.
+	 * @param tar is the target population.
+	 * @param nid_tar0 is the index of the first neuron in the target population
+	 * that is going to be connected.
+	 * @param nid_tar1 is the index of the last-plus-one neuron in the target
+	 * population that is going to be connected.
+	 * @return a reference at this object for simple method chaining.
+	 */
+	PopulationBase &connect(size_t nid_src0, size_t nid_src1,
+	                        PopulationBase tar, size_t nid_tar0,
+	                        size_t nid_tar1,
+	                        std::unique_ptr<Connector> connector);
 
 	/**
 	 * Returns a reference at the underlying network instance.
@@ -131,17 +241,6 @@ private:
 	 */
 	size_t m_idx;
 
-protected:
-	/**
-	 * Returns a handle at the population this neuron is part of.
-	 */
-	PopulationBase population() { return m_pop; }
-
-	/**
-	 * Returns a const-handle at the population this neuron is part of.
-	 */
-	const PopulationBase population() const { return m_pop; }
-
 public:
 	/**
 	 * Creates a new NeuronBase instance pointing at idx-th neuron in the given
@@ -154,6 +253,16 @@ public:
 	    : m_pop(population), m_idx(idx)
 	{
 	}
+
+	/**
+	 * Returns a handle at the population this neuron is part of.
+	 */
+	PopulationBase population() { return m_pop; }
+
+	/**
+	 * Returns a const-handle at the population this neuron is part of.
+	 */
+	const PopulationBase population() const { return m_pop; }
 
 	/**
 	 * Returns a reference at the neuron type descriptor.
@@ -181,6 +290,22 @@ public:
 	const NeuronType &type() { return NeuronType::inst(); }
 
 	Parameters &parameters() { return population().parameters(idx()); }
+
+	/**
+	 * Returns a handle at the population this neuron is part of.
+	 */
+	Population<T> population()
+	{
+		return Population<T>(NeuronBase::population());
+	}
+
+	/**
+	 * Returns a const-handle at the population this neuron is part of.
+	 */
+	const Population<T> population() const
+	{
+		return Population<T>(NeuronBase::population());
+	}
 
 	/*
 	 * Deference operator. Needed for the population iterator ->() operator to
@@ -638,7 +763,8 @@ template <typename T>
 class PopulationView
     : public PopulationViewBase<T, PopulationViewRange::Begin,
                                 PopulationViewRange::End, PopulationView<T>>,
-      public PopulationViewRange {
+      public PopulationViewRange,
+      public PopulationConnections<PopulationView<T>> {
 
 public:
 	using PopulationViewBaseType =
@@ -679,7 +805,8 @@ public:
 template <typename T>
 class Population
     : public PopulationViewBase<T, PopulationViewRange::StaticBegin,
-                                PopulationViewRange::StaticEnd, Population<T>> {
+                                PopulationViewRange::StaticEnd, Population<T>>,
+      public PopulationConnections<PopulationView<T>> {
 private:
 	friend class Network;
 
@@ -880,17 +1007,22 @@ public:
  * Out-of class member function definitions
  */
 
+inline NeuronBase PopulationBase::operator[](size_t idx)
+{
+	return NeuronBase(*this, idx);
+}
+
 template <typename T, typename Begin, typename End, typename Impl>
-PopulationView<T> PopulationViewBase<T, Begin, End, Impl>::range(
+inline PopulationView<T> PopulationViewBase<T, Begin, End, Impl>::range(
     size_t begin_idx, size_t end_idx)
 {
 	return PopulationView<T>(*this, begin_idx, end_idx);
 }
 
 template <typename T>
-Population<T>::Population(Network &network, size_t size,
-                          const typename T::Parameters &params,
-                          const std::string &name)
+inline Population<T>::Population(Network &network, size_t size,
+                                 const typename T::Parameters &params,
+                                 const std::string &name)
     : Population<T>::PopulationViewBaseType(
           network.create_population(size, T::inst(), params, name))
 {

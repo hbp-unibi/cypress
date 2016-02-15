@@ -31,7 +31,7 @@ namespace cypress {
 /**
  * Data structure describing a connection between two neurons.
  */
-#pragma pack push(1)
+#pragma pack(push, 1)
 /**
  * Structure describing the synaptic properties -- weight and delay.
  */
@@ -99,19 +99,16 @@ struct LocalConnection {
 	 * Constructor of the Connection class. Per default all fields are
 	 * initialised with zero.
 	 */
-	Connection(uint32_t src = 0, uint32_t tar = 0, float weight = 0.0,
-	           delay = 0.0)
-	    : src(nsrc),
-
-	      tar(ntar),
-	      synapse(weight, delay)
+	LocalConnection(uint32_t src = 0, uint32_t tar = 0, float weight = 0.0,
+	                float delay = 0.0)
+	    : src(src), tar(tar), synapse(weight, delay)
 	{
 	}
 
 	/**
 	 * Checks whether the connection is valid.
 	 */
-	bool valid() { return synapse.valid(); }
+	bool valid() const { return synapse.valid(); }
 
 	/**
 	 * Returns true if the synapse is excitatory.
@@ -145,15 +142,15 @@ struct Connection {
 	 * initialised with zero.
 	 */
 	Connection(uint32_t psrc = 0, uint32_t ptar = 0, uint32_t nsrc = 0,
-	           uint32_t ntar = 0, float weight = 0.0, delay = 0.0)
-	    : psrc(psrc), ptar(ptar), n(nsrc, nsrc, weight, delay)
+	           uint32_t ntar = 0, float weight = 0.0, float delay = 0.0)
+	    : psrc(psrc), ptar(ptar), n(nsrc, ntar, weight, delay)
 	{
 	}
 
 	/**
 	 * Checks whether the connection is valid.
 	 */
-	bool valid() { return n.synapse.valid(); }
+	bool valid() const { return n.synapse.valid(); }
 
 	/**
 	 * Returns true if the synapse is excitatory.
@@ -170,8 +167,9 @@ struct Connection {
 	 */
 	bool operator==(const Connection &s) const
 	{
-		return Comperator<uint32_t>::equals(1 - uint32_t(valid()))(
-		    psrc, s.psrc)(ptar, s.ptar)(n.src, s.n.src)(n.tar, s.n.tar)();
+		return Comperator<uint32_t>::equals(
+		    1 - uint32_t(valid()), 1 - uint32_t(s.valid()))(psrc, s.psrc)(
+		    ptar, s.ptar)(n.src, s.n.src)(n.tar, s.n.tar)();
 	}
 
 	/**
@@ -182,11 +180,12 @@ struct Connection {
 	 */
 	bool operator<(const Connection &s) const
 	{
-		return Comperator<uint32_t>::smaller(1 - uint32_t(valid()))(
-		    psrc, s.psrc)(ptar, s.ptar)(n.src, s.n.src)(n.tar, s.n.tar)();
+		return Comperator<uint32_t>::smaller(
+		    1 - uint32_t(valid()), 1 - uint32_t(s.valid()))(psrc, s.psrc)(
+		    ptar, s.ptar)(n.src, s.n.src)(n.tar, s.n.tar)();
 	}
 };
-#pragma pop
+#pragma pack(pop)
 
 /*
  * Forward declarations.
@@ -225,7 +224,7 @@ public:
 		/**
 		 * The target population id.
 		 */
-		uint32_t pid_src;
+		uint32_t pid_tar;
 
 		/**
 		 * Index of the first neuron in the source population involved in the
@@ -250,6 +249,21 @@ public:
 		 * in the connection.
 		 */
 		uint32_t nid_tar_end;
+
+		/**
+		 * Constructor of the ConnectionDescriptor class.
+		 */
+		ConnectionDescriptor(uint32_t pid_src, uint32_t pid_tar,
+		                     uint32_t nid_src_begin, uint32_t nid_src_end,
+		                     uint32_t nid_tar_begin, uint32_t nid_tar_end)
+		    : pid_src(pid_src),
+		      pid_tar(pid_tar),
+		      nid_src_begin(nid_src_begin),
+		      nid_src_end(nid_src_end),
+		      nid_tar_begin(nid_tar_begin),
+		      nid_tar_end(nid_tar_end)
+		{
+		}
 	};
 
 	/**
@@ -264,7 +278,7 @@ public:
 	 * to the number estimated by connection_count().
 	 */
 	virtual size_t connect(const ConnectionDescriptor &descr,
-	                       Connection[] tar_mem) = 0;
+	                       Connection tar_mem[]) = 0;
 
 	/**
 	 * Predicts an upper-bound of the number of connections. The caller of the
@@ -308,13 +322,13 @@ public:
 	 * connections.
 	 */
 	static std::unique_ptr<AllToAllConnector> all_to_all(float weight = 1.0,
-	                                                     delay = 0.0);
+	                                                     float delay = 0.0);
 
 	/**
 	 * Createa a one-to-one connector and returns a pointer at the connector.
 	 */
 	static std::unique_ptr<OneToOneConnector> one_to_one(float weight = 1.0,
-	                                                     delay = 0.0);
+	                                                     float delay = 0.0);
 
 	/**
 	 * Create a list connector which creates connections according to the given
@@ -365,24 +379,25 @@ public:
 	    float stddev_delay = 0.0, bool resurrect = false);
 };
 
-
-class AllToAllConnector: public Connector {
+class AllToAllConnector : public Connector {
 private:
 	static const std::string m_name;
 
 public:
 	size_t connect(const ConnectionDescriptor &descr,
-	                       Connection[] tar_mem) override;
+	               Connection tar_mem[]) override;
 
 	size_t connection_count(const ConnectionDescriptor &descr) override;
 
 	bool connection_valid(const ConnectionDescriptor &descr) override;
 
-	const std::string &name() override; {return m_name;}
+	const std::string &name() override
+	{
+		return m_name;
+	}
 
 	~AllToAllConnector() override;
 };
-
 }
 
 #endif /* CYPRESS_CORE_CONNECTOR_HPP */

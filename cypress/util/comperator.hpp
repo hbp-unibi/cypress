@@ -23,7 +23,7 @@
 
 #include <cstdint>
 
-namespace nam {
+namespace cypress {
 /**
  * The Comperator class can be used to assemble comperator operators, such as
  * equals, smaller or larger than.
