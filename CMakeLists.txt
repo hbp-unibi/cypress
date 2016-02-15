@@ -51,6 +51,7 @@ add_library(cypress
 	cypress/backend/resources
 	cypress/backend/binnf/binnf
 	cypress/core/backend
+#	cypress/core/connector
 	cypress/core/neurons
 	cypress/core/network
 	cypress/util/clone_ptr
