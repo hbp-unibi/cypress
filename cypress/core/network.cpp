@@ -115,6 +115,8 @@ public:
 
 	Network &network() { return *m_network; }
 
+	const NeuronParametersBase &parameters() const { return m_parameters; }
+
 	bool homogeneous() const { return true; }
 };
 
@@ -151,6 +153,22 @@ public:
 		m_populations.emplace_back(network, size, type, params, name);
 		return m_populations.back();
 	}
+
+	float duration() const
+	{
+		float res = 0.0;
+		for (const auto &population : m_populations) {
+			if (&population.type() == &SpikeSourceArray::inst()) {
+				// The spike times are supposed to be sorted!
+				const size_t spike_count = population.parameters().size();
+				if (spike_count > 0) {
+					res =
+					    std::max(res, population.parameters()[spike_count - 1]);
+				}
+			}
+		}
+		return res;
+	}
 };
 
 /**
@@ -163,6 +181,8 @@ Network::~Network()
 {
 	// Only required for the unique ptr to NetworkImpl
 }
+
+float Network::duration() const { return m_impl->duration(); }
 
 PopulationImpl &Network::create_population(size_t size, const NeuronType &type,
                                            const NeuronParametersBase &params,

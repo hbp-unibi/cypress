@@ -153,7 +153,7 @@ public:
 	/**
 	 * Number of parameters.
 	 */
-	size_t size() { return m_parameters.size(); }
+	size_t size() const { return m_parameters.size(); }
 };
 
 /**

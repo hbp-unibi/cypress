@@ -38,6 +38,7 @@ namespace cypress {
 /*
  * Forward declarations
  */
+class Backend;
 class Network;
 class NeuronBase;
 class PopulationBase;
@@ -724,6 +725,11 @@ public:
 	 * network will become invalid.
 	 */
 	~Network();
+
+	/**
+	 * Returns the time stamp of the last spike stored in a SpikeSourceArray.
+	 */
+	float duration() const;
 
 	/**
 	 * Creates a new population instance.
