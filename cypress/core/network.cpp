@@ -17,6 +17,7 @@
  */
 
 #include <cypress/core/network.hpp>
+#include <cypress/core/backend.hpp>
 
 namespace cypress {
 
@@ -189,5 +190,11 @@ PopulationImpl &Network::create_population(size_t size, const NeuronType &type,
                                            const std::string &name)
 {
 	return m_impl->create_population(this, size, type, params, name);
+}
+
+Network &Network::run(const Backend &backend, float duration)
+{
+	backend.run(*this, duration);
+	return *this;
 }
 }

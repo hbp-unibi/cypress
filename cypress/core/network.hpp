@@ -749,6 +749,20 @@ public:
 	{
 		return Population<T>(*this, size, params, name);
 	}
+
+	/**
+	 * Executes the network on the given backend and stores the results in the
+	 * population objects. This function is simply a wrapper for Backend.run().
+	 * If there is an error during execution, the run function will throw a
+	 * exception.
+	 *
+	 * @param backend is a reference at the backend instance the network should
+	 * be executed on.
+	 * @param duration is the simulation-time. If a value smaller or equal to
+	 * zero is given, the simulation time is automatically chosen.
+	 * @return a reference at this Network instance for simple method chaining.
+	 */
+	Network &run(const Backend &backend, float duration = 0.0);
 };
 
 /*
