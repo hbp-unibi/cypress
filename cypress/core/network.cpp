@@ -146,6 +146,19 @@ private:
 	std::vector<clone_ptr<PopulationImpl>> m_populations;
 
 public:
+	std::vector<PopulationImpl *> populations(const std::string &name,
+	                                          const NeuronType *type)
+	{
+		std::vector<PopulationImpl *> res;
+		for (auto &pop : m_populations) {
+			if ((name.empty() || pop->name() == name) &&
+			    (type == nullptr || &pop->type() == type)) {
+				res.push_back(pop.ptr());
+			}
+		}
+		return res;
+	}
+
 	PopulationImpl &create_population(Network *network, size_t size,
 	                                  const NeuronType &type,
 	                                  const NeuronParametersBase &params,
@@ -185,6 +198,12 @@ Network &Network::operator=(Network &&) = default;
 Network::~Network()
 {
 	// Only required for the unique ptr to NetworkImpl
+}
+
+std::vector<PopulationImpl *> Network::populations(const std::string &name,
+                                                   const NeuronType *type)
+{
+	return m_impl->populations(name, type);
 }
 
 float Network::duration() const { return m_impl->duration(); }

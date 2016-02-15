@@ -60,7 +60,7 @@ class Neuron;
  */
 class PopulationBase {
 private:
-	friend Network;
+	friend class Network;
 
 	/**
 	 * Reference at the actual implementation of the population object.
@@ -99,7 +99,7 @@ public:
 	void name(const std::string &name);
 
 	//	void connect(PopulationBase &tar, size_t nid_src0, size_t nid_src1,
-	//size_t nid_tar0, size_t nid_tar1, std::unique_ptr<Connector> connector);
+	// size_t nid_tar0, size_t nid_tar1, std::unique_ptr<Connector> connector);
 
 	/**
 	 * Returns a reference at the underlying network instance.
@@ -680,11 +680,17 @@ template <typename T>
 class Population
     : public PopulationViewBase<T, PopulationViewRange::StaticBegin,
                                 PopulationViewRange::StaticEnd, Population<T>> {
-public:
+private:
+	friend class Network;
+
 	using PopulationViewBaseType =
 	    PopulationViewBase<T, PopulationViewRange::StaticBegin,
 	                       PopulationViewRange::StaticEnd, Population<T>>;
 
+protected:
+	using PopulationViewBaseType::PopulationViewBaseType;
+
+public:
 	/**
 	 * Constructor of the population class. Creates a new population with the
 	 * correct population type, size and the given name.
@@ -716,6 +722,20 @@ private:
 	                                  const NeuronParametersBase &params,
 	                                  const std::string &name);
 
+	/**
+	 * Internally used to access populations of a given name and optionally
+	 * type.
+	 *
+	 * @param name the name of the population being searched. If empty, all
+	 * populations are matched.
+	 * @param type is the type of the population being searched. If nullptr,
+	 * all populations are matched.
+	 * @return a vector of pointers at the PopulationImpl instances backing the
+	 * populations.
+	 */
+	std::vector<PopulationImpl *> populations(const std::string &name,
+	                                          const NeuronType *type);
+
 public:
 	/**
 	 * Constructor of the network class -- returns an empty network.
@@ -745,8 +765,7 @@ public:
 	 * @param params contains the initial parameters for all neurons in this
 	 * population.
 	 * @param name is the name of the population. The name can be used for
-	 * visualisation purposes and to retrieve a population by name. Note that
-	 * the name must be unique.
+	 * visualisation purposes and to retrieve a population by name.
 	 */
 	template <typename T>
 	Population<T> create_population(
@@ -755,6 +774,42 @@ public:
 	    const std::string &name = std::string())
 	{
 		return Population<T>(*this, size, params, name);
+	}
+
+	/**
+	 * Returns population objects pointing at the population with the given
+	 * name.
+	 *
+	 * @param name is the name of the population that is being searched for.
+	 * If an empty string is given, all populations are returned
+	 */
+	std::vector<PopulationBase> populations(
+	    const std::string &name = std::string())
+	{
+		std::vector<PopulationBase> res;
+		for (PopulationImpl *p : populations(name, nullptr)) {
+			res.push_back(PopulationBase(*p));
+		}
+		return res;
+	}
+
+	/**
+	 * Returns population objects pointing at the population with the given
+	 * name.
+	 *
+	 * @param name is the name of the population that is being searched for. If
+	 * empty, all populations are matched.
+	 * @tparam T is the neuron type of the population that should be returned.
+	 */
+	template <typename T>
+	std::vector<Population<T>> populations(
+	    const std::string &name = std::string())
+	{
+		std::vector<Population<T>> res;
+		for (PopulationImpl *p : populations(name, &T::inst())) {
+			res.push_back(Population<T>(*p));
+		}
+		return res;
 	}
 
 	/**

@@ -518,4 +518,24 @@ TEST(network, clone)
 	EXPECT_EQ(400.0, n2.duration());
 }
 
+TEST(network, names)
+{
+	Network n;
+	n.create_population<SpikeSourceArray>(10, {100.0, 120.0}, "spikes1");
+	n.create_population<SpikeSourceArray>(20, {100.0, 120.0}, "spikes2");
+	n.create_population<IfCondExp>(30, {}, "neurons");
+	n.create_population<IfCondExp>(40, {});
+
+	ASSERT_EQ(4, n.populations().size());
+	ASSERT_EQ(4, n.populations("").size());
+	ASSERT_EQ(1, n.populations("spikes1").size());
+	ASSERT_EQ(1, n.populations("spikes2").size());
+	ASSERT_EQ(1, n.populations("neurons").size());
+	ASSERT_EQ(2, n.populations<SpikeSourceArray>().size());
+	ASSERT_EQ(2, n.populations<IfCondExp>().size());
+	ASSERT_EQ(1, n.populations<SpikeSourceArray>("spikes1").size());
+	ASSERT_EQ(1, n.populations<SpikeSourceArray>("spikes2").size());
+	ASSERT_EQ(1, n.populations<IfCondExp>("neurons").size());
+}
+
 }
