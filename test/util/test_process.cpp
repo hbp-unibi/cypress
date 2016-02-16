@@ -85,7 +85,7 @@ TEST(process, running)
 {
 	using namespace std::chrono_literals;
 
-	Process proc("sleep", {"0.1"});
+	Process proc("sleep", {"0.05"});
 	EXPECT_TRUE(proc.running());
 	EXPECT_TRUE(proc.running());
 	std::this_thread::sleep_for(0.2s);
