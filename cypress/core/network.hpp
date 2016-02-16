@@ -52,21 +52,43 @@ template <typename T>
 class Neuron;
 
 /**
- * Mixin class providing various methods for instanciating connections
- * originating from a population.
+ * Base connection method. Connects a range of neurons in the source population
+ * to a range of neurons in the target population. All connection methods
+ * inherited from PopulationConnections are relayed to this method.
+ *
+ * @param src is the source population.
+ * @param nid_src0 is the index of the first neuron in this population that
+ * is going to be connected.
+ * @param nid_src1 is the index of the last-plus-one neuron in this
+ * population being connected.
+ * @param tar is the target population.
+ * @param nid_tar0 is the index of the first neuron in the target population
+ * that is going to be connected.
+ * @param nid_tar1 is the index of the last-plus-one neuron in the target
+ * population that is going to be connected.
+ * @return a reference at this object for simple method chaining.
+ */
+void connect(PopulationBase &src, size_t nid_src0, size_t nid_src1,
+             PopulationBase &tar, size_t nid_tar0, size_t nid_tar1,
+             std::unique_ptr<Connector> connector);
+
+/**
+ * Class defining the basic static method used to connect neurons.
  */
 template <typename Impl>
-class PopulationConnections {
+class PopulationConnector {
 private:
-	Impl &impl() { return static_cast<Impl &>(*this); }
+	Impl &impl() { return reinterpret_cast<Impl &>(*this); }
+
+	const Impl &impl() const { return reinterpret_cast<const Impl &>(*this); }
 
 	uint32_t i0() const { return impl().begin()->idx(); }
 	uint32_t i1() const { return impl().end()->idx(); }
 
 public:
 	/**
-	 * Connects all neurons in this population with the range of neurons pointed
-	 * at by the target iterators.
+	 * Connects all neurons in this population with the range of neurons
+	 * pointed at by the target iterators.
 	 *
 	 * @param tar_begin is an iterator pointing at the first neuron in the
 	 * target population that should be connected.
@@ -76,27 +98,30 @@ public:
 	 */
 	template <typename TargetIterator>
 	Impl &connect(TargetIterator tar_begin, TargetIterator tar_end,
-	              std::unique_ptr<Connector> connector)
+	              std::unique_ptr<Connector> connector,
+	              typename std::enable_if<true>::type * = nullptr)
 	{
-		impl().connect(i0(), i1(), tar_begin->population(), tar_begin->idx(),
-		               tar_end->idx(), connector);
+		cypress::connect(impl(), i0(), i1(), tar_begin->population(),
+		                 tar_begin->idx(), tar_end->idx(),
+		                 std::move(connector));
 		return impl();
 	}
 
 	/**
-	 * Connects all neurons in this population with the single neuron pointed
-	 * at by the target iterator.
+	 * Connects all neurons in this population with the single neuron
+	 * pointed at by the target iterator.
 	 *
 	 * @param tar is an interator pointing at the target neuron.
 	 * @param connector is the object establishing the actual connections.
 	 */
-	template <typename TargetIterator,
-	          typename std::enable_if<std::is_base_of<
-	              std::iterator, TargetIterator>>::type * = nullptr>
-	Impl &connect(TargetIterator tar, std::unique_ptr<Connector> connector)
+	template <typename TargetIterator>
+	Impl &connect(TargetIterator tar, std::unique_ptr<Connector> connector,
+	              typename std::enable_if<
+	                  std::is_base_of<std::random_access_iterator_tag,
+	                                  TargetIterator>::value>::type * = nullptr)
 	{
-		impl().connect(i0(), i1(), tar->population(), tar->idx(),
-		               tar->idx() + 1, connector);
+		cypress::connect(impl(), i0(), i1(), tar->population(), tar->idx(),
+		                 tar->idx() + 1, std::move(connector));
 		return impl();
 	}
 
@@ -106,13 +131,14 @@ public:
 	 * @param tar is the target neuron.
 	 * @param connector is the object.
 	 */
-	template <typename TargetNeuron,
-	          typename std::enable_if<std::is_base_of<
-	              NeuronBase, TargetNeuron>>::type * = nullptr>
-	Impl &connect(TargetNeuron tar, std::unique_ptr<Connector> connector)
+	template <typename TargetNeuron>
+	Impl &connect(
+	    TargetNeuron tar, std::unique_ptr<Connector> connector,
+	    typename std::enable_if<
+	        std::is_base_of<NeuronBase, TargetNeuron>::value>::type * = nullptr)
 	{
-		impl().connect(i0(), i1(), tar.population(), tar.idx(), tar.idx() + 1,
-		               connector);
+		cypress::connect(impl(), i0(), i1(), tar.population(), tar.idx(),
+		                 tar.idx() + 1, std::move(connector));
 		return impl();
 	}
 
@@ -120,20 +146,342 @@ public:
 	 * Connects all neurons in this population with all neurons in the given
 	 * target population.
 	 *
-	 * @param nid_src0 is the index of the first neuron in this population that
-	 * is going to be connected.
+	 * @param nid_src0 is the index of the first neuron in this population
+	 * that is going to be connected.
 	 * @param nid_src1 is the index of the last-plus-one neuron in this
 	 * population being connected.
 	 * @param tar is an iterator pointing at the target neuron.
 	 */
-	/*	template <typename TargetPopulation>
-	    Impl &connect(TargetPopulation population,
-	                  std::unique_ptr<Connector> connector)
-	    {
-	        impl().connect(i0(), i1(), tar.population(), tar.begin()->idx(),
-	                       tar.end()->idx(), connector);
-	        return impl();
-	    }*/
+	template <typename TargetPopulation>
+	Impl &connect(
+	    TargetPopulation tar, std::unique_ptr<Connector> connector,
+	    typename std::enable_if<
+	        std::is_base_of<PopulationBase, TargetPopulation>::value>::type * =
+	        nullptr)
+	{
+		cypress::connect(impl(), i0(), i1(), tar, tar.begin()->idx(),
+		                 tar.end()->idx(), std::move(connector));
+		return impl();
+	}
+};
+
+/**
+ * Mixin class providing all iterator-related facilities to a Population class.
+ */
+template <typename Value, typename Begin, typename End, typename Impl>
+class PopulationIterator {
+public:
+	/**
+	 * Generic class implementing the various iterator types exposed by the
+	 * Population class. Note that comparison operators only compare the neuron
+	 * index and do not check for equivalence of the population object.
+	 * Comparing
+	 * iterators from different population objects is nonsense.
+	 *
+	 * @tparam Dir is the direction into which the iterator advances.
+	 * @tparam Const if true, the iterator allows no write access to the
+	 * underlying population. If false, the corresponding access operators are
+	 * enabled.
+	 */
+	template <int Dir, bool Const>
+	class iterator_ : public std::iterator<std::random_access_iterator_tag,
+	                                       Value, ssize_t, Value, Value> {
+	private:
+		/**
+		 * Shorthand for the own type.
+		 */
+		using Self = iterator_<Dir, Const>;
+
+		/**
+		 * Pointer at the backing population object. May either be a const
+		 * pointer (if the Const flag is true) or a normal pointer (if the Const
+		 * flag is false).
+		 */
+		using PopulationPtr =
+		    typename std::conditional<Const, PopulationBase const *,
+		                              PopulationBase *>::type;
+
+		/**
+		 * Reference to the graph instance this iterator is refering to. The
+		 * graph instance is used to dereference
+		 */
+		PopulationPtr m_population;
+
+		/**
+		 * Current neuron index the iterator points at.
+		 */
+		ssize_t m_idx;
+
+	public:
+		/**
+		 * Constructor, creates an iterator pointing at the neuron with the
+		 * index idx in the given population.
+		 *
+		 * @param population is a pointer at the underlying population.
+		 * @param idx is the index of the neuron.
+		 */
+		iterator_(PopulationPtr population, ssize_t idx)
+		    : m_population(population), m_idx(idx)
+		{
+		}
+
+		/**
+		 * Allow implicit conversion to const-iterators.
+		 */
+		operator iterator_<Dir, true>() const
+		{
+			return iterator_<Dir, true>(m_population, m_idx);
+		}
+
+		bool operator==(const Self &o) const { return m_idx == o.m_idx; }
+
+		bool operator!=(const Self &o) const { return m_idx != o.m_idx; }
+
+		bool operator<(const Self &o) const
+		{
+			return m_idx * Dir < o.m_idx * Dir;
+		}
+
+		bool operator>(const Self &o) const
+		{
+			return m_idx * Dir > o.m_idx * Dir;
+		}
+
+		bool operator<=(const Self &o) const
+		{
+			return m_idx * Dir <= o.m_idx * Dir;
+		}
+
+		bool operator>=(const Self &o) const
+		{
+			return m_idx * Dir >= o.m_idx * Dir;
+		}
+
+		Self operator+(ssize_t b)
+		{
+			return Self(m_population, m_idx + b * Dir);
+		}
+
+		Self operator-(ssize_t b)
+		{
+			return Self(m_population, m_idx - b * Dir);
+		}
+
+		ssize_t operator-(const Self &o) const
+		{
+			return (m_idx - o.m_idx) * Dir;
+		}
+
+		Self &operator++()
+		{
+			m_idx += Dir;
+			return *this;
+		}
+		Self operator++(int)
+		{
+			auto cpy = Self(m_population, m_idx);
+			m_idx += Dir;
+			return cpy;
+		}
+
+		Self &operator--()
+		{
+			m_idx -= Dir;
+			return *this;
+		}
+
+		Self operator--(int)
+		{
+			auto cpy = Self(m_population, m_idx);
+			m_idx -= Dir;
+			return cpy;
+		}
+
+		Self &operator+=(ssize_t n)
+		{
+			m_idx += n * Dir;
+			return *this;
+		}
+
+		Self &operator-=(ssize_t n)
+		{
+			m_idx -= n * Dir;
+			return *this;
+		}
+
+		template <typename U = Value,
+		          typename = typename std::enable_if<!Const, U>::type>
+		Value operator*()
+		{
+			return Value(*m_population, m_idx);
+		}
+
+		template <typename U = Value,
+		          typename = typename std::enable_if<!Const, U>::type>
+		Value operator->()
+		{
+			return Value(*m_population, m_idx);
+		}
+
+		template <typename U = Value,
+		          typename = typename std::enable_if<!Const, U>::type>
+		Value operator[](ssize_t n)
+		{
+			return Value(*m_population, m_idx + n * Dir);
+		}
+
+		Value operator*() const { return Value(*m_population, m_idx); }
+
+		Value operator->() const { return Value(*m_population, m_idx); }
+
+		Value operator[](ssize_t n) const
+		{
+			return Value(*m_population, m_idx + n * Dir);
+		}
+	};
+
+private:
+	Impl *impl() { return reinterpret_cast<Impl *>(this); }
+	const Impl *impl() const { return reinterpret_cast<const Impl *>(this); }
+
+protected:
+	ssize_t i0() const { return Begin()(impl()); }
+	ssize_t i1() const { return End()(impl()); }
+	ssize_t ri0() const { return End()(impl()) - 1; }
+	ssize_t ri1() const { return Begin()(impl()) - 1; }
+
+#ifndef NDEBUG
+	/**
+	 * Makes sure the given begin and end indices are inside the valid range.
+	 */
+	void check_range(ssize_t begin_idx, ssize_t end_idx) const
+	{
+		if (begin_idx < i0() || end_idx > i1()) {
+			throw std::out_of_range(
+			    "Range must be a subset of the source population range.");
+		}
+	}
+#else
+	void check_range(ssize_t, ssize_t) const {}
+#endif
+
+public:
+	using iterator = iterator_<1, false>;
+	using const_iterator = iterator_<1, true>;
+	using reverse_iterator = iterator_<-1, false>;
+	using const_reverse_iterator = iterator_<-1, true>;
+
+	/**
+	 * Returns a reference at the i-th neuron in the Population or
+	 * PopulationView.
+	 */
+	Value operator[](size_t i) { return Value(*impl(), i0() + i); }
+
+	/**
+	 * Returns a const-reference at the i-th neuron.
+	 */
+	const Value operator[](size_t i) const { return Value(*impl(), i0() + i); }
+
+	size_t size() { return i1() - i0(); }
+
+	iterator begin() { return iterator(impl(), i0()); }
+
+	iterator end() { return iterator(impl(), i1()); }
+
+	reverse_iterator rbegin() { return reverse_iterator(impl(), ri0()); }
+
+	reverse_iterator rend() { return reverse_iterator(impl(), ri1()); }
+
+	const_iterator begin() const { return cbegin(); }
+
+	const_iterator end() const { return cend(); }
+
+	const_reverse_iterator rbegin() const { return crbegin(); }
+
+	const_reverse_iterator rend() const { return crend(); }
+
+	const_iterator cbegin() const { return const_iterator(impl(), i0()); }
+
+	const_iterator cend() const { return const_iterator(impl(), i1()); }
+
+	const_reverse_iterator crbegin() const
+	{
+		return const_reverse_iterator(impl(), ri0());
+	}
+
+	const_reverse_iterator crend() const
+	{
+		return const_reverse_iterator(impl(), ri1());
+	}
+};
+
+/**
+ * Internally used mixin class which is used to store the first and the last
+ * index of the neurons represented by a PopulationView.
+ */
+class PopulationViewRange {
+private:
+	/**
+	 * Index of the first neuron.
+	 */
+	size_t m_begin_idx;
+
+	/**
+	 * Index of the last plus one neuron.
+	 */
+	size_t m_end_idx;
+
+public:
+	/**
+	 * Constructor of the PopulationViewData mixin. Simply copies the given
+	 * arguments to its internal storage.
+	 *
+	 * @param begin_idx is the index of the first neuron in the population view.
+	 * @param end_idx is the index of the last plus one neuron in the population
+	 * view.
+	 */
+	PopulationViewRange(size_t begin_idx, size_t end_idx)
+	    : m_begin_idx(begin_idx), m_end_idx(end_idx)
+	{
+	}
+
+	/**
+	 * Functor which allows to access the index of the first element from a
+	 * pointer to PopulationViewRange.
+	 */
+	struct Begin {
+		ssize_t operator()(const PopulationViewRange *range)
+		{
+			return static_cast<const PopulationViewRange *>(range)->m_begin_idx;
+		}
+	};
+
+	/**
+	 * Functor which allows to access the index of the first element from a
+	 * pointer to PopulationViewRange.
+	 */
+	struct End {
+		ssize_t operator()(const PopulationViewRange *range)
+		{
+			return static_cast<const PopulationViewRange *>(range)->m_end_idx;
+		}
+	};
+
+	/**
+	 * Internally used functor which returns the index of the first index in a
+	 * population (which always is zero).
+	 */
+	struct StaticBegin {
+		ssize_t operator()(const PopulationBase *) { return 0; }
+	};
+
+	/**
+	 * Internally used functor which returns the index of the last plus one
+	 * index in a population (which always corresponds to its size).
+	 */
+	struct StaticEnd {
+		ssize_t operator()(const PopulationBase *pop);
+	};
 };
 
 /**
@@ -142,9 +490,14 @@ public:
  * cheaply copied around. Do not directly use this class, but the more advanced,
  * templated Population<T> class.
  */
-class PopulationBase : public PopulationConnections<PopulationBase> {
+class PopulationBase
+    : public PopulationConnector<PopulationBase>,
+      public PopulationIterator<NeuronBase, PopulationViewRange::StaticBegin,
+                                PopulationViewRange::StaticEnd,
+                                PopulationBase> {
 private:
 	friend class Network;
+	friend class PopulationConnector;
 
 	/**
 	 * Reference at the actual implementation of the population object.
@@ -162,14 +515,6 @@ protected:
 	explicit PopulationBase(PopulationImpl &impl) : m_impl(impl){};
 
 public:
-	/**
-	 * Returns a NeuronBase instance pointing at the i-th neuron in this
-	 * population.
-	 *
-	 * @param idx is the index of the neuron accessed neuron in this population.
-	 */
-	NeuronBase operator[](size_t idx);
-
 	/**
 	 * Returns a reference at the neuron type descriptor.
 	 */
@@ -189,27 +534,6 @@ public:
 	 * Allows to set the name of the underlying population.
 	 */
 	PopulationBase &name(const std::string &name);
-
-	/**
-	 * Basic connection method. Connects a range of neurons in this population
-	 * to a range of neurons in the given target population. All connection
-	 * methods inherited from PopulationConnections are relayed to this method.
-	 *
-	 * @param nid_src0 is the index of the first neuron in this population that
-	 * is going to be connected.
-	 * @param nid_src1 is the index of the last-plus-one neuron in this
-	 * population being connected.
-	 * @param tar is the target population.
-	 * @param nid_tar0 is the index of the first neuron in the target population
-	 * that is going to be connected.
-	 * @param nid_tar1 is the index of the last-plus-one neuron in the target
-	 * population that is going to be connected.
-	 * @return a reference at this object for simple method chaining.
-	 */
-	PopulationBase &connect(size_t nid_src0, size_t nid_src1,
-	                        PopulationBase tar, size_t nid_tar0,
-	                        size_t nid_tar1,
-	                        std::unique_ptr<Connector> connector);
 
 	/**
 	 * Returns a reference at the underlying network instance.
@@ -277,6 +601,20 @@ public:
 	 * @return the index of the neuron in the top-level population.
 	 */
 	size_t idx() const { return m_idx; }
+
+	/*
+	 * Deference operator. Needed for the population iterator ->() operator to
+	 * be standards compliant.
+	 */
+	NeuronBase *operator->() { return this; }
+	const NeuronBase *operator->() const { return this; }
+
+	/*
+	 * As we already have the -> operator, we should also implement the *
+	 * operator.
+	 */
+	NeuronBase &operator*() { return *this; }
+	const NeuronBase &operator*() const { return *this; }
 };
 
 template <typename T>
@@ -346,7 +684,10 @@ public:
  * @tparam Impl is the actually implementing type.
  */
 template <typename T, typename Begin, typename End, typename Impl>
-class PopulationViewBase : public PopulationBase {
+class PopulationViewBase
+    : public PopulationBase,
+      public PopulationConnector<Impl>,
+      public PopulationIterator<Neuron<T>, Begin, End, Impl> {
 private:
 	template <typename T2>
 	friend class Population;
@@ -354,287 +695,50 @@ private:
 	template <typename T2>
 	friend class PopulationView;
 
-	/**
-	* Generic class implementing the various iterator types exposed by the
-	* Population class. Note that comparison operators only compare the neuron
-	* index and do not check for equivalence of the population object. Comparing
-	* iterators from different population objects is nonsense.
-	*
-	* @tparam Dir is the direction into which the iterator advances.
-	* @tparam Const if true, the iterator allows no write access to the
-	* underlying population. If false, the corresponding access operators are
-	* enabled.
-	*/
-	template <int Dir, bool Const>
-	struct iterator_
-	    : public std::iterator<std::random_access_iterator_tag, Neuron<T>,
-	                           ssize_t, Neuron<T>, std::unique_ptr<Neuron<T>>> {
-	private:
-		/**
-		 * Shorthand for the own type.
-		 */
-		using Self = iterator_<Dir, Const>;
-
-		/**
-		 * Shorthand for the own type.
-		 */
-		using Parent = PopulationViewBase<T, Begin, End, Impl>;
-
-		/**
-		 * Pointer at the backing population object. May either be a const
-		 * pointer (if the Const flag is true) or a normal pointer (if the Const
-		 * flag is false).
-		 */
-		using PopulationPtr =
-		    typename std::conditional<Const, Parent const *, Parent *>::type;
-
-		/**
-		 * Reference to the graph instance this iterator is refering to. The
-		 * graph instance is used to dereference
-		 */
-		PopulationPtr m_population;
-
-		/**
-		 * Current neuron index the iterator points at.
-		 */
-		ssize_t m_idx;
-
-	public:
-		using value_type = Neuron<T>;
-
-		using const_value_type = const Neuron<T>;
-
-		/**
-		 * Type denothing the difference between two iterators.
-		 */
-		using difference_type = ssize_t;
-
-		/**
-		 * Reference type.
-		 */
-		using reference = value_type;
-
-		/**
-		 * Pointer type.
-		 */
-		using pointer = value_type;
-
-		/**
-		 * Const reference type.
-		 */
-		using const_reference = const_value_type;
-
-		/**
-		 * Const pointer type.
-		 */
-		using const_pointer = const_value_type;
-
-		/**
-		 * Constructor, creates an iterator pointing at the neuron with the
-		 * index idx in the given population.
-		 *
-		 * @param population is a pointer at the underlying population.
-		 * @param idx is the index of the neuron.
-		 */
-		iterator_(PopulationPtr population, ssize_t idx)
-		    : m_population(population), m_idx(idx)
-		{
-		}
-
-		/**
-		 * Allow implicit conversion to const-iterators.
-		 */
-		operator iterator_<Dir, true>() const
-		{
-			return iterator_<Dir, true>(m_population, m_idx);
-		}
-
-		bool operator==(const Self &o) const { return m_idx == o.m_idx; }
-
-		bool operator!=(const Self &o) const { return m_idx != o.m_idx; }
-
-		bool operator<(const Self &o) const
-		{
-			return m_idx * Dir < o.m_idx * Dir;
-		}
-
-		bool operator>(const Self &o) const
-		{
-			return m_idx * Dir > o.m_idx * Dir;
-		}
-
-		bool operator<=(const Self &o) const
-		{
-			return m_idx * Dir <= o.m_idx * Dir;
-		}
-
-		bool operator>=(const Self &o) const
-		{
-			return m_idx * Dir >= o.m_idx * Dir;
-		}
-
-		Self operator+(difference_type b)
-		{
-			return Self(m_population, m_idx + b * Dir);
-		}
-
-		Self operator-(difference_type b)
-		{
-			return Self(m_population, m_idx - b * Dir);
-		}
-
-		difference_type operator-(const Self &o) const
-		{
-			return (m_idx - o.m_idx) * Dir;
-		}
-
-		Self &operator++()
-		{
-			m_idx += Dir;
-			return *this;
-		}
-		Self operator++(int)
-		{
-			auto cpy = Self(m_population, m_idx);
-			m_idx += Dir;
-			return cpy;
-		}
-
-		Self &operator--()
-		{
-			m_idx -= Dir;
-			return *this;
-		}
-
-		Self operator--(int)
-		{
-			auto cpy = Self(m_population, m_idx);
-			m_idx -= Dir;
-			return cpy;
-		}
-
-		Self &operator+=(difference_type n)
-		{
-			m_idx += n * Dir;
-			return *this;
-		}
-
-		Self &operator-=(difference_type n)
-		{
-			m_idx -= n * Dir;
-			return *this;
-		}
-
-		template <typename U = T,
-		          typename = typename std::enable_if<!Const, U>::type>
-		reference operator*()
-		{
-			return Neuron<T>(*m_population, m_idx);
-		}
-
-		template <typename U = T,
-		          typename = typename std::enable_if<!Const, U>::type>
-		pointer operator->()
-		{
-			return Neuron<T>(*m_population, m_idx);
-		}
-
-		template <typename U = T,
-		          typename = typename std::enable_if<!Const, U>::type>
-		reference operator[](difference_type n)
-		{
-			return Neuron<T>(*m_population, m_idx + n * Dir);
-		}
-
-		const_reference operator*() const
-		{
-			return Neuron<T>(*m_population, m_idx);
-		}
-
-		const_pointer operator->() const
-		{
-			return Neuron<T>(*m_population, m_idx);
-		}
-
-		const_reference operator[](difference_type n) const
-		{
-			return Neuron<T>(*m_population, m_idx + n * Dir);
-		}
-	};
-
-	ssize_t i0() const { return Begin()(static_cast<const Impl *>(this)); }
-	ssize_t i1() const { return End()(static_cast<const Impl *>(this)); }
-	ssize_t ri0() const { return End()(static_cast<const Impl *>(this)) - 1; }
-	ssize_t ri1() const { return Begin()(static_cast<const Impl *>(this)) - 1; }
-
-/**
- * Makes sure the given begin and end indices are
- */
-#ifndef NDEBUG
-	void check_range(ssize_t begin_idx, ssize_t end_idx) const
-	{
-		if (begin_idx < i0() || end_idx > i1()) {
-			throw std::out_of_range(
-			    "Range must be a subset of the source population range.");
-		}
-	}
-#else
-	void check_range(ssize_t, ssize_t) const {}
-#endif
-
 protected:
 	using PopulationBase::PopulationBase;
+	using PopulationBase::impl;
+
+	using PopulationIterator<Neuron<T>, Begin, End, Impl>::i0;
+	using PopulationIterator<Neuron<T>, Begin, End, Impl>::i1;
+	using PopulationIterator<Neuron<T>, Begin, End, Impl>::ri0;
+	using PopulationIterator<Neuron<T>, Begin, End, Impl>::ri1;
+	using PopulationIterator<Neuron<T>, Begin, End, Impl>::check_range;
 
 public:
-	using iterator = iterator_<1, false>;
-	using const_iterator = iterator_<1, true>;
-	using reverse_iterator = iterator_<-1, false>;
-	using const_reverse_iterator = iterator_<-1, true>;
-
 	using NeuronType = T;
 	using Parameters = typename T::Parameters;
 
-	using PopulationBase::name;
-
-	/**
-	 * Returns the size of the population or the number of neurons in the
-	 * population view.
+	/*
+	 * Forward all the "connect" methods provided by the PopulationConnector
+	 * base class.
 	 */
-	size_t size() { return i1() - i0(); }
+	using PopulationConnector<Impl>::connect;
+
+	/*
+	 * Forward the various container access methods provided by
+	 * PopulationIterator.
+	 */
+	using PopulationIterator<Neuron<T>, Begin, End, Impl>::iterator;
+	using PopulationIterator<Neuron<T>, Begin, End, Impl>::reverse_iterator;
+	using PopulationIterator<Neuron<T>, Begin, End, Impl>::const_iterator;
+	using PopulationIterator<Neuron<T>, Begin, End,
+	                         Impl>::const_reverse_iterator;
+	using PopulationIterator<Neuron<T>, Begin, End, Impl>::operator[];
+	using PopulationIterator<Neuron<T>, Begin, End, Impl>::begin;
+	using PopulationIterator<Neuron<T>, Begin, End, Impl>::end;
+	using PopulationIterator<Neuron<T>, Begin, End, Impl>::rbegin;
+	using PopulationIterator<Neuron<T>, Begin, End, Impl>::rend;
+	using PopulationIterator<Neuron<T>, Begin, End, Impl>::cbegin;
+	using PopulationIterator<Neuron<T>, Begin, End, Impl>::cend;
+	using PopulationIterator<Neuron<T>, Begin, End, Impl>::crbegin;
+	using PopulationIterator<Neuron<T>, Begin, End, Impl>::crend;
+	using PopulationIterator<Neuron<T>, Begin, End, Impl>::size;
 
 	/**
 	 * Returns a reference at the underlying neuron type descriptor.
 	 */
 	const NeuronType &type() const { return NeuronType::inst(); }
-
-	/**
-	 * Setter which allows to set the name of the population. If this object
-	 * is a PopulationView, the name of the population itself will be altered
-	 * -- the population and the population view share the same name. Returns
-	 * a reference at this object for method chaining.
-	 *
-	 * @param name is the new name of the population.
-	 * @return a reference at this object.
-	 */
-	Impl &name(const std::string &name)
-	{
-		PopulationBase::name(name);
-		return *this;
-	};
-
-	/**
-	 * Returns a reference at the i-th neuron in the Population or
-	 * PopulationView.
-	 */
-	Neuron<T> operator[](size_t i) { return Neuron<T>(*this, i0() + i); }
-
-	/**
-	 * Returns a const-reference at the i-th neuron.
-	 */
-	const Neuron<T> operator[](size_t i) const
-	{
-		return Neuron<T>(*this, i0() + i);
-	}
 
 	/**
 	 * Returns a new population view which represents a range of neurons within
@@ -649,105 +753,6 @@ public:
 	 * population.
 	 */
 	PopulationView<T> range(size_t begin_idx, size_t end_idx);
-
-	iterator begin() { return iterator(this, i0()); }
-
-	iterator end() { return iterator(this, i1()); }
-
-	reverse_iterator rbegin() { return reverse_iterator(this, ri0()); }
-
-	reverse_iterator rend() { return reverse_iterator(this, ri1()); }
-
-	const_iterator begin() const { return cbegin(this); }
-
-	const_iterator end() const { return cend(this); }
-
-	const_reverse_iterator rbegin() const { return crbegin(); }
-
-	const_reverse_iterator rend() const { return crend(); }
-
-	const_iterator cbegin() const { return const_iterator(this, i0()); }
-
-	const_iterator cend() const { return const_iterator(this, i1()); }
-
-	const_reverse_iterator crbegin()
-	{
-		return const_reverse_iterator(this, ri0());
-	}
-
-	const_reverse_iterator crend()
-	{
-		return const_reverse_iterator(this, ri1());
-	}
-};
-
-/**
- * Internally used mixin class which is used to store the first and the last
- * index of the neurons represented by a PopulationView.
- */
-class PopulationViewRange {
-private:
-	/**
-	 * Index of the first neuron.
-	 */
-	size_t m_begin_idx;
-
-	/**
-	 * Index of the last plus one neuron.
-	 */
-	size_t m_end_idx;
-
-public:
-	/**
-	 * Constructor of the PopulationViewData mixin. Simply copies the given
-	 * arguments to its internal storage.
-	 *
-	 * @param begin_idx is the index of the first neuron in the population view.
-	 * @param end_idx is the index of the last plus one neuron in the population
-	 * view.
-	 */
-	PopulationViewRange(size_t begin_idx, size_t end_idx)
-	    : m_begin_idx(begin_idx), m_end_idx(end_idx)
-	{
-	}
-
-	/**
-	 * Functor which allows to access the index of the first element from a
-	 * pointer to PopulationViewRange.
-	 */
-	struct Begin {
-		ssize_t operator()(const PopulationViewRange *range)
-		{
-			return static_cast<const PopulationViewRange *>(range)->m_begin_idx;
-		}
-	};
-
-	/**
-	 * Functor which allows to access the index of the first element from a
-	 * pointer to PopulationViewRange.
-	 */
-	struct End {
-		ssize_t operator()(const PopulationViewRange *range)
-		{
-			return static_cast<const PopulationViewRange *>(range)->m_end_idx;
-		}
-	};
-
-	/**
-	 * Internally used functor which returns the index of the first index in a
-	 * population (which always is zero).
-	 */
-	struct StaticBegin {
-		ssize_t operator()(const PopulationBase *) { return 0; }
-	};
-
-	/**
-	 * Internally used functor which returns the index of the last plus one
-	 * index in a population (which always corresponds to its size).
-	 */
-	struct StaticEnd {
-		ssize_t operator()(const PopulationBase *pop) { return pop->size(); }
-	};
 };
 
 /**
@@ -763,9 +768,7 @@ template <typename T>
 class PopulationView
     : public PopulationViewBase<T, PopulationViewRange::Begin,
                                 PopulationViewRange::End, PopulationView<T>>,
-      public PopulationViewRange,
-      public PopulationConnections<PopulationView<T>> {
-
+      public PopulationViewRange {
 public:
 	using PopulationViewBaseType =
 	    PopulationViewBase<T, PopulationViewRange::Begin,
@@ -805,8 +808,7 @@ public:
 template <typename T>
 class Population
     : public PopulationViewBase<T, PopulationViewRange::StaticBegin,
-                                PopulationViewRange::StaticEnd, Population<T>>,
-      public PopulationConnections<PopulationView<T>> {
+                                PopulationViewRange::StaticEnd, Population<T>> {
 private:
 	friend class Network;
 
@@ -1007,9 +1009,10 @@ public:
  * Out-of class member function definitions
  */
 
-inline NeuronBase PopulationBase::operator[](size_t idx)
+inline ssize_t PopulationViewRange::StaticEnd::operator()(
+    const PopulationBase *pop)
 {
-	return NeuronBase(*this, idx);
+	return pop->size();
 }
 
 template <typename T, typename Begin, typename End, typename Impl>

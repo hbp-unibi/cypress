@@ -49,6 +49,17 @@ public:
 }
 
 /*
+ * Free-standing functions
+ */
+
+void connect(PopulationBase &, size_t , size_t ,
+             PopulationBase &, size_t , size_t ,
+             std::unique_ptr<Connector> )
+{
+	// TODO
+}
+
+/*
  * Class PopulationImpl
  */
 

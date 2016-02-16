@@ -550,4 +550,19 @@ TEST(network, population_by_name)
 	ASSERT_THROW(n.population<IfCondExp>("foo"),
 	             Network::NoSuchPopulationException);
 }
+
+TEST(network, connect)
+{
+	Network n;
+
+	Population<SpikeSourceArray> pop1 = n.create_population<SpikeSourceArray>(1, {});
+	Population<IfCondExp> pop2 = n.create_population<IfCondExp>(10, {});
+
+	pop1.connect(pop2, Connector::all_to_all(0.016, 0.01));
+
+	PopulationBase pop3 = pop2;
+
+	pop3.connect(pop2, Connector::all_to_all(0.016, 0.01));
+}
+
 }
