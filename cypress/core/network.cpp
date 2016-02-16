@@ -22,6 +22,7 @@
 namespace cypress {
 
 namespace {
+// TODO: Move to neurons.hpp
 /**
  * Internally used parameter type with no parameters.
  */
@@ -49,26 +50,15 @@ public:
 }
 
 /*
- * Free-standing functions
- */
-
-void connect(PopulationBase &, size_t , size_t ,
-             PopulationBase &, size_t , size_t ,
-             std::unique_ptr<Connector> )
-{
-	// TODO
-}
-
-/*
  * Class PopulationImpl
  */
 
 class PopulationImpl {
 private:
 	/**
-	 * Pointer at the actual network instance.
+	 * Index of this population within the network instance.
 	 */
-	Network *m_network;
+	size_t m_idx;
 
 	/**
 	 * Size of the population.
@@ -95,7 +85,7 @@ public:
 	 * Default constructor of the PopulationImpl class.
 	 */
 	PopulationImpl()
-	    : m_network(nullptr),
+	    : m_idx(0),
 	      m_size(0),
 	      m_type(&NullNeuronType::inst()),
 	      m_parameters(NullNeuronType::Parameters()),
@@ -103,10 +93,10 @@ public:
 	{
 	}
 
-	PopulationImpl(Network *network, size_t size, const NeuronType &type,
+	PopulationImpl(size_t idx, size_t size, const NeuronType &type,
 	               const NeuronParametersBase &parameters,
 	               const std::string &name)
-	    : m_network(network),
+	    : m_idx(idx),
 	      m_size(size),
 	      m_type(&type),
 	      m_parameters(parameters),
@@ -115,6 +105,8 @@ public:
 	}
 
 	const NeuronType &type() const { return *m_type; }
+
+	size_t idx() const { return m_idx; }
 
 	size_t size() const { return m_size; }
 
@@ -125,32 +117,10 @@ public:
 		m_name = name;  // TODO: Update network
 	};
 
-	Network &network() { return *m_network; }
-
 	const NeuronParametersBase &parameters() const { return m_parameters; }
 
 	bool homogeneous() const { return true; }
 };
-
-/*
- * Class PopulationBase
- */
-
-const NeuronType &PopulationBase::type() const { return m_impl.type(); }
-
-size_t PopulationBase::size() const { return m_impl.size(); }
-
-const std::string &PopulationBase::name() const { return m_impl.name(); }
-
-PopulationBase &PopulationBase::name(const std::string &name)
-{
-	m_impl.name(name);
-	return *this;
-}
-
-Network &PopulationBase::network() { return m_impl.network(); }
-
-bool PopulationBase::homogeneous() const { return m_impl.homogeneous(); }
 
 /**
  * Class NetworkImpl
@@ -174,13 +144,21 @@ public:
 		return res;
 	}
 
-	PopulationImpl &create_population(Network *network, size_t size,
-	                                  const NeuronType &type,
+	void connect(size_t pid_src, size_t nid_src0, size_t nid_src1,
+	             size_t pid_tar, size_t nid_tar0, size_t nid_tar1,
+	             std::unique_ptr<Connector> connector)
+	{
+		std::cout << pid_src << ", " << nid_src0 << ", " << nid_src1 << ", "
+		          << pid_tar << ", " << nid_tar0 << ", " << nid_tar1
+		          << std::endl;
+	}
+
+	PopulationImpl &create_population(size_t size, const NeuronType &type,
 	                                  const NeuronParametersBase &params,
 	                                  const std::string &name)
 	{
-		m_populations.emplace_back(
-		    make_clone<PopulationImpl>(network, size, type, params, name));
+		m_populations.emplace_back(make_clone<PopulationImpl>(
+		    m_populations.size(), size, type, params, name));
 		return *m_populations.back();
 	}
 
@@ -200,6 +178,18 @@ public:
 	}
 };
 
+/*
+ * Class PopulationBase
+ */
+
+const NeuronType &PopulationBase::type() const { return m_impl.type(); }
+
+size_t PopulationBase::size() const { return m_impl.size(); }
+
+const std::string &PopulationBase::name() const { return m_impl.name(); }
+
+bool PopulationBase::homogeneous() const { return m_impl.homogeneous(); }
+
 /**
  * Class Network
  */
@@ -215,6 +205,24 @@ Network::~Network()
 	// Only required for the unique ptr to NetworkImpl
 }
 
+Network &Network::connect(PopulationBase &src, size_t nid_src0, size_t nid_src1,
+                          PopulationBase &tar, size_t nid_tar0, size_t nid_tar1,
+                          std::unique_ptr<Connector> connector)
+{
+	// Make sure both belong to the same network instance
+	if (&src.network() != this || &tar.network() != this) {
+		throw InvalidConnectionException(
+		    "Source and target population must belong to the same network "
+		    "instance!");
+	}
+
+	// Call the connect method in the network implementation
+	m_impl->connect(src.impl().idx(), nid_src0, nid_src1, tar.impl().idx(),
+	                nid_tar0, nid_tar1, std::move(connector));
+
+	return *this;
+}
+
 std::vector<PopulationImpl *> Network::populations(const std::string &name,
                                                    const NeuronType *type)
 {
@@ -227,7 +235,7 @@ PopulationImpl &Network::create_population(size_t size, const NeuronType &type,
                                            const NeuronParametersBase &params,
                                            const std::string &name)
 {
-	return m_impl->create_population(this, size, type, params, name);
+	return m_impl->create_population(size, type, params, name);
 }
 
 Network &Network::run(const Backend &backend, float duration)

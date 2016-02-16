@@ -52,27 +52,6 @@ template <typename T>
 class Neuron;
 
 /**
- * Base connection method. Connects a range of neurons in the source population
- * to a range of neurons in the target population. All connection methods
- * inherited from PopulationConnections are relayed to this method.
- *
- * @param src is the source population.
- * @param nid_src0 is the index of the first neuron in this population that
- * is going to be connected.
- * @param nid_src1 is the index of the last-plus-one neuron in this
- * population being connected.
- * @param tar is the target population.
- * @param nid_tar0 is the index of the first neuron in the target population
- * that is going to be connected.
- * @param nid_tar1 is the index of the last-plus-one neuron in the target
- * population that is going to be connected.
- * @return a reference at this object for simple method chaining.
- */
-void connect(PopulationBase &src, size_t nid_src0, size_t nid_src1,
-             PopulationBase &tar, size_t nid_tar0, size_t nid_tar1,
-             std::unique_ptr<Connector> connector);
-
-/**
  * Class defining the basic static method used to connect neurons.
  */
 template <typename Impl>
@@ -101,9 +80,9 @@ public:
 	              std::unique_ptr<Connector> connector,
 	              typename std::enable_if<true>::type * = nullptr)
 	{
-		cypress::connect(impl(), i0(), i1(), tar_begin->population(),
-		                 tar_begin->idx(), tar_end->idx(),
-		                 std::move(connector));
+		impl().network().connect(impl(), i0(), i1(), tar_begin->population(),
+		                         tar_begin->idx(), tar_end->idx(),
+		                         std::move(connector));
 		return impl();
 	}
 
@@ -120,8 +99,9 @@ public:
 	                  std::is_base_of<std::random_access_iterator_tag,
 	                                  TargetIterator>::value>::type * = nullptr)
 	{
-		cypress::connect(impl(), i0(), i1(), tar->population(), tar->idx(),
-		                 tar->idx() + 1, std::move(connector));
+		impl().network().connect(impl(), i0(), i1(), tar->population(),
+		                         tar->idx(), tar->idx() + 1,
+		                         std::move(connector));
 		return impl();
 	}
 
@@ -137,8 +117,9 @@ public:
 	    typename std::enable_if<
 	        std::is_base_of<NeuronBase, TargetNeuron>::value>::type * = nullptr)
 	{
-		cypress::connect(impl(), i0(), i1(), tar.population(), tar.idx(),
-		                 tar.idx() + 1, std::move(connector));
+		impl().network().connect(impl(), i0(), i1(), tar.population(),
+		                         tar.idx(), tar.idx() + 1,
+		                         std::move(connector));
 		return impl();
 	}
 
@@ -159,8 +140,8 @@ public:
 	        std::is_base_of<PopulationBase, TargetPopulation>::value>::type * =
 	        nullptr)
 	{
-		cypress::connect(impl(), i0(), i1(), tar, tar.begin()->idx(),
-		                 tar.end()->idx(), std::move(connector));
+		impl().network().connect(impl(), i0(), i1(), tar, tar.begin()->idx(),
+		                         tar.end()->idx(), std::move(connector));
 		return impl();
 	}
 };
@@ -497,7 +478,14 @@ class PopulationBase
                                 PopulationBase> {
 private:
 	friend class Network;
-	friend class PopulationConnector;
+	friend void connect(PopulationBase &, size_t, size_t, PopulationBase &tar,
+	                    size_t, size_t, std::unique_ptr<Connector>);
+
+	/**
+	 * Reference at the network instance from which this population handle was
+	 * retrieved.
+	 */
+	Network &m_network;
 
 	/**
 	 * Reference at the actual implementation of the population object.
@@ -512,9 +500,25 @@ protected:
 	 * Constructor of the PopulationBase class. Populations can only be created
 	 * by the Network class.
 	 */
-	explicit PopulationBase(PopulationImpl &impl) : m_impl(impl){};
+	explicit PopulationBase(Network &network, PopulationImpl &impl)
+	    : m_network(network), m_impl(impl){};
 
 public:
+	PopulationBase(const PopulationBase &) = default;
+	PopulationBase(PopulationBase &&) noexcept = default;
+	PopulationBase &operator=(const PopulationBase &) = default;
+	PopulationBase &operator=(PopulationBase &&) = default;
+
+	/**
+	 * Returns a reference at the underlying network instance.
+	 */
+	Network &network() { return m_network; }
+
+	/**
+	 * Returns a const reference at the underlying network instance.
+	 */
+	const Network &network() const { return m_network; }
+
 	/**
 	 * Returns a reference at the neuron type descriptor.
 	 */
@@ -529,16 +533,6 @@ public:
 	 * Returns the name of the population.
 	 */
 	const std::string &name() const;
-
-	/**
-	 * Allows to set the name of the underlying population.
-	 */
-	PopulationBase &name(const std::string &name);
-
-	/**
-	 * Returns a reference at the underlying network instance.
-	 */
-	Network &network();
 
 	/**
 	 * Returns true if all neurons in the population share the same parameters.
@@ -789,7 +783,7 @@ public:
 	 */
 	template <typename PopulationType>
 	PopulationView(PopulationType &parent, size_t begin_idx, size_t end_idx)
-	    : PopulationViewBaseType(parent.impl()),
+	    : PopulationViewBaseType(parent.network(), parent.impl()),
 	      PopulationViewRange(parent.i0() + begin_idx, parent.i0() + end_idx)
 	{
 		parent.check_range(PopulationViewBaseType::i0(),
@@ -871,6 +865,11 @@ public:
 		using std::runtime_error::runtime_error;
 	};
 
+	class InvalidConnectionException : public std::runtime_error {
+	public:
+		using std::runtime_error::runtime_error;
+	};
+
 	/**
 	 * Constructor of the network class -- returns an empty network.
 	 */
@@ -891,6 +890,28 @@ public:
 	 * Returns the time stamp of the last spike stored in a SpikeSourceArray.
 	 */
 	float duration() const;
+
+	/**
+	 * Base connection method. Connects a range of neurons in the source
+	 * population
+	 * to a range of neurons in the target population. All connection methods
+	 * in PopulationConnections are relayed to this method.
+	 *
+	 * @param src is the source population.
+	 * @param nid_src0 is the index of the first neuron in this population that
+	 * is going to be connected.
+	 * @param nid_src1 is the index of the last-plus-one neuron in this
+	 * population being connected.
+	 * @param tar is the target population.
+	 * @param nid_tar0 is the index of the first neuron in the target population
+	 * that is going to be connected.
+	 * @param nid_tar1 is the index of the last-plus-one neuron in the target
+	 * population that is going to be connected.
+	 * @return a reference at this object for simple method chaining.
+	 */
+	Network &connect(PopulationBase &src, size_t nid_src0, size_t nid_src1,
+	                 PopulationBase &tar, size_t nid_tar0, size_t nid_tar1,
+	                 std::unique_ptr<Connector> connector);
 
 	/**
 	 * Creates a new population instance.
@@ -923,7 +944,7 @@ public:
 	{
 		std::vector<PopulationBase> res;
 		for (PopulationImpl *p : populations(name, nullptr)) {
-			res.push_back(PopulationBase(*p));
+			res.push_back(PopulationBase(*this, *p));
 		}
 		return res;
 	}
@@ -943,7 +964,7 @@ public:
 	{
 		std::vector<Population<T>> res;
 		for (PopulationImpl *p : populations(name, &T::inst())) {
-			res.push_back(Population<T>(*p));
+			res.push_back(Population<T>(*this, *p));
 		}
 		return res;
 	}
@@ -1027,7 +1048,7 @@ inline Population<T>::Population(Network &network, size_t size,
                                  const typename T::Parameters &params,
                                  const std::string &name)
     : Population<T>::PopulationViewBaseType(
-          network.create_population(size, T::inst(), params, name))
+          network, network.create_population(size, T::inst(), params, name))
 {
 }
 }

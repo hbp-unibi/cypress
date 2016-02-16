@@ -507,14 +507,18 @@ TEST(network, duration)
 
 TEST(network, clone)
 {
-	Network n1;
-	n1.create_population<SpikeSourceArray>(10, {100.0, 200.0, 300.0});
-	n1.create_population<SpikeSourceArray>(20, {});
-	n1.create_population<SpikeSourceArray>(30, {100.0, 400.0});
+	Network n2;
+	{
+		Network n1;
+		n1.create_population<SpikeSourceArray>(10, {100.0, 200.0, 300.0});
+		n1.create_population<SpikeSourceArray>(20, {});
+		n1.create_population<SpikeSourceArray>(30, {100.0, 400.0});
 
-	Network n2 = n1;
+		EXPECT_EQ(400.0, n1.duration());
 
-	EXPECT_EQ(400.0, n1.duration());
+		n2 = n1;
+	}
+
 	EXPECT_EQ(400.0, n2.duration());
 }
 
@@ -555,7 +559,8 @@ TEST(network, connect)
 {
 	Network n;
 
-	Population<SpikeSourceArray> pop1 = n.create_population<SpikeSourceArray>(1, {});
+	Population<SpikeSourceArray> pop1 =
+	    n.create_population<SpikeSourceArray>(1, {});
 	Population<IfCondExp> pop2 = n.create_population<IfCondExp>(10, {});
 
 	pop1.connect(pop2, Connector::all_to_all(0.016, 0.01));
@@ -564,5 +569,4 @@ TEST(network, connect)
 
 	pop3.connect(pop2, Connector::all_to_all(0.016, 0.01));
 }
-
 }
