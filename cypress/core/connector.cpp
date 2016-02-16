@@ -20,4 +20,56 @@
 
 namespace cypress {
 
+/**
+ * Class Connector
+ */
+
+Connector::Connector() = default;
+
+Connector::~Connector() = default;
+
+std::unique_ptr<AllToAllConnector> Connector::all_to_all(float weight,
+                                                         float delay)
+{
+	return std::move(std::make_unique<AllToAllConnector>(weight, delay));
+}
+
+/**
+ * Class AllToAllConnector
+ */
+
+const std::string AllToAllConnector::m_name = "AllToAllConnector";
+
+AllToAllConnector::AllToAllConnector(float weight, float delay)
+    : m_weight(weight), m_delay(delay)
+{
+}
+
+AllToAllConnector::~AllToAllConnector() {}
+
+size_t AllToAllConnector::connect(const ConnectionDescriptor &descr,
+                                  Connection tar_mem[])
+{
+	size_t i = 0;
+	for (size_t src = descr.nid_src_begin; src < descr.nid_src_end; src++) {
+		for (size_t tar = descr.nid_tar_begin; tar < descr.nid_tar_end; tar++) {
+			tar_mem[i++] = Connection(descr.pid_src, descr.pid_tar, src, tar,
+			                          m_weight, m_delay);
+		}
+	}
+	return i;
+}
+
+size_t AllToAllConnector::connection_count(const ConnectionDescriptor &descr)
+{
+	return (descr.nid_src_end - descr.nid_src_begin) *
+	       (descr.nid_tar_end - descr.nid_tar_begin);
+}
+
+bool AllToAllConnector::connection_valid(const ConnectionDescriptor &)
+{
+	return true;
+}
+
+const std::string &AllToAllConnector::name() { return m_name; }
 }

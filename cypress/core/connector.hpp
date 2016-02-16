@@ -22,6 +22,7 @@
 #define CYPRESS_CORE_CONNECTOR_HPP
 
 #include <functional>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -267,6 +268,16 @@ public:
 	};
 
 	/**
+	 * Default constructor.
+	 */
+	Connector();
+
+	/**
+	 * Virtual default destructor.
+	 */
+	virtual ~Connector();
+
+	/**
 	 * Tells the Connector to actually create the neuron-to-neuron connections
 	 * between certain neurons.
 	 *
@@ -311,8 +322,6 @@ public:
 	/**
 	 * Virtual destructor of the connector.
 	 */
-	virtual ~Connector();
-
 	/**
 	 * Creates an all-to-all connector and returns a pointer at the connector.
 	 *
@@ -383,7 +392,15 @@ class AllToAllConnector : public Connector {
 private:
 	static const std::string m_name;
 
+	float m_weight;
+
+	float m_delay;
+
 public:
+	AllToAllConnector(float weight = 0.0, float delay = 0.0);
+
+	~AllToAllConnector() override;
+
 	size_t connect(const ConnectionDescriptor &descr,
 	               Connection tar_mem[]) override;
 
@@ -391,12 +408,7 @@ public:
 
 	bool connection_valid(const ConnectionDescriptor &descr) override;
 
-	const std::string &name() override
-	{
-		return m_name;
-	}
-
-	~AllToAllConnector() override;
+	const std::string &name() override;
 };
 }
 
