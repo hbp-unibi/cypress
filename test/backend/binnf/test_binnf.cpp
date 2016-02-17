@@ -93,10 +93,19 @@ TEST(binnf, python_communication)
 
 	// Read it back, expect the deserialisation to be successful
 	auto res = deserialise(proc.child_stdout());
-	ASSERT_TRUE(res.first);
+	EXPECT_TRUE(res.first);
 
 	// Make sure input and output data are equal
-	check_equal(block_in, res.second);
+	if (res.first) {
+		check_equal(block_in, res.second);
+	} else {
+		// Most likely there is an error message
+		char buf[4096];
+		while (proc.child_stderr().good()) {
+			proc.child_stderr().read(buf, 4096);
+			std::cout.write(buf, proc.child_stderr().gcount());
+		}
+	}
 
 	// Make sure the Python code does not crash
 	EXPECT_EQ(0, proc.wait());
