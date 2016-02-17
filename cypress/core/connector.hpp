@@ -293,12 +293,12 @@ public:
 	/**
 	 * Default constructor.
 	 */
-	Connector();
+	Connector() {}
 
 	/**
 	 * Virtual default destructor.
 	 */
-	virtual ~Connector();
+	virtual ~Connector() {}
 
 	/**
 	 * Tells the Connector to actually create the neuron-to-neuron connections
@@ -411,27 +411,79 @@ public:
 	    float stddev_delay = 0.0, bool resurrect = false);
 };
 
-class AllToAllConnector : public Connector {
+/**
+ * Abstract base class for connectors with a weight and an delay.
+ */
+class UniformConnector : public Connector {
 private:
-	static const std::string m_name;
-
 	float m_weight;
-
 	float m_delay;
 
 public:
-	AllToAllConnector(float weight = 0.0, float delay = 0.0);
+	UniformConnector(float weight = 0.0, float delay = 0.0)
+	    : m_weight(weight), m_delay(delay) {}
 
-	~AllToAllConnector() override;
+	float weight() const { return m_weight; }
+	float delay() const { return m_delay; }
+};
+
+/**
+ * The AllToAllConnector class is used to establish a connection from each
+ * neuron in the specified source population to every neuron in the specified
+ * target population.
+ */
+class AllToAllConnector : public UniformConnector {
+private:
+	static const std::string m_name;
+
+public:
+	using UniformConnector::UniformConnector;
+
+	~AllToAllConnector() override {}
 
 	size_t connect(const ConnectionDescriptor &descr,
 	               Connection tar_mem[]) override;
 
-	size_t connection_count(const ConnectionDescriptor &descr) override;
+	size_t connection_count(const ConnectionDescriptor &descr) override
+	{
+		return descr.nsrc() * descr.ntar();
+	}
 
-	bool connection_valid(const ConnectionDescriptor &descr) override;
+	bool connection_valid(const ConnectionDescriptor &) override
+	{
+		return true;
+	}
 
-	const std::string &name() override;
+	const std::string &name() override { return m_name; }
+};
+
+/**
+ * The OneToOneConnector connects pairs of neurons between source and target
+ * population. The number of neurons in both populations must be equal.
+ */
+class OneToOneConnector : public UniformConnector {
+private:
+	static const std::string m_name;
+
+public:
+	using UniformConnector::UniformConnector;
+
+	~OneToOneConnector() override {}
+
+	size_t connect(const ConnectionDescriptor &descr,
+	               Connection tar_mem[]) override;
+
+	size_t connection_count(const ConnectionDescriptor &descr) override
+	{
+		return descr.nsrc();
+	}
+
+	bool connection_valid(const ConnectionDescriptor &descr) override
+	{
+		return descr.nsrc() == descr.ntar();
+	}
+
+	const std::string &name() override { return m_name; }
 };
 }
 

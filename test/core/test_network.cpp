@@ -562,11 +562,20 @@ TEST(network, connect)
 	Population<SpikeSourceArray> pop1 =
 	    n.create_population<SpikeSourceArray>(1, {});
 	Population<IfCondExp> pop2 = n.create_population<IfCondExp>(10, {});
+	Population<IfCondExp> pop3 = n.create_population<IfCondExp>(10, {});
+	Population<IfCondExp> pop4 = n.create_population<IfCondExp>(20, {});
 
 	pop1.connect(pop2, Connector::all_to_all(0.016, 0.01));
+	pop1.connect(pop3, Connector::all_to_all(0.016, 0.01));
+	pop2.connect(pop4.range(0, 10), Connector::one_to_one(0.016, 0.01));
+	pop3.connect(pop4.range(10, 20), Connector::one_to_one(0.016, 0.01));
+	pop4.range(0, 10).connect(pop3, Connector::all_to_all(0.016, 0.01));
+	pop4.range(10, 20).connect(pop2, Connector::all_to_all(0.016, 0.01));
 
-	PopulationBase pop3 = pop2;
-
-	pop3.connect(pop2, Connector::all_to_all(0.016, 0.01));
+	for (auto &c : n.connections()) {
+		std::cout << c.pid_src() << ", " << c.nid_src0() << ", " << c.nid_src1()
+		          << " --> " << c.pid_tar() << ", " << c.nid_tar0() << ", "
+		          << c.nid_tar1() << std::endl;
+	}
 }
 }

@@ -24,14 +24,16 @@ namespace cypress {
  * Class Connector
  */
 
-Connector::Connector() = default;
-
-Connector::~Connector() = default;
-
 std::unique_ptr<AllToAllConnector> Connector::all_to_all(float weight,
                                                          float delay)
 {
 	return std::move(std::make_unique<AllToAllConnector>(weight, delay));
+}
+
+std::unique_ptr<OneToOneConnector> Connector::one_to_one(float weight,
+                                                         float delay)
+{
+	return std::move(std::make_unique<OneToOneConnector>(weight, delay));
 }
 
 /**
@@ -40,35 +42,36 @@ std::unique_ptr<AllToAllConnector> Connector::all_to_all(float weight,
 
 const std::string AllToAllConnector::m_name = "AllToAllConnector";
 
-AllToAllConnector::AllToAllConnector(float weight, float delay)
-    : m_weight(weight), m_delay(delay)
-{
-}
-
-AllToAllConnector::~AllToAllConnector() {}
-
 size_t AllToAllConnector::connect(const ConnectionDescriptor &descr,
                                   Connection tar_mem[])
 {
 	size_t i = 0;
 	for (NeuronIndex src = descr.nid_src0(); src < descr.nid_src1(); src++) {
-		for (NeuronIndex tar = descr.nid_tar0(); tar < descr.nid_tar1(); tar++) {
+		for (NeuronIndex tar = descr.nid_tar0(); tar < descr.nid_tar1();
+		     tar++) {
 			tar_mem[i++] = Connection(descr.pid_src(), descr.pid_tar(), src,
-			                          tar, m_weight, m_delay);
+			                          tar, weight(), delay());
 		}
 	}
 	return i;
 }
 
-size_t AllToAllConnector::connection_count(const ConnectionDescriptor &descr)
-{
-	return descr.nsrc() * descr.ntar();
-}
+/**
+ * Class OneToOneConnector
+ */
 
-bool AllToAllConnector::connection_valid(const ConnectionDescriptor &)
-{
-	return true;
-}
+const std::string OneToOneConnector::m_name = "OneToOneConnector";
 
-const std::string &AllToAllConnector::name() { return m_name; }
+size_t OneToOneConnector::connect(const ConnectionDescriptor &descr,
+                                  Connection tar_mem[])
+{
+	size_t i = 0;
+	size_t n = descr.nsrc();  // == descr.ntar()
+	for (; i < n; i++) {
+		tar_mem[i] =
+		    Connection(descr.pid_src(), descr.pid_tar(), descr.nid_src0() + i,
+		               descr.nid_src1() + i, weight(), delay());
+	}
+	return i;
+}
 }
