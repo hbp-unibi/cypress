@@ -23,6 +23,11 @@ if(NOT CMAKE_BUILD_TYPE)
 	set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Choose the type of build, options are: Debug Release RelWithDebInfo MinSizeRel." FORCE)
 endif()
 
+# Link statically
+SET(CMAKE_FIND_LIBRARY_SUFFIXES ".a")
+SET(BUILD_SHARED_LIBRARIES OFF)
+SET(CMAKE_EXE_LINKER_FLAGS "-static -s")
+
 include_directories(
 	${CMAKE_SOURCE_DIR}
 	PRIVATE
@@ -58,6 +63,7 @@ add_library(cypress
 	cypress/core/connector
 	cypress/core/neurons
 	cypress/core/network
+	cypress/core/types
 	cypress/util/clone_ptr
 	cypress/util/comperator
 	cypress/util/matrix
@@ -79,23 +85,24 @@ target_link_libraries(raw_binnf cypress)
 # Unit tests -- only enable if gtest is present
 #
 enable_testing()
-find_package(GTest)
-if(${GTEST_FOUND})
-	include_directories(${GTEST_INCLUDE_DIR})
+add_subdirectory(lib/googletest)
+set(GTEST_INCLUDE_DIRS ${GTEST_SOURCE_DIR}/include ${GTEST_SOURCE_DIR})
+set(GTEST_LIBRARIES gtest gtest_main)
+set(GTEST ON)
+include_directories(${GTEST_INCLUDE_DIRS})
 
-	add_executable(test_cypress
-		test/backend/binnf/test_binnf
-		test/core/test_network
+add_executable(test_cypress
+	test/backend/binnf/test_binnf
+	test/core/test_network
 #		test/util/test_comperator
-		test/util/test_process
-		test/util/test_resource
-	)
+	test/util/test_process
+	test/util/test_resource
+)
 
-	target_link_libraries(test_cypress
-		cypress
-		${GTEST_BOTH_LIBRARIES}
-	)
+target_link_libraries(test_cypress
+	cypress
+	${GTEST_LIBRARIES}
+)
 
-	add_test(test_cypress test_cypress)
-endif()
+add_test(test_cypress test_cypress)
 
