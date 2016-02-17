@@ -21,4 +21,5 @@
 // List all auto-generated resource files here
 #include <resource/backend/pynn/pynn_interface.hpp>
 #include <resource/backend/pynn/pynn_binnf_loopback.hpp>
+#include <resource/backend/nmpi/nmpi_broker.hpp>
 

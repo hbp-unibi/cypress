@@ -36,9 +36,11 @@ function minify {
 }
 
 function build_resource {
-	RESOURCE_NAME=${1}
-	shift
-	echo "// This file is auto-generated. Do not modify."
+	RESOURCE_NAME="${1}"; shift
+	OUT_FILE="${1}"; shift
+	PY_OUT_FILE="`dirname "$OUT_FILE"`/`basename $OUT_FILE .hpp`.py"
+	mkdir -p "`dirname "$OUT_FILE"`"
+	(echo "// This file is auto-generated. Do not modify."
 	echo
 	echo "#pragma once"
 	echo
@@ -49,23 +51,36 @@ function build_resource {
 	echo
 	echo "namespace cypress {"
 	echo "const Resource Resources::${RESOURCE_NAME}(std::vector<uint8_t>({"
-	cat $* | minify | hexdump -v -e '1 1 "0x%02x,"'
+	cat $* | tee $PY_OUT_FILE | minify | hexdump -v -e '1 1 "0x%02x,"'
 	echo -n "}));"
 	echo "}"
 	echo
-	echo "#endif /* RES_${RESOURCE_NAME}_HPP */"
+	echo "#endif /* RES_${RESOURCE_NAME}_HPP */") > $OUT_FILE
 }
 
+# Download the hbp_neuromorphic_platform python package if it does not exist yet
+if [ ! -f "$DIR/backend/nmpi/lib/nmpi/nmpi_user.py" ]; then
+	echo "Downloading current version of the hbp_neuromorphic_platform package"
+	mkdir -p "$DIR/backend/nmpi/lib"
+	pip install -t "$DIR/backend/nmpi/lib" hbp_neuromorphic_platform
+	echo "Done."
+fi
+
 # Build the PyNN script Python code into a resource
-build_resource PYNN_INTERFACE \
+build_resource PYNN_INTERFACE "$OUT_DIR/pynn/pynn_interface.hpp" \
 	"$DIR/backend/pynn/constants.py" \
 	"$DIR/backend/pynn/binnf.py" \
 	"$DIR/backend/pynn/cypress.py" \
-	"$DIR/backend/pynn/cli.py" > "$OUT_DIR/pynn_interface.hpp"
+	"$DIR/backend/pynn/cli.py"
 
 # Build the PyNN script Python code into a resource
-build_resource PYNN_BINNF_LOOPBACK \
+build_resource PYNN_BINNF_LOOPBACK "$OUT_DIR/pynn/pynn_binnf_loopback.hpp" \
 	"$DIR/backend/pynn/binnf.py" \
-	"$DIR/backend/pynn/loopback.py" > "$OUT_DIR/pynn_binnf_loopback.hpp"
+	"$DIR/backend/pynn/loopback.py"
 
+# Build the NMPI Python code into a resource
+build_resource PYNN_BINNF_LOOPBACK "$OUT_DIR/nmpi/nmpi_broker.hpp" \
+	"$DIR/backend/nmpi/header.py" \
+	"$DIR/backend/nmpi/lib/nmpi/nmpi_user.py" \
+	"$DIR/backend/nmpi/broker.py"
 

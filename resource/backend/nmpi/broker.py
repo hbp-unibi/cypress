@@ -35,7 +35,7 @@ try:
                         "lib/nmpi")
     if os.path.exists(os.path.join(path, "nmpi_user.py")):
         sys.path.append(path)
-        import nmpi_user as nmpi
+        from nmpi_user import *
 except ImportError:
     pass
 
@@ -185,7 +185,7 @@ if not "username" in config:
 # Create the client instance
 token = config["token"] if "token" in config else None
 while True:
-    client = nmpi.Client(username=config["username"], token=token)
+    client = Client(username=config["username"], token=token)
     config["token"] = client.token
 
     # Save the configuration, including the current client token
@@ -217,7 +217,6 @@ while True:
 # Print the log
 job = client.get_job(job_id)
 print(job["log"])
-print job
 
 # Download the result files
 datalist = job["output_data"]
