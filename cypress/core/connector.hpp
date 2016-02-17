@@ -26,6 +26,7 @@
 #include <string>
 #include <vector>
 
+#include <cypress/core/types.hpp>
 #include <cypress/util/comperator.hpp>
 
 namespace cypress {
@@ -191,12 +192,88 @@ struct Connection {
 /*
  * Forward declarations.
  */
+class Connector;
 class AllToAllConnector;
 class OneToOneConnector;
 class FromListConnector;
 class FromFunctorConnector;
 class FixedProbabilityConnector;
 class GaussNoiseConnector;
+
+/**
+ * The ConnectionDescriptor represents a user-defined connection between two
+ * neuron populations.
+ */
+class ConnectionDescriptor {
+private:
+	/**
+	 * The source population id.
+	 */
+	PopulationIndex m_pid_src;
+
+	/**
+	 * Index of the first neuron in the source population involved in the
+	 * connection.
+	 */
+	NeuronIndex m_nid_src0;
+
+	/**
+	 * Index of the first neuron in the target population involved in the
+	 * connection.
+	 */
+	NeuronIndex m_nid_src1;
+
+	/**
+	 * The target population id.
+	 */
+	PopulationIndex m_pid_tar;
+
+	/**
+	 * Index of the first neuron in the target population involved in the
+	 * connection.
+	 */
+	NeuronIndex m_nid_tar0;
+
+	/**
+	 * Index of the last-plus-one neuron in the target population involved
+	 * in the connection.
+	 */
+	NeuronIndex m_nid_tar1;
+
+	/**
+	 * Shared pointer at the actual connector instance.
+	 */
+	std::shared_ptr<Connector> m_connector;
+
+public:
+	/**
+	 * Constructor of the ConnectionDescriptor class.
+	 */
+	ConnectionDescriptor(uint32_t pid_src, uint32_t nid_src0, uint32_t nid_src1,
+	                     uint32_t pid_tar, uint32_t nid_tar0, uint32_t nid_tar1,
+	                     std::shared_ptr<Connector> connector)
+	    : m_pid_src(pid_src),
+	      m_nid_src0(nid_src0),
+	      m_nid_src1(nid_src1),
+	      m_pid_tar(pid_tar),
+	      m_nid_tar0(nid_tar0),
+	      m_nid_tar1(nid_tar1),
+	      m_connector(connector)
+	{
+	}
+
+	PopulationIndex pid_src() const { return m_pid_src; }
+	PopulationIndex pid_tar() const { return m_pid_tar; }
+	NeuronIndex nid_src0() const { return m_nid_src0; }
+	NeuronIndex nid_src1() const { return m_nid_src1; }
+	NeuronIndex nid_tar0() const { return m_nid_tar0; }
+	NeuronIndex nid_tar1() const { return m_nid_tar1; }
+
+	Connector &connector() const { return *m_connector; }
+
+	size_t nsrc() const { return m_nid_src1 - m_nid_src0; }
+	size_t ntar() const { return m_nid_tar1 - m_nid_tar0; }
+};
 
 /**
  * The abstract Connector class defines the basic interface used to construct
@@ -213,60 +290,6 @@ class GaussNoiseConnector;
  */
 class Connector {
 public:
-	/**
-	 * The ConnectionDescriptor class details
-	 */
-	struct ConnectionDescriptor {
-		/**
-		 * The source population id.
-		 */
-		uint32_t pid_src;
-
-		/**
-		 * The target population id.
-		 */
-		uint32_t pid_tar;
-
-		/**
-		 * Index of the first neuron in the source population involved in the
-		 * connection.
-		 */
-		uint32_t nid_src_begin;
-
-		/**
-		 * Index of the first neuron in the target population involved in the
-		 * connection.
-		 */
-		uint32_t nid_src_end;
-
-		/**
-		 * Index of the first neuron in the target population involved in the
-		 * connection.
-		 */
-		uint32_t nid_tar_begin;
-
-		/**
-		 * Index of the last-plus-one neuron in the target population involved
-		 * in the connection.
-		 */
-		uint32_t nid_tar_end;
-
-		/**
-		 * Constructor of the ConnectionDescriptor class.
-		 */
-		ConnectionDescriptor(uint32_t pid_src, uint32_t pid_tar,
-		                     uint32_t nid_src_begin, uint32_t nid_src_end,
-		                     uint32_t nid_tar_begin, uint32_t nid_tar_end)
-		    : pid_src(pid_src),
-		      pid_tar(pid_tar),
-		      nid_src_begin(nid_src_begin),
-		      nid_src_end(nid_src_end),
-		      nid_tar_begin(nid_tar_begin),
-		      nid_tar_end(nid_tar_end)
-		{
-		}
-	};
-
 	/**
 	 * Default constructor.
 	 */

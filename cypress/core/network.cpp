@@ -126,9 +126,23 @@ public:
  * Class NetworkImpl
  */
 
+/**
+ * The NetworkImpl class contains the actual implementation of the Network
+ * graph.
+ */
 class NetworkImpl {
 private:
+	/**
+	 * Vector containing the PopulationImpl instances. The clon_ptr wrapper
+	 * is used to make sure the PopulationImpl pointers stored in the
+	 * PopulationBase instances stays valid when the vector is altered.
+	 */
 	std::vector<clone_ptr<PopulationImpl>> m_populations;
+
+	/**
+	 * Vector containing all connections.
+	 */
+	std::vector<ConnectionDescriptor> m_connections;
 
 public:
 	std::vector<PopulationImpl *> populations(const std::string &name,
@@ -148,9 +162,13 @@ public:
 	             size_t pid_tar, size_t nid_tar0, size_t nid_tar1,
 	             std::unique_ptr<Connector> connector)
 	{
-		std::cout << pid_src << ", " << nid_src0 << ", " << nid_src1 << ", "
-		          << pid_tar << ", " << nid_tar0 << ", " << nid_tar1
-		          << std::endl;
+		m_connections.emplace_back(pid_src, nid_src0, nid_src1, pid_tar,
+		                           nid_tar0, nid_tar1, std::move(connector));
+	}
+
+	const std::vector<ConnectionDescriptor> &connections() const
+	{
+		return m_connections;
 	}
 
 	PopulationImpl &create_population(size_t size, const NeuronType &type,
@@ -221,6 +239,11 @@ Network &Network::connect(PopulationBase &src, size_t nid_src0, size_t nid_src1,
 	                nid_tar0, nid_tar1, std::move(connector));
 
 	return *this;
+}
+
+const std::vector<ConnectionDescriptor> &Network::connections() const
+{
+	return m_impl->connections();
 }
 
 std::vector<PopulationImpl *> Network::populations(const std::string &name,

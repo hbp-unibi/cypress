@@ -51,10 +51,10 @@ size_t AllToAllConnector::connect(const ConnectionDescriptor &descr,
                                   Connection tar_mem[])
 {
 	size_t i = 0;
-	for (size_t src = descr.nid_src_begin; src < descr.nid_src_end; src++) {
-		for (size_t tar = descr.nid_tar_begin; tar < descr.nid_tar_end; tar++) {
-			tar_mem[i++] = Connection(descr.pid_src, descr.pid_tar, src, tar,
-			                          m_weight, m_delay);
+	for (NeuronIndex src = descr.nid_src0(); src < descr.nid_src1(); src++) {
+		for (NeuronIndex tar = descr.nid_tar0(); tar < descr.nid_tar1(); tar++) {
+			tar_mem[i++] = Connection(descr.pid_src(), descr.pid_tar(), src,
+			                          tar, m_weight, m_delay);
 		}
 	}
 	return i;
@@ -62,8 +62,7 @@ size_t AllToAllConnector::connect(const ConnectionDescriptor &descr,
 
 size_t AllToAllConnector::connection_count(const ConnectionDescriptor &descr)
 {
-	return (descr.nid_src_end - descr.nid_src_begin) *
-	       (descr.nid_tar_end - descr.nid_tar_begin);
+	return descr.nsrc() * descr.ntar();
 }
 
 bool AllToAllConnector::connection_valid(const ConnectionDescriptor &)

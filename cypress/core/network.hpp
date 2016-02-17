@@ -914,6 +914,11 @@ public:
 	                 std::unique_ptr<Connector> connector);
 
 	/**
+	 * Returns a reference at a list containing all user-defined connections.
+	 */
+	const std::vector<ConnectionDescriptor>& connections() const;
+
+	/**
 	 * Creates a new population instance.
 	 *
 	 * @param size is the size of the population.
