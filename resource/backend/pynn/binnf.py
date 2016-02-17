@@ -183,7 +183,10 @@ def serialise(fd, name, header, matrix):
 
     _write_int(fd, rows)
     _write_int(fd, cols)
-    fd.write(matrix.tobytes())
+    if hasattr(matrix, 'tobytes'): # only exists since Numpy 1.9
+        fd.write(matrix.tobytes())
+    else:
+        matrix.tofile(fd, sep="")
 
     # Finalise the block
     _write_int(fd, BLOCK_END_SEQUENCE)
