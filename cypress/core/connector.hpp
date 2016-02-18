@@ -192,88 +192,13 @@ struct Connection {
 /*
  * Forward declarations.
  */
-class Connector;
+class ConnectionDescriptor;
 class AllToAllConnector;
 class OneToOneConnector;
 class FromListConnector;
 class FromFunctorConnector;
 class FixedProbabilityConnector;
 class GaussNoiseConnector;
-
-/**
- * The ConnectionDescriptor represents a user-defined connection between two
- * neuron populations.
- */
-class ConnectionDescriptor {
-private:
-	/**
-	 * The source population id.
-	 */
-	PopulationIndex m_pid_src;
-
-	/**
-	 * Index of the first neuron in the source population involved in the
-	 * connection.
-	 */
-	NeuronIndex m_nid_src0;
-
-	/**
-	 * Index of the first neuron in the target population involved in the
-	 * connection.
-	 */
-	NeuronIndex m_nid_src1;
-
-	/**
-	 * The target population id.
-	 */
-	PopulationIndex m_pid_tar;
-
-	/**
-	 * Index of the first neuron in the target population involved in the
-	 * connection.
-	 */
-	NeuronIndex m_nid_tar0;
-
-	/**
-	 * Index of the last-plus-one neuron in the target population involved
-	 * in the connection.
-	 */
-	NeuronIndex m_nid_tar1;
-
-	/**
-	 * Shared pointer at the actual connector instance.
-	 */
-	std::shared_ptr<Connector> m_connector;
-
-public:
-	/**
-	 * Constructor of the ConnectionDescriptor class.
-	 */
-	ConnectionDescriptor(uint32_t pid_src, uint32_t nid_src0, uint32_t nid_src1,
-	                     uint32_t pid_tar, uint32_t nid_tar0, uint32_t nid_tar1,
-	                     std::shared_ptr<Connector> connector)
-	    : m_pid_src(pid_src),
-	      m_nid_src0(nid_src0),
-	      m_nid_src1(nid_src1),
-	      m_pid_tar(pid_tar),
-	      m_nid_tar0(nid_tar0),
-	      m_nid_tar1(nid_tar1),
-	      m_connector(connector)
-	{
-	}
-
-	PopulationIndex pid_src() const { return m_pid_src; }
-	PopulationIndex pid_tar() const { return m_pid_tar; }
-	NeuronIndex nid_src0() const { return m_nid_src0; }
-	NeuronIndex nid_src1() const { return m_nid_src1; }
-	NeuronIndex nid_tar0() const { return m_nid_tar0; }
-	NeuronIndex nid_tar1() const { return m_nid_tar1; }
-
-	Connector &connector() const { return *m_connector; }
-
-	size_t nsrc() const { return m_nid_src1 - m_nid_src0; }
-	size_t ntar() const { return m_nid_tar1 - m_nid_tar0; }
-};
 
 /**
  * The abstract Connector class defines the basic interface used to construct
@@ -309,10 +234,10 @@ public:
 	 * @param tar_mem is the start address of the memory region to which the
 	 * connections should be written.
 	 * @return the actual number of connections written. May be smaller or equal
-	 * to the number estimated by connection_count().
+	 * to the number estimated by connection_size().
 	 */
 	virtual size_t connect(const ConnectionDescriptor &descr,
-	                       Connection tar_mem[]) = 0;
+	                       Connection tar_mem[]) const = 0;
 
 	/**
 	 * Predicts an upper-bound of the number of connections. The caller of the
@@ -323,14 +248,14 @@ public:
 	 * @return an upper bound of the number of neuron-to-neuron connections
 	 * that will be created by the connector.
 	 */
-	virtual size_t connection_count(const ConnectionDescriptor &descr) = 0;
+	virtual size_t size(const ConnectionDescriptor &descr) const = 0;
 
 	/**
 	 * Returns true if the connector can create the connections for the given
 	 * connection descriptor. While most connectors will always be able to
 	 * create a connection, for example a one-to-one connector
 	 */
-	virtual bool connection_valid(const ConnectionDescriptor &descr) = 0;
+	virtual bool valid(const ConnectionDescriptor &descr) const = 0;
 
 	/**
 	 * Function which should return a name identifying the connector type --
@@ -340,7 +265,7 @@ public:
 	 * @return a reference at a string describing the name of the descriptor
 	 * type.
 	 */
-	virtual const std::string &name() = 0;
+	virtual const std::string &name() const = 0;
 
 	/**
 	 * Virtual destructor of the connector.
@@ -412,6 +337,138 @@ public:
 };
 
 /**
+ * The ConnectionDescriptor represents a user-defined connection between two
+ * neuron populations.
+ */
+class ConnectionDescriptor {
+private:
+	PopulationIndex m_pid_src;
+	NeuronIndex m_nid_src0;
+	NeuronIndex m_nid_src1;
+	PopulationIndex m_pid_tar;
+	NeuronIndex m_nid_tar0;
+	NeuronIndex m_nid_tar1;
+	std::shared_ptr<Connector> m_connector;
+
+public:
+	/**
+	 * Constructor of the ConnectionDescriptor class.
+	 */
+	ConnectionDescriptor(uint32_t pid_src, uint32_t nid_src0, uint32_t nid_src1,
+	                     uint32_t pid_tar, uint32_t nid_tar0, uint32_t nid_tar1,
+	                     std::shared_ptr<Connector> connector = nullptr)
+	    : m_pid_src(pid_src),
+	      m_nid_src0(nid_src0),
+	      m_nid_src1(nid_src1),
+	      m_pid_tar(pid_tar),
+	      m_nid_tar0(nid_tar0),
+	      m_nid_tar1(nid_tar1),
+	      m_connector(connector)
+	{
+	}
+
+	/**
+	 * The source population id.
+	 */
+	PopulationIndex pid_src() const { return m_pid_src; }
+
+	/**
+	 * Index of the first neuron in the source population involved in the
+	 * connection.
+	 */
+	NeuronIndex nid_src0() const { return m_nid_src0; }
+
+	/**
+	 * Index of the first neuron in the target population involved in the
+	 * connection.
+	 */
+	NeuronIndex nid_src1() const { return m_nid_src1; }
+
+	/**
+	 * The target population id.
+	 */
+	PopulationIndex pid_tar() const { return m_pid_tar; }
+
+	/**
+	 * Index of the first neuron in the target population involved in the
+	 * connection.
+	 */
+	NeuronIndex nid_tar0() const { return m_nid_tar0; }
+
+	/**
+	 * Index of the last-plus-one neuron in the target population involved
+	 * in the connection.
+	 */
+	NeuronIndex nid_tar1() const { return m_nid_tar1; }
+
+	/**
+	 * Returns a const reference at the underlying connector instance -- the
+	 * class which actually fills the connection table.
+	 */
+	const Connector &connector() const { return *m_connector; }
+
+	/**
+	 * Tells the Connector to actually create the neuron-to-neuron connections
+	 * between certain neurons.
+	 *
+	 * @param descr is the connection descriptor containing the data detailing
+	 * the connection.
+	 * @param tar_mem is the start address of the memory region to which the
+	 * connections should be written.
+	 * @return the actual number of connections written. May be smaller or equal
+	 * to the number estimated by connection_size().
+	 */
+	size_t connect(Connection tar_mem[]) const
+	{
+		return connector().connect(*this, tar_mem);
+	}
+
+	/**
+	 * Returns an upper bound of the number of neuron-to-neuron connections
+	 * that will be created by the connector.
+	 */
+	size_t size() const { return connector().size(*this); }
+
+	/**
+	 * Returns true if the connector is valid.
+	 */
+	bool valid() const { return m_connector && connector().valid(*this); }
+
+	/**
+	 * Returns the number of neurons in the source population.
+	 */
+	size_t nsrc() const { return m_nid_src1 - m_nid_src0; }
+
+	/**
+	 * Returns the number of neurons in the target population.
+	 */
+	size_t ntar() const { return m_nid_tar1 - m_nid_tar0; }
+
+	/**
+	 * Checks whether two Connection instances are equal, apart from the
+	 * connector.
+	 */
+	bool operator==(const ConnectionDescriptor &s) const
+	{
+		return Comperator<uint32_t>::equals(m_pid_src, s.m_pid_src)(
+		    m_pid_tar, s.m_pid_tar)(m_nid_src0, s.m_nid_src0)(
+		    m_nid_src1, s.m_nid_src1)(m_nid_tar0, s.m_nid_tar0)(m_nid_tar1,
+		                                                        s.m_nid_tar1)();
+	}
+
+	/**
+	 * Used to sort the connections by their source id.
+	 */
+	bool operator<(const ConnectionDescriptor &s) const
+	{
+		return Comperator<uint32_t>::smaller(m_pid_src, s.m_pid_src)(
+		    m_pid_tar, s.m_pid_tar)(m_nid_src0, s.m_nid_src0)(
+		    m_nid_src1, s.m_nid_src1)(m_nid_tar0, s.m_nid_tar0)(m_nid_tar1,
+		                                                        s.m_nid_tar1)();
+	}
+};
+
+/**
  * Abstract base class for connectors with a weight and an delay.
  */
 class UniformConnector : public Connector {
@@ -421,7 +478,9 @@ private:
 
 public:
 	UniformConnector(float weight = 0.0, float delay = 0.0)
-	    : m_weight(weight), m_delay(delay) {}
+	    : m_weight(weight), m_delay(delay)
+	{
+	}
 
 	float weight() const { return m_weight; }
 	float delay() const { return m_delay; }
@@ -442,19 +501,16 @@ public:
 	~AllToAllConnector() override {}
 
 	size_t connect(const ConnectionDescriptor &descr,
-	               Connection tar_mem[]) override;
+	               Connection tar_mem[]) const override;
 
-	size_t connection_count(const ConnectionDescriptor &descr) override
+	size_t size(const ConnectionDescriptor &descr) const override
 	{
 		return descr.nsrc() * descr.ntar();
 	}
 
-	bool connection_valid(const ConnectionDescriptor &) override
-	{
-		return true;
-	}
+	bool valid(const ConnectionDescriptor &) const override { return true; }
 
-	const std::string &name() override { return m_name; }
+	const std::string &name() const override { return m_name; }
 };
 
 /**
@@ -471,19 +527,19 @@ public:
 	~OneToOneConnector() override {}
 
 	size_t connect(const ConnectionDescriptor &descr,
-	               Connection tar_mem[]) override;
+	               Connection tar_mem[]) const override;
 
-	size_t connection_count(const ConnectionDescriptor &descr) override
+	size_t size(const ConnectionDescriptor &descr) const override
 	{
 		return descr.nsrc();
 	}
 
-	bool connection_valid(const ConnectionDescriptor &descr) override
+	bool valid(const ConnectionDescriptor &descr) const override
 	{
 		return descr.nsrc() == descr.ntar();
 	}
 
-	const std::string &name() override { return m_name; }
+	const std::string &name() const override { return m_name; }
 };
 }
 

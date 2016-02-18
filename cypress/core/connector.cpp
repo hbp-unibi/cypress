@@ -43,7 +43,7 @@ std::unique_ptr<OneToOneConnector> Connector::one_to_one(float weight,
 const std::string AllToAllConnector::m_name = "AllToAllConnector";
 
 size_t AllToAllConnector::connect(const ConnectionDescriptor &descr,
-                                  Connection tar_mem[])
+                                  Connection tar_mem[]) const
 {
 	size_t i = 0;
 	for (NeuronIndex src = descr.nid_src0(); src < descr.nid_src1(); src++) {
@@ -63,7 +63,7 @@ size_t AllToAllConnector::connect(const ConnectionDescriptor &descr,
 const std::string OneToOneConnector::m_name = "OneToOneConnector";
 
 size_t OneToOneConnector::connect(const ConnectionDescriptor &descr,
-                                  Connection tar_mem[])
+                                  Connection tar_mem[]) const
 {
 	size_t i = 0;
 	size_t n = descr.nsrc();  // == descr.ntar()
