@@ -30,28 +30,28 @@ TEST(network, create_population)
 
 	{
 		auto pop = network.create_population<IfCondExp>(10);
-		EXPECT_EQ(10, pop.size());
+		EXPECT_EQ(10U, pop.size());
 		EXPECT_EQ(&IfCondExp::inst(), &pop.type());
 		EXPECT_EQ("", pop.name());
 	}
 
 	{
 		auto pop = network.create_population<IfCondExp>(20, {}, "foo");
-		EXPECT_EQ(20, pop.size());
+		EXPECT_EQ(20U, pop.size());
 		EXPECT_EQ(&IfCondExp::inst(), &pop.type());
 		EXPECT_EQ("foo", pop.name());
 	}
 
 	{
 		Population<IfCondExp> pop(network, 30);
-		EXPECT_EQ(30, pop.size());
+		EXPECT_EQ(30U, pop.size());
 		EXPECT_EQ(&IfCondExp::inst(), &pop.type());
 		EXPECT_EQ("", pop.name());
 	}
 
 	{
 		Population<IfCondExp> pop(network, 40, {}, "foo2");
-		EXPECT_EQ(40, pop.size());
+		EXPECT_EQ(40U, pop.size());
 		EXPECT_EQ(&IfCondExp::inst(), &pop.type());
 		EXPECT_EQ("foo2", pop.name());
 	}
@@ -68,7 +68,7 @@ TEST(network, population_iterator)
 		for (auto neuron : pop) {
 			EXPECT_EQ(i++, neuron.idx());
 		}
-		EXPECT_EQ(10, i);
+		EXPECT_EQ(10U, i);
 	}
 }
 
@@ -77,10 +77,10 @@ TEST(network, population_iterator_post_increment)
 	Network network;
 	auto pop = network.create_population<IfCondExp>(10);
 
-	EXPECT_EQ(0, (pop.begin()++)->idx());
-	EXPECT_EQ(9, (pop.rbegin()++)->idx());
-	EXPECT_EQ(0, (pop.cbegin()++)->idx());
-	EXPECT_EQ(9, (pop.crbegin()++)->idx());
+	EXPECT_EQ(0U, (pop.begin()++)->idx());
+	EXPECT_EQ(9U, (pop.rbegin()++)->idx());
+	EXPECT_EQ(0U, (pop.cbegin()++)->idx());
+	EXPECT_EQ(9U, (pop.crbegin()++)->idx());
 
 	// Explicit default iterator instantiation
 	{
@@ -89,7 +89,7 @@ TEST(network, population_iterator_post_increment)
 			ASSERT_EQ(i, it->idx());
 			ASSERT_EQ(i++, (*it).idx());
 		}
-		EXPECT_EQ(10, i);
+		EXPECT_EQ(10U, i);
 	}
 
 	// Explicit constant iterator instantiation
@@ -99,15 +99,15 @@ TEST(network, population_iterator_post_increment)
 			ASSERT_EQ(i, it->idx());
 			ASSERT_EQ(i++, (*it).idx());
 		}
-		EXPECT_EQ(10, i);
+		EXPECT_EQ(10U, i);
 	}
 
 	// Explicit reverse iterator instantiation
 	{
 		ssize_t i = 9;
 		for (auto it = pop.rbegin(); it != pop.rend(); it++) {
-			ASSERT_EQ(i, it->idx());
-			ASSERT_EQ(i--, (*it).idx());
+			ASSERT_EQ(i, ssize_t(it->idx()));
+			ASSERT_EQ(i--, ssize_t((*it).idx()));
 		}
 		EXPECT_EQ(-1, i);
 	}
@@ -116,8 +116,8 @@ TEST(network, population_iterator_post_increment)
 	{
 		ssize_t i = 9;
 		for (auto it = pop.crbegin(); it != pop.crend(); it++) {
-			ASSERT_EQ(i, it->idx());
-			ASSERT_EQ(i--, (*it).idx());
+			ASSERT_EQ(i, ssize_t(it->idx()));
+			ASSERT_EQ(i--, ssize_t((*it).idx()));
 		}
 		EXPECT_EQ(-1, i);
 	}
@@ -128,10 +128,10 @@ TEST(network, population_iterator_pre_increment)
 	Network network;
 	auto pop = network.create_population<IfCondExp>(10);
 
-	EXPECT_EQ(1, (++pop.begin())->idx());
-	EXPECT_EQ(8, (++pop.rbegin())->idx());
-	EXPECT_EQ(1, (++pop.cbegin())->idx());
-	EXPECT_EQ(8, (++pop.crbegin())->idx());
+	EXPECT_EQ(1U, (++pop.begin())->idx());
+	EXPECT_EQ(8U, (++pop.rbegin())->idx());
+	EXPECT_EQ(1U, (++pop.cbegin())->idx());
+	EXPECT_EQ(8U, (++pop.crbegin())->idx());
 
 	// Explicit default iterator instantiation
 	{
@@ -140,7 +140,7 @@ TEST(network, population_iterator_pre_increment)
 			ASSERT_EQ(i, it->idx());
 			ASSERT_EQ(i++, (*it).idx());
 		}
-		EXPECT_EQ(10, i);
+		EXPECT_EQ(10U, i);
 	}
 
 	// Explicit constant iterator instantiation
@@ -150,7 +150,7 @@ TEST(network, population_iterator_pre_increment)
 			ASSERT_EQ(i, it->idx());
 			ASSERT_EQ(i++, (*it).idx());
 		}
-		EXPECT_EQ(10, i);
+		EXPECT_EQ(10U, i);
 	}
 
 	// Explicit reverse iterator instantiation
@@ -530,25 +530,25 @@ TEST(network, population_by_name)
 	n.create_population<IfCondExp>(30, {}, "neurons");
 	n.create_population<IfCondExp>(40, {});
 
-	ASSERT_EQ(4, n.populations().size());
-	ASSERT_EQ(4, n.populations("").size());
-	ASSERT_EQ(1, n.populations("spikes1").size());
-	ASSERT_EQ(1, n.populations("spikes2").size());
-	ASSERT_EQ(1, n.populations("neurons").size());
-	ASSERT_EQ(2, n.populations<SpikeSourceArray>().size());
-	ASSERT_EQ(2, n.populations<IfCondExp>().size());
-	ASSERT_EQ(1, n.populations<SpikeSourceArray>("spikes1").size());
-	ASSERT_EQ(1, n.populations<SpikeSourceArray>("spikes2").size());
-	ASSERT_EQ(1, n.populations<IfCondExp>("neurons").size());
+	ASSERT_EQ(4U, n.populations().size());
+	ASSERT_EQ(4U, n.populations("").size());
+	ASSERT_EQ(1U, n.populations("spikes1").size());
+	ASSERT_EQ(1U, n.populations("spikes2").size());
+	ASSERT_EQ(1U, n.populations("neurons").size());
+	ASSERT_EQ(2U, n.populations<SpikeSourceArray>().size());
+	ASSERT_EQ(2U, n.populations<IfCondExp>().size());
+	ASSERT_EQ(1U, n.populations<SpikeSourceArray>("spikes1").size());
+	ASSERT_EQ(1U, n.populations<SpikeSourceArray>("spikes2").size());
+	ASSERT_EQ(1U, n.populations<IfCondExp>("neurons").size());
 
-	EXPECT_EQ(10, n.population("spikes1").size());
-	EXPECT_EQ(20, n.population("spikes2").size());
-	EXPECT_EQ(30, n.population("neurons").size());
-	EXPECT_EQ(10, n.population<SpikeSourceArray>("spikes1").size());
-	EXPECT_EQ(20, n.population<SpikeSourceArray>("spikes2").size());
-	EXPECT_EQ(30, n.population<IfCondExp>("neurons").size());
-	EXPECT_EQ(20, n.population<SpikeSourceArray>().size());
-	EXPECT_EQ(40, n.population<IfCondExp>().size());
+	EXPECT_EQ(10U, n.population("spikes1").size());
+	EXPECT_EQ(20U, n.population("spikes2").size());
+	EXPECT_EQ(30U, n.population("neurons").size());
+	EXPECT_EQ(10U, n.population<SpikeSourceArray>("spikes1").size());
+	EXPECT_EQ(20U, n.population<SpikeSourceArray>("spikes2").size());
+	EXPECT_EQ(30U, n.population<IfCondExp>("neurons").size());
+	EXPECT_EQ(20U, n.population<SpikeSourceArray>().size());
+	EXPECT_EQ(40U, n.population<IfCondExp>().size());
 
 	ASSERT_THROW(n.population("foo"), Network::NoSuchPopulationException);
 	ASSERT_THROW(n.population<IfCondExp>("foo"),
