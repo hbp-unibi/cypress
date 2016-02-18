@@ -56,6 +56,7 @@ function build_resource {
 	echo "}"
 	echo
 	echo "#endif /* RES_${RESOURCE_NAME}_HPP */") > $OUT_FILE
+	chmod +x $PY_OUT_FILE # Mark the concatenated python file as executable
 }
 
 # Download the hbp_neuromorphic_platform python package if it does not exist yet
