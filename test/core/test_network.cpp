@@ -572,10 +572,14 @@ TEST(network, connect)
 	pop4.range(0, 10).connect(pop3, Connector::all_to_all(0.016, 0.01));
 	pop4.range(10, 20).connect(pop2, Connector::all_to_all(0.016, 0.01));
 
-	for (auto &c : n.connections()) {
-		std::cout << c.pid_src() << ", " << c.nid_src0() << ", " << c.nid_src1()
-		          << " --> " << c.pid_tar() << ", " << c.nid_tar0() << ", "
-		          << c.nid_tar1() << std::endl;
-	}
+	const auto &cs = n.connections();
+	ASSERT_EQ(6U, cs.size());
+
+	EXPECT_EQ(ConnectionDescriptor(0, 0, 1, 1, 0, 10), cs[0]);
+	EXPECT_EQ(ConnectionDescriptor(0, 0, 1, 2, 0, 10), cs[1]);
+	EXPECT_EQ(ConnectionDescriptor(1, 0, 10, 3, 0, 10), cs[2]);
+	EXPECT_EQ(ConnectionDescriptor(2, 0, 10, 3, 10, 20), cs[3]);
+	EXPECT_EQ(ConnectionDescriptor(3, 0, 10, 2, 0, 10), cs[4]);
+	EXPECT_EQ(ConnectionDescriptor(3, 10, 20, 1, 0, 10), cs[5]);
 }
 }

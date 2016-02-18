@@ -81,9 +81,6 @@ private:
 	std::string m_name;
 
 public:
-	/**
-	 * Default constructor of the PopulationImpl class.
-	 */
 	PopulationImpl()
 	    : m_idx(0),
 	      m_size(0),
@@ -162,8 +159,23 @@ public:
 	             size_t pid_tar, size_t nid_tar0, size_t nid_tar1,
 	             std::unique_ptr<Connector> connector)
 	{
-		m_connections.emplace_back(pid_src, nid_src0, nid_src1, pid_tar,
+		// Make sure the target population is not a spike source
+		if (m_populations[pid_tar]->type().spike_source) {
+			throw Network::InvalidConnectionException(
+			    "Spike sources are not valid connection targets.");
+		}
+
+		// Assemble the connection descriptor and check its validity
+		ConnectionDescriptor descr(pid_src, nid_src0, nid_src1, pid_tar,
 		                           nid_tar0, nid_tar1, std::move(connector));
+		if (!descr.valid()) {
+			throw Network::InvalidConnectionException(
+			    "The source and target population sizes do not match the size "
+			    "expected by the chosen connector.");
+		}
+
+		// Append the descriptor to the connection list
+		m_connections.emplace_back(std::move(descr));
 	}
 
 	const std::vector<ConnectionDescriptor> &connections() const
