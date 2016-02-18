@@ -80,7 +80,7 @@ build_resource PYNN_BINNF_LOOPBACK "$OUT_DIR/pynn/pynn_binnf_loopback.hpp" \
 	"$DIR/backend/pynn/loopback.py"
 
 # Build the NMPI Python code into a resource
-build_resource PYNN_BINNF_LOOPBACK "$OUT_DIR/nmpi/nmpi_broker.hpp" \
+build_resource NMPI_BROKER "$OUT_DIR/nmpi/nmpi_broker.hpp" \
 	"$DIR/backend/nmpi/header.py" \
 	"$DIR/backend/nmpi/lib/nmpi/nmpi_user.py" \
 	"$DIR/backend/nmpi/broker.py"
