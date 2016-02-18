@@ -17,8 +17,17 @@
 #   You should have received a copy of the GNU General Public License
 #   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import argparse
+import base64
+import bz2
+import json
 import os
+import random
+import shutil
+import stat
+import string
 import sys
+import tarfile
 import time
 
 try:
@@ -42,7 +51,6 @@ except ImportError:
 #
 # Parse the command line
 #
-import argparse
 parser = argparse.ArgumentParser(
     description="Command line interface to the Python part of Cypress")
 parser.add_argument("--executable", type=str, action="store", required=True,
@@ -62,30 +70,13 @@ args = parser.parse_args()
 # Create a python script which contains all the specified files and extracts
 # them to a directory upon execution
 
-# http://stackoverflow.com/questions/600268/mkdir-p-functionality-in-python
-def mkdir_p(path):
-    import errno
-    try:
-        if (path != ""):
-            os.makedirs(path)
-    except OSError as exc:  # Python >2.5
-        if exc.errno == errno.EEXIST and os.path.isdir(path):
-            pass
-        else:
-            raise
 
 def tmpdirname(N):
-    import random
-    import string
-
     return ''.join(random.choice(string.ascii_uppercase +
                                  string.ascii_lowercase + string.digits) for _ in range(N))
 
-def file_script(filename, tar_filename, execute):
-    import bz2
-    import base64
-    import stat
 
+def file_script(filename, tar_filename, execute):
     with open(filename, 'r') as fd:
         compressed = base64.b64encode(bz2.compress(fd.read()))
     return ("extract('" + tar_filename
@@ -100,9 +91,12 @@ script = """#!/usr/bin/env python
 
 import base64
 import bz2
+import errno
 import os
+import shutil
 import subprocess
 import sys
+import tarfile
 
 # Remember which files were extracted -- we'll cleanup our traces after running
 dir = os.path.join(os.getcwd(), '""" + tmpdir + """')
@@ -110,7 +104,6 @@ files = []
 
 # http://stackoverflow.com/questions/600268/mkdir-p-functionality-in-python
 def mkdir_p(path):
-    import errno
     try:
         if (path != ""):
             os.makedirs(path)
@@ -140,6 +133,15 @@ def cleanup():
     # Remove extracted files -- we're only interested in newly created files
     for file in files:
         os.unlink(file)
+
+    # Create a tar.bz2 of the target folder containing all the output
+    tarname = os.path.basename(dir)
+    archive = tarname + ".tar.bz2"
+    with tarfile.open(archive, "w:bz2") as tar:
+        tar.add(dir, arcname=tarname)
+
+    # Remove the target directory
+    shutil.rmtree(dir)
 """
 
 files = args.files + [args.executable]
@@ -160,8 +162,6 @@ script = script + "sys.exit(res)\n"
 #
 # Read the NMPI client configuration
 #
-import json
-
 config = {}
 config_file = os.path.expanduser(os.path.join("~", ".nmpi_config"))
 if os.path.isfile(config_file):
@@ -194,16 +194,19 @@ while True:
 
     # Submit the job, if this fails, explicitly query the password
     try:
-        job_id = client.submit_job(source=script, platform=args.platform, project=config["project"])
+        job_id = client.submit_job(
+            source=script,
+            platform=args.platform,
+            project=config["project"])
     except:
-        if token != None:
+        if token is not None:
             token = None
             continue
         else:
             raise
     break
 
-# Wait until the 
+# Wait until the
 status = "submitted"
 while True:
     new_status = client.job_status(job_id)
@@ -218,18 +221,32 @@ while True:
 job = client.get_job(job_id)
 print(job["log"])
 
-# Download the result files
+# Download the result archive
 datalist = job["output_data"]
 for dataitem in datalist:
     url = dataitem["url"]
     (scheme, netloc, path, params, query, fragment) = urlparse(url)
-#    sep = "/" + str(job_id) + "/" + tmpdir + "/" # Does not work for some reason
-    sep = "/" + str(job_id) + "/"
-    if sep in path:
-        local_filename = path[path.rfind(sep) + len(sep):]
-        mkdir_p(os.path.dirname(local_filename))
-        print("Downloading " + url + " -> " + local_filename)
-        urlretrieve(url, local_filename)
+    archive = tmpdir + ".tar.bz2"
+    if archive in path:
+        # Download the archive containing the result data
+        print("Downloading result...")
+        urlretrieve(url, archive)
+
+        # Extract the output to the temporary directory
+        print("Extracting data...")
+        with tarfile.open(archive, "r:*") as tar:
+            members = [member for member in tar.getmembers() if member.name.startswith(tmpdir)]
+            tar.extractall(members=members)
+        os.unlink(archive)
+
+        # Move the content from the temporary directory to the top-level
+        # directory, remove the temporary directory
+        for filename in os.listdir(tmpdir):
+            shutil.move(os.path.join(tmpdir, filename), filename)
+        os.rmdir(tmpdir)
+
+        print("Done!")
+        break
 
 # Exit with the correct status
 sys.exit(0 if status == "finished" else 1)
