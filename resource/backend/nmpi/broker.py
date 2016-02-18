@@ -24,6 +24,7 @@
 import argparse
 import base64
 import bz2
+import logging
 import json
 import os
 import random
@@ -51,6 +52,13 @@ try:
         from nmpi_user import *
 except ImportError:
     pass
+
+# Setup the formater
+handler = logging.StreamHandler()
+handler.setFormatter(logging.Formatter("%(name)s:%(levelname)s:%(message)s"))
+logger = logging.getLogger("cypress")
+logger.setLevel(logging.INFO)
+logger.addHandler(handler)
 
 #
 # Parse the command line
@@ -173,10 +181,10 @@ if os.path.isfile(config_file):
         with open(config_file, 'r') as fd:
             config = json.load(fd)
     except Exception as e:
-        print("Error: " + e.message)
-        print("Warning: Error while parsing ~/.nmpi_config. Starting with empty configuration!")
+        logger.error(e.message)
+        logger.warning("Error while parsing ~/.nmpi_config. Starting with empty configuration!")
 else:
-    print("Warning: ~/.nmpi_config not found. Starting with empty configuration!")
+    logger.warning("~/.nmpi_config not found. Starting with empty configuration!")
 
 # Prompt the project name
 if not "project" in config:
@@ -211,11 +219,11 @@ while True:
     break
 
 # Wait until the job has switched to either the "error" or the "finished" state
-status = "submitted"
+status = ""
 while True:
     new_status = client.job_status(job_id)
     if new_status != status:
-        print("Job status changed: " + new_status)
+        logger.info("Job status: " + new_status)
         status = new_status
     if status == "error" or status == "finished":
         break
@@ -223,7 +231,8 @@ while True:
 
 # Print the log
 job = client.get_job(job_id)
-print(job["log"])
+sys.stdout.write(str(job["log"]))
+sys.stdout.flush()
 
 # Download the result archive
 datalist = job["output_data"]
@@ -233,11 +242,11 @@ for dataitem in datalist:
     archive = tmpdir + ".tar.bz2"
     if archive in path:
         # Download the archive containing the result data
-        print("Downloading result...")
+        logger.info("Downloading result...")
         urlretrieve(url, archive)
 
         # Extract the output to the temporary directory
-        print("Extracting data...")
+        logger.info("Extracting data...")
         with tarfile.open(archive, "r:*") as tar:
             members = [member for member in tar.getmembers() if member.name.startswith(tmpdir)]
             tar.extractall(members=members)
@@ -249,7 +258,7 @@ for dataitem in datalist:
             shutil.move(os.path.join(tmpdir, filename), filename)
         os.rmdir(tmpdir)
 
-        print("Done!")
+        logger.info("Done!")
         break
 
 # Exit with the correct status
