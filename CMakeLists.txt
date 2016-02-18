@@ -66,6 +66,7 @@ add_library(cypress
 	cypress/core/types
 	cypress/util/clone_ptr
 	cypress/util/comperator
+	cypress/util/filesystem
 	cypress/util/matrix
 	cypress/util/process
 	cypress/util/resource
@@ -95,6 +96,7 @@ add_executable(test_cypress
 	test/backend/binnf/test_binnf
 	test/core/test_network
 #		test/util/test_comperator
+	test/util/test_filesystem
 	test/util/test_process
 	test/util/test_resource
 )
