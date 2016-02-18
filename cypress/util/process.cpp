@@ -135,8 +135,10 @@ public:
 			// Create the file buffer object
 			m_child_stdout_filebuf =
 			    std::make_unique<Filebuf>(m_child_stdout_pipe[0], std::ios::in);
+			m_child_stdout_filebuf->pubsetbuf(nullptr, 0);
 			m_child_stderr_filebuf =
 			    std::make_unique<Filebuf>(m_child_stderr_pipe[0], std::ios::in);
+			m_child_stderr_filebuf->pubsetbuf(nullptr, 0);
 			m_child_stdin_filebuf =
 			    std::make_unique<Filebuf>(m_child_stdin_pipe[1], std::ios::out);
 
@@ -211,48 +213,60 @@ int Process::wait() { return impl->wait(); }
 
 bool Process::signal(int signal) { return impl->signal(signal); }
 
-std::tuple<int, std::string, std::string> Process::exec(
-    const std::string &cmd, const std::vector<std::string> &args,
-    const std::string &input)
+// Thread proc used to asynchronously write to a stream
+static void writer_thread(Process &proc, std::ostream &target,
+                          const std::string &input)
+{
+	target << input;
+	proc.close_child_stdin();
+}
+
+// Thread proc used to asynchronously read from a stream
+static void reader_thread(std::istream &source, std::ostream &output)
+{
+	while (source.good()) {
+		char c;
+		source.read(&c, 1);
+		output.write(&c, source.gcount());
+		if (source.gcount() == 1 && (c == '\n' || c == '\r')) {
+			output.flush();
+		}
+	}
+}
+
+int Process::exec(const std::string &cmd, const std::vector<std::string> &args,
+                  std::ostream &cout, std::ostream &cerr,
+                  const std::string &input)
 {
 	Process proc(cmd, args);
 
-	// Thread proc used to asynchronously write to a stream
-	auto writer_thread = [](Process &proc, std::ostream &target,
-	                        const std::string &input) -> void {
-		target << input;
-		proc.close_child_stdin();
-	};
-
-	// Thread proc used to asynchronously read from a stream
-	auto reader_thread = [](std::istream &source,
-	                        std::ostream &output) -> void {
-		static constexpr size_t BUF_SIZE = PIPE_BUF;
-		char buf[BUF_SIZE];
-		while (source.good()) {
-			source.read(buf, BUF_SIZE);
-			output.write(buf, source.gcount());
-		}
-	};
-
-	// Concurrently write the input data into the child process and read the
-	// output back
-	std::stringstream ss_out, ss_err;
 	std::thread t1(writer_thread, std::ref(proc), std::ref(proc.child_stdin()),
 	               std::ref(input));
 	std::thread t2(reader_thread, std::ref(proc.child_stdout()),
-	               std::ref(ss_out));
+	               std::ref(cout));
 	std::thread t3(reader_thread, std::ref(proc.child_stderr()),
-	               std::ref(ss_err));
+	               std::ref(cerr));
 
 	// Wait for all threads to complete
 	t1.join();
 	t2.join();
 	t3.join();
 
+	return proc.wait();
+}
+
+std::tuple<int, std::string, std::string> Process::exec(
+    const std::string &cmd, const std::vector<std::string> &args,
+    const std::string &input)
+{
+	// Concurrently write the input data into the child process and read the
+	// output back
+	std::stringstream ss_out, ss_err;
+
+	int res = exec(cmd, args, ss_out, ss_err, input);
+
 	// Wait for the child process to exit, return the exit code and the stream
 	// from standard out
-	return std::make_tuple<int, std::string, std::string>(
-	    proc.wait(), ss_out.str(), ss_err.str());
+	return std::make_tuple(res, ss_out.str(), ss_err.str());
 }
 }

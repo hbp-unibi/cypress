@@ -132,6 +132,25 @@ public:
 	bool signal(int signal);
 
 	/**
+	 * Convenience method for executing a child process and sendings its stdout
+	 * and stderr streams to the given streams.
+	 *
+	 * @param cmd is the command that should be executed.
+	 * @param args is a vector of arguments that should be given to the command.
+	 * @param input is a string that should be sent to the child process via
+	 * its stdin.
+	 * @param cout is the target stream to which the child process cout should
+	 * be written.
+	 * @param cerr is the target stream to which the child process cerr should
+	 * be written.
+	 * @return the process return code.
+	 */
+	static int exec(const std::string &cmd,
+	                const std::vector<std::string> &args, std::ostream &cout,
+	                std::ostream &cerr,
+	                const std::string &input = std::string());
+
+	/**
 	 * Convenience method for executing a child process, sending data via stdin
 	 * and receiving its output on std::cout and std::cerr.
 	 *
