@@ -21,9 +21,9 @@
 #include <cstdint>
 #include <limits>
 
-#include <util/comperator.cpp>
+#include <cypress/util/comperator.hpp>
 
-namespace nam {
+namespace cypress {
 
 TEST(comperator, smaller) {
 	EXPECT_EQ(1, Comperator<int>::smaller(0, 1).res);

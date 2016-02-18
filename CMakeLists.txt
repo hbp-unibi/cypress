@@ -95,7 +95,7 @@ include_directories(${GTEST_INCLUDE_DIRS})
 add_executable(test_cypress
 	test/backend/binnf/test_binnf
 	test/core/test_network
-#		test/util/test_comperator
+	test/util/test_comperator
 	test/util/test_filesystem
 	test/util/test_process
 	test/util/test_resource
