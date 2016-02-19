@@ -305,7 +305,7 @@ def read_network(fd):
     target = None
     while True:
         # Deserialise a single input block
-        name, _, matrix = deseralise(fd)
+        name, _, matrix = deserialise(fd)
 
         # "None" is returned as soon as the end of the file is reached
         if name is None:
