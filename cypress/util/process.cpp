@@ -213,16 +213,13 @@ int Process::wait() { return impl->wait(); }
 
 bool Process::signal(int signal) { return impl->signal(signal); }
 
-// Thread proc used to asynchronously write to a stream
-static void writer_thread(Process &proc, std::ostream &target,
-                          const std::string &input)
+void Process::generic_writer(Process &proc, const std::string &input)
 {
-	target << input;
+	proc.child_stdin() << input;
 	proc.close_child_stdin();
 }
 
-// Thread proc used to asynchronously read from a stream
-static void reader_thread(std::istream &source, std::ostream &output)
+void Process::generic_reader(std::istream &source, std::ostream &output)
 {
 	while (source.good()) {
 		char c;
@@ -240,11 +237,10 @@ int Process::exec(const std::string &cmd, const std::vector<std::string> &args,
 {
 	Process proc(cmd, args);
 
-	std::thread t1(writer_thread, std::ref(proc), std::ref(proc.child_stdin()),
-	               std::ref(input));
-	std::thread t2(reader_thread, std::ref(proc.child_stdout()),
+	std::thread t1(generic_writer, std::ref(proc), std::ref(input));
+	std::thread t2(generic_reader, std::ref(proc.child_stdout()),
 	               std::ref(cout));
-	std::thread t3(reader_thread, std::ref(proc.child_stderr()),
+	std::thread t3(generic_reader, std::ref(proc.child_stderr()),
 	               std::ref(cerr));
 
 	// Wait for all threads to complete

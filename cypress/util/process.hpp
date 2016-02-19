@@ -52,6 +52,25 @@ private:
 	std::unique_ptr<ProcessImpl> impl;
 
 public:
+
+	/**
+	 * Thread proc used to asynchronously write a buffer to the stdin of a
+	 * process.
+	 *
+	 * @param proc is the process to which should be written.
+	 * @param input is the buffer that should be written to the stdin.
+	 */
+	static void generic_writer(Process &proc, const std::string &input);
+
+	/**
+	 * Thread proc used to asynchronously pipe data from a source input stream
+	 * to a target stream. Used to read data from a process.
+	 *
+	 * @param source is the source stream.
+	 * @param output is the target stream.
+	 */
+	static void generic_reader(std::istream &source, std::ostream &output);
+
 	/**
 	 * Constructor of the process class. Executes the given command with the
 	 * given arguments.
