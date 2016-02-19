@@ -76,37 +76,9 @@ add_library(cypress
 
 target_link_libraries(cypress pthread)
 
-#
-# Example programs
-#
-
-add_executable(raw_binnf examples/raw_binnf)
-
-target_link_libraries(raw_binnf cypress)
-
-#
-# Unit tests -- only enable if gtest is present
-#
 enable_testing()
+
 add_subdirectory(lib/googletest)
-set(GTEST_INCLUDE_DIRS ${GTEST_SOURCE_DIR}/include ${GTEST_SOURCE_DIR})
-set(GTEST_LIBRARIES gtest gtest_main)
-set(GTEST ON)
-include_directories(${GTEST_INCLUDE_DIRS})
-
-add_executable(test_cypress
-	test/backend/binnf/test_binnf
-	test/core/test_network
-	test/util/test_comperator
-	test/util/test_filesystem
-	test/util/test_process
-	test/util/test_resource
-)
-
-target_link_libraries(test_cypress
-	cypress
-	${GTEST_LIBRARIES}
-)
-
-add_test(test_cypress test_cypress)
+add_subdirectory(examples)
+add_subdirectory(test)
 
