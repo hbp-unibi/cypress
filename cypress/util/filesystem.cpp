@@ -17,8 +17,8 @@
  */
 
 #include <memory>
+#include <random>
 
-#include <limits.h>
 #include <libgen.h>
 #include <stdlib.h>
 #include <sys/types.h>
@@ -58,6 +58,25 @@ std::unordered_set<std::string> dirs(const std::vector<std::string> &files)
 		res.emplace(dirname(&canonical[0]));
 	}
 	return res;
+}
+
+std::ofstream tmpfile(std::string &path)
+{
+	static const char ALPHANUM[] =
+		"0123456789"
+		"ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+		"abcdefghijklmnopqrstuvwxyz";
+
+	std::default_random_engine rng(std::random_device{}());
+	std::uniform_int_distribution<> dist(0, sizeof(ALPHANUM) - 1);
+
+	for (ssize_t i = path.size() - 1; i >= 0; i--) {
+		if (path[i] == 'X') {
+			path[i] = ALPHANUM[dist(rng)];
+		}
+	}
+
+	return std::move(std::ofstream(path));
 }
 
 }

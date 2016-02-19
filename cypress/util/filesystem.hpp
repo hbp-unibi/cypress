@@ -22,6 +22,7 @@
 #define CYPRESS_UTIL_FILESYSTEM_HPP
 
 #include <algorithm>
+#include <fstream>
 #include <string>
 #include <unordered_set>
 
@@ -69,6 +70,17 @@ std::string longest_common_path(const T &dirs, char sep = '/')
 	                         ? ((dirs.cbegin()->back() == '/') ? n - 1 : n)
 	                         : cmp.rfind(sep, n)));
 }
+
+/**
+ * Generates a temporary file in the given directory and returns an output
+ * stream.
+ *
+ * @param path is the path where the file should be placed, the last charachters
+ * of path equaling "X" are replaced with random alphanumeric characters.
+ * @return an ofstream which allows to write to the temporary file.
+ */
+std::ofstream tmpfile(std::string &path);
+
 }
 }
 
