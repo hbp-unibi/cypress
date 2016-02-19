@@ -30,6 +30,8 @@
 #ifndef CYPRESS_BACKEND_HPP
 #define CYPRESS_BACKEND_HPP
 
+#include <stdexcept>
+
 namespace cypress {
 
 /*
@@ -49,6 +51,14 @@ protected:
 	virtual void do_run(Network &network, float duration) const = 0;
 
 public:
+	/**
+	 * Exception that should be thrown by implementing classes if do_run fails.
+	 */
+	class ExecutionError : public std::runtime_error {
+	public:
+		using std::runtime_error::runtime_error;
+	};
+
 	/**
 	 * Simulates the given spiking neural network for the given duration.
 	 */

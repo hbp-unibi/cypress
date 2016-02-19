@@ -18,16 +18,22 @@
 
 #include <algorithm>
 #include <future>
+#include <fstream>
 #include <string>
 #include <sstream>
+#include <thread>
 #include <vector>
 #include <unordered_map>
 #include <unordered_set>
 
+#include <unistd.h>
+
+#include <cypress/backend/binnf/marshaller.hpp>
 #include <cypress/backend/pynn/pynn.hpp>
 #include <cypress/backend/resources.hpp>
 #include <cypress/core/network.hpp>
 #include <cypress/util/process.hpp>
+#include <cypress/util/filesystem.hpp>
 
 namespace cypress {
 namespace {
@@ -110,26 +116,19 @@ static const std::unordered_map<std::string, SystemProperties>
 /**
  * Map containing some default setup for the simulators.
  */
-static const std::unordered_map<std::string, Json>
-    DEFAULT_SETUPS = {
-        {"nest", Json::object()},
-        {"ess", {
-            {"ess_params", {
-                {"perfectSynapseTrafo", true},
-            }},
-            {"hardware", "$sim.hardwareSetup[\"one-hicann\"]"},
-            {"ignoreHWParameterRanges", true},
-            {"useSystemSim", true}
-        }},
-        {"nmmc1", {
-            {"timestep", 1.0}
-        }},
-        {"nmpm1", {
-            {"neuron_size", 4},
-            {"hicann", 276}
-        }},
-        {"spikey", Json::object()}
-    };
+static const std::unordered_map<std::string, Json> DEFAULT_SETUPS = {
+    {"nest", Json::object()},
+    {"ess",
+     {{"ess_params",
+       {
+           {"perfectSynapseTrafo", true},
+       }},
+      {"hardware", "$sim.hardwareSetup[\"one-hicann\"]"},
+      {"ignoreHWParameterRanges", true},
+      {"useSystemSim", true}}},
+    {"nmmc1", {{"timestep", 1.0}}},
+    {"nmpm1", {{"neuron_size", 4}, {"hicann", 276}}},
+    {"spikey", Json::object()}};
 
 /**
  * Static class used to lookup information about the PyNN simulations.
@@ -295,21 +294,43 @@ void PyNN::do_run(Network &source, float duration) const
 		throw PyNNSimulatorNotFound(ss.str());
 	}
 
-	// Run the PyNN python backend
-	std::vector<std::string> params({
-		Resources::PYNN_INTERFACE.open(),
-		"run",
-		"--simulator",
-		m_normalised_simulator,
-		"--library",
-		import,
-		"--setup",
-		m_setup.dump(),
-		"--duration",
-		std::to_string(duration)
-	});
+	// Generate the error log filename
+	std::string log_path = ".cypress_err_" + m_normalised_simulator + "_XXXXXX";
 
-	Process::exec("python", params, std::cout, std::cerr);
+	// Run the PyNN python backend
+	{
+		std::vector<std::string> params(
+		    {Resources::PYNN_INTERFACE.open(), "run", "--simulator",
+		     m_normalised_simulator, "--library", import, "--setup",
+		     m_setup.dump(), "--duration", std::to_string(duration)});
+		Process proc("python", params);
+
+		// Attach the error log
+		std::ofstream log_stream = filesystem::tmpfile(log_path);
+		std::thread log_thread(Process::generic_reader,
+		                       std::ref(proc.child_stderr()),
+		                       std::ref(log_stream));
+
+		// Send the network description to the simulator
+		binnf::marshall_network(source, proc.child_stdin());
+		proc.close_child_stdin();
+
+		// Read the response back
+		binnf::marshall_response(source, proc.child_stdout());
+
+		// Wait for the process to be done
+		if (proc.wait() != 0) {
+			throw ExecutionError(
+			    std::string("Error while executing the simulator, see ") +
+			    log_path + " for more information.");
+		}
+
+		// Make sure the logging thread has finished
+		log_thread.join();
+	}
+
+	// Remove the log file
+	unlink(log_path.c_str());
 }
 
 std::string PyNN::nmpi_platform() const
