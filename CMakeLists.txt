@@ -49,7 +49,6 @@ add_custom_command(
 		"${CMAKE_SOURCE_DIR}/resource/backend/pynn/constants.py"
 		"${CMAKE_SOURCE_DIR}/resource/backend/pynn/cypress.py"
 		"${CMAKE_SOURCE_DIR}/resource/backend/pynn/loopback.py"
-		"${CMAKE_SOURCE_DIR}/resource/backend/nmpi/header.py"
 		"${CMAKE_SOURCE_DIR}/resource/backend/nmpi/broker.py"
 )
 

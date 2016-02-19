@@ -28,6 +28,8 @@ if [ "$HAS_PYMINIFIER" = 0 ]; then
 fi
 
 function minify {
+	echo "#!/usr/bin/env python"
+	echo "# -*- coding: utf-8 -*-"
 	if [ "$HAS_PYMINIFIER" != 0 ]; then
 		pyminifier --bzip2 /dev/fd/0
 	else
@@ -81,7 +83,6 @@ build_resource PYNN_BINNF_LOOPBACK "$OUT_DIR/pynn/pynn_binnf_loopback.hpp" \
 
 # Build the NMPI Python code into a resource
 build_resource NMPI_BROKER "$OUT_DIR/nmpi/nmpi_broker.hpp" \
-	"$DIR/backend/nmpi/header.py" \
 	"$DIR/backend/nmpi/lib/nmpi/nmpi_user.py" \
 	"$DIR/backend/nmpi/broker.py"
 
