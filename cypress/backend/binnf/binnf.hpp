@@ -110,6 +110,21 @@ struct Block {
 using Callback = std::function<bool(const std::string &, const Header &,
                                     const Matrix<Number> &)>;
 
+
+/**
+ * Serialises a named matrix along with its content and the given header to
+ * the given stream as a single data block.
+ *
+ * @param os is the output stream to which the matrix should be written.
+ * @param name is the name of the block that should be written.
+ * @param header is the header describing each column of the matrix.
+ * @param data is a pointer at a continuous data block containing the data that
+ * should be serialised.
+ * @param rows is the number of data rows.
+ */
+void serialise(std::ostream &os, const std::string &name,
+                      const Header &header, const Number data[], size_t rows);
+
 /**
  * Serialises a named matrix along with its content and the given header to
  * the given stream as a single data block.

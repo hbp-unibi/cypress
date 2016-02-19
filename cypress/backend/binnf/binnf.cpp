@@ -49,16 +49,16 @@ SizeType header_len(const Header &header)
 	return res;
 }
 
-SizeType matrix_len(const Matrix<Number> &matrix)
+SizeType matrix_len(size_t rows, size_t cols)
 {
-	return 2 * SIZE_LEN + matrix.size() * NUMBER_LEN;
+	return 2 * SIZE_LEN + rows * cols * NUMBER_LEN;
 }
 
 SizeType block_len(const std::string &name, const Header &header,
-                   const Matrix<Number> &matrix)
+                   size_t rows)
 {
 	return BLOCK_TYPE_LEN + str_len(name) + header_len(header) +
-	       matrix_len(matrix);
+	       matrix_len(rows, header.size());
 }
 
 /* Individual data write methods */
@@ -152,13 +152,12 @@ void read(std::istream &is, Matrix<Number> &matrix)
 /* Entire block serialisation method */
 
 void serialise(std::ostream &os, const std::string &name, const Header &header,
-               const Matrix<Number> &matrix)
+               const Number data[], size_t rows)
 {
-	assert(matrix.cols() == header.size());
 
 	write(os, BLOCK_START_SEQUENCE);  // Write the block start mark
 	write(os,
-	      block_len(name, header, matrix));  //  Write the total block length
+	      block_len(name, header, rows));  //  Write the total block length
 	write(os, BLOCK_TYPE_MATRIX);
 	write(os, name);                     // Write the name of the block
 	write(os, SizeType(header.size()));  // Write the length of the header
@@ -166,8 +165,17 @@ void serialise(std::ostream &os, const std::string &name, const Header &header,
 		write(os, header.names[i]);  // Write the column name
 		write(os, header.types[i]);  // Write the column type
 	}
-	write(os, matrix);              // Write the actual matrix
+	write(os, SizeType(rows));           // Write the number of rows
+	write(os, SizeType(header.size()));  // Write the number of columns
+	os.write((const char *)data, rows * header.size() * NUMBER_LEN);
 	write(os, BLOCK_END_SEQUENCE);  // Write the block end mark
+}
+
+void serialise(std::ostream &os, const std::string &name, const Header &header,
+               const Matrix<Number> &matrix)
+{
+	assert(matrix.cols() == header.size());
+	serialise(os, name, header, matrix.data(), matrix.rows());
 }
 
 void serialise(std::ostream &os, const Block &block)
