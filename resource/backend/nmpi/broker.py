@@ -53,7 +53,7 @@ try:
 except ImportError:
     pass
 
-# Setup the formater
+# Setup the logger
 handler = logging.StreamHandler()
 handler.setFormatter(logging.Formatter("%(name)s:%(levelname)s:%(message)s"))
 logger = logging.getLogger("cypress")

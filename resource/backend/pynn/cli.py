@@ -25,8 +25,29 @@ try:
 except:
     pass
 
+import logging
+
+# Setup the logger
+handler = logging.StreamHandler()
+handler.setFormatter(logging.Formatter("%(name)s:%(levelname)s:%(message)s"))
+logger = logging.getLogger("cypress")
+logger.setLevel(logging.INFO)
+logger.addHandler(handler)
+
+
 def do_run(args):
     import sys
+    import json
+
+    logger.info(
+        "Running simulation with the following parameters: simulator=" +
+        args.simulator +
+        " library=" +
+        args.library +
+        " setup=" +
+        args.setup +
+        " duration=" +
+        str(args.duration))
 
     # Fetch the input/output file
     in_filename = getattr(args, "in")
@@ -40,7 +61,7 @@ def do_run(args):
     # Open the simulator and run the network
     res = Cypress(
         args.simulator,
-        args.library).run(
+        args.library, setup=json.loads(args.setup)).run(
         network,
         duration=args.duration)
 
@@ -109,6 +130,12 @@ sp_run.add_argument(
     "--library",
     type=str,
     help="PyNN backend to use (e.g. pyNN.nest)", required=True)
+sp_run.add_argument(
+    "--setup",
+    type=str,
+    help="JSON-encoded setup. Values starting with '$' are evaluated using the "
+    + "exec() command with access to the simulator instance (named 'sim').",
+    default={})
 sp_run.add_argument(
     "--duration",
     type=float,

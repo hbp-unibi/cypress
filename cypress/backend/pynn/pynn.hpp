@@ -25,6 +25,7 @@
 #include <string>
 #include <vector>
 
+#include <cypress/util/json.hpp>
 #include <cypress/core/backend.hpp>
 
 namespace cypress {
@@ -38,6 +39,7 @@ private:
 	std::string m_simulator;
 	std::string m_normalised_simulator;
 	std::vector<std::string> m_imports;
+	Json m_setup;
 
 	void do_run(Network &network, float duration) const override;
 
@@ -56,8 +58,10 @@ public:
 	 *
 	 * @param simulator is the name of the simulator backend to be used by PyNN.
 	 * Use the static backends method to list available backends.
+	 * @param setup contains additional setup information that should be passed
+	 * to the backend.
 	 */
-	PyNN(const std::string &simulator);
+	PyNN(const std::string &simulator, const Json &setup = Json::object());
 
 	/**
 	 * Destructor of the PyNN class.

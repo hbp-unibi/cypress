@@ -29,10 +29,15 @@ SET(BUILD_SHARED_LIBRARIES OFF)
 SET(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static")
 SET(CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE} -s")
 
+# Include external dependencies from the lib folder
+add_subdirectory(lib/googletest)
+
 include_directories(
 	${CMAKE_SOURCE_DIR}
 	PRIVATE
-		${CMAKE_BINARY_DIR})
+		${CMAKE_BINARY_DIR}
+		lib/json/src
+)
 
 # Compile the Python code into a C++ header
 add_custom_command(
@@ -69,6 +74,7 @@ add_library(cypress
 	cypress/util/clone_ptr
 	cypress/util/comperator
 	cypress/util/filesystem
+	cypress/util/json
 	cypress/util/matrix
 	cypress/util/process
 	cypress/util/resource
@@ -78,7 +84,6 @@ target_link_libraries(cypress pthread)
 
 enable_testing()
 
-add_subdirectory(lib/googletest)
 add_subdirectory(examples)
 add_subdirectory(test)
 

@@ -25,6 +25,7 @@
 #include <unordered_set>
 
 #include <cypress/backend/pynn/pynn.hpp>
+#include <cypress/backend/resources.hpp>
 #include <cypress/core/network.hpp>
 #include <cypress/util/process.hpp>
 
@@ -107,9 +108,33 @@ static const std::unordered_map<std::string, SystemProperties>
                             {"spikey", {true, true, false}}};
 
 /**
+ * Map containing some default setup for the simulators.
+ */
+static const std::unordered_map<std::string, Json>
+    DEFAULT_SETUPS = {
+        {"nest", Json::object()},
+        {"ess", {
+            {"ess_params", {
+                {"perfectSynapseTrafo", true},
+            }},
+            {"hardware", "$sim.hardwareSetup[\"one-hicann\"]"},
+            {"ignoreHWParameterRanges", true},
+            {"useSystemSim", true}
+        }},
+        {"nmmc1", {
+            {"timestep", 1.0}
+        }},
+        {"nmpm1", {
+            {"neuron_size", 4},
+            {"hicann", 276}
+        }},
+        {"spikey", Json::object()}
+    };
+
+/**
  * Static class used to lookup information about the PyNN simulations.
  */
-class PyNNInfo {
+class PyNNUtil {
 private:
 	std::unordered_map<std::string, std::unique_ptr<std::shared_future<bool>>>
 	    m_import_map;
@@ -221,18 +246,26 @@ public:
 };
 
 /**
- * Static instance of PyNNInfo which caches lookups for available Python
+ * Static instance of PyNNUtil which caches lookups for available Python
  * imports.
  */
-static PyNNInfo PYNN_INFO;
+static PyNNUtil PYNN_UTIL;
 }
 
-PyNN::PyNN(const std::string &simulator) : m_simulator(simulator)
+PyNN::PyNN(const std::string &simulator, const Json &setup)
+    : m_simulator(simulator), m_setup(setup)
 {
 	// Lookup the canonical simulator name and the
-	auto res = PYNN_INFO.lookup_simulator(simulator);
+	auto res = PYNN_UTIL.lookup_simulator(simulator);
 	m_normalised_simulator = res.first;
 	m_imports = res.second;
+
+	// Merge the default setup with the user-provided setup
+	auto it = DEFAULT_SETUPS.find(m_normalised_simulator);
+	if (it != DEFAULT_SETUPS.end()) {
+		m_setup = it->second;
+		join(m_setup, setup);
+	}
 }
 
 PyNN::~PyNN() = default;
@@ -240,7 +273,7 @@ PyNN::~PyNN() = default;
 void PyNN::do_run(Network &source, float duration) const
 {
 	// Find the import that should be used
-	std::vector<bool> available = PYNN_INFO.has_imports(m_imports);
+	std::vector<bool> available = PYNN_UTIL.has_imports(m_imports);
 	std::string import;
 	for (size_t i = 0; i < available.size(); i++) {
 		if (available[i]) {
@@ -261,6 +294,22 @@ void PyNN::do_run(Network &source, float duration) const
 		}
 		throw PyNNSimulatorNotFound(ss.str());
 	}
+
+	// Run the PyNN python backend
+	std::vector<std::string> params({
+		Resources::PYNN_INTERFACE.open(),
+		"run",
+		"--simulator",
+		m_normalised_simulator,
+		"--library",
+		import,
+		"--setup",
+		m_setup.dump(),
+		"--duration",
+		std::to_string(duration)
+	});
+
+	Process::exec("python", params, std::cout, std::cerr);
 }
 
 std::string PyNN::nmpi_platform() const
@@ -284,7 +333,7 @@ std::vector<std::string> PyNN::simulators()
 	}
 
 	// Check which imports are available
-	std::vector<bool> available = PYNN_INFO.has_imports(imports);
+	std::vector<bool> available = PYNN_UTIL.has_imports(imports);
 	std::vector<std::string> res;
 	for (size_t i = 0; i < available.size(); i++) {
 		if (available[i]) {
