@@ -30,9 +30,14 @@
 #define CYPRESS_HPP
 
 #include <cypress/backend/binnf/binnf.hpp>
+#include <cypress/backend/nmpi/nmpi.hpp>
+#include <cypress/backend/pynn/pynn.hpp>
 #include <cypress/backend/resources.hpp>
+#include <cypress/core/backend.hpp>
+#include <cypress/core/connector.hpp>
 #include <cypress/core/network.hpp>
 #include <cypress/core/neurons.hpp>
+#include <cypress/core/types.hpp>
 #include <cypress/util/matrix.hpp>
 #include <cypress/util/process.hpp>
 
