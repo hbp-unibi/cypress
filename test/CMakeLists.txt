@@ -13,6 +13,7 @@ add_executable(test_cypress
 	core/test_network
 	util/test_comperator
 	util/test_filesystem
+	util/test_json
 	util/test_process
 	util/test_resource
 )
