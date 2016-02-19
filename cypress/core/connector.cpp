@@ -59,11 +59,13 @@ std::vector<Connection> instantiate_connections(
 	std::vector<Connection> res;
 	ssize_t cursor = 0;
 	for (const auto &descr : descrs) {
-		// Instantiate the connections
+		// Make sure there is enough memory in the result vector
 		const size_t size = descr.size();
 		if ((res.size() - cursor) < size) {
 			res.resize(cursor + size);
 		}
+
+		// Instantiate the connections
 		const size_t written = descr.connect(&res[cursor]);
 
 		// Sort the generated connections, search the first invalid connection
