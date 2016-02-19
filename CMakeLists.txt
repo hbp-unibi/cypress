@@ -60,6 +60,7 @@ add_library(cypress
 	cypress/backend/resources
 	cypress/backend/binnf/binnf
 	cypress/backend/nmpi/nmpi
+	cypress/backend/pynn/pynn
 	cypress/core/backend
 	cypress/core/connector
 	cypress/core/neurons
