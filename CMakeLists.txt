@@ -59,6 +59,7 @@ add_library(cypress
 	"${CMAKE_BINARY_DIR}/resource/backend/nmpi/nmpi_broker.hpp"
 	cypress/backend/resources
 	cypress/backend/binnf/binnf
+	cypress/backend/nmpi/nmpi
 	cypress/core/backend
 	cypress/core/connector
 	cypress/core/neurons
