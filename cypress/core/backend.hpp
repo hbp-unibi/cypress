@@ -25,6 +25,11 @@
  * @author Andreas Stöckel
  */
 
+#pragma once
+
+#ifndef CYPRESS_BACKEND_HPP
+#define CYPRESS_BACKEND_HPP
+
 namespace cypress {
 
 /*
@@ -55,3 +60,5 @@ public:
 	virtual ~Backend();
 };
 }
+
+#endif /* CYPRESS_BACKEND_HPP */
