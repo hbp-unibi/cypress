@@ -29,11 +29,5 @@ int main(int argc, const char *argv[]) {
 		return 1;
 	}
 	PyNN backend(argv[1]);
-	std::cout << backend.simulator() << std::endl;
-	std::cout << backend.normalised_simulator() << std::endl;
-	for (std::string simulator : backend.imports()) {
-		std::cout << simulator << std::endl;
-	}
-
 	Network().run(backend);
 }
