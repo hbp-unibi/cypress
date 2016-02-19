@@ -469,6 +469,17 @@ public:
 };
 
 /**
+ * Instantiates the connection descriptors into a flat list of actual
+ * connections.
+ *
+ * @param descrs is a list of connection descriptors which should be turned into
+ * a list of connections.
+ * @return a flat vector containing the instantiated connections.
+ */
+std::vector<Connection> instantiate_connections(
+    const std::vector<ConnectionDescriptor> &descrs);
+
+/**
  * Abstract base class for connectors with a weight and an delay.
  */
 class UniformConnector : public Connector {

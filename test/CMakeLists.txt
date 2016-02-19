@@ -11,6 +11,7 @@ add_executable(test_cypress
 	backend/binnf/test_binnf
 	backend/pynn/test_pynn
 	core/test_network
+	core/test_connector
 	util/test_comperator
 	util/test_filesystem
 	util/test_json

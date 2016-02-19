@@ -16,6 +16,9 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <algorithm>
+#include <limits>
+
 #include <cypress/core/connector.hpp>
 
 namespace cypress {
@@ -34,6 +37,48 @@ std::unique_ptr<OneToOneConnector> Connector::one_to_one(float weight,
                                                          float delay)
 {
 	return std::move(std::make_unique<OneToOneConnector>(weight, delay));
+}
+
+/**
+ * Method instantiate_connections
+ */
+
+std::vector<Connection> instantiate_connections(
+    const std::vector<ConnectionDescriptor> &descrs)
+{
+	// Connection which is greater than all other possible valid connections,
+	// but smaller than the smallest invalid connection
+	static const Connection LAST_VALID(
+	    std::numeric_limits<PopulationIndex>::max(),
+	    std::numeric_limits<PopulationIndex>::max(),
+	    std::numeric_limits<NeuronIndex>::max(),
+	    std::numeric_limits<NeuronIndex>::max(), 1.0, 0.0);
+
+	// Iterate over the connection descriptors and instantiate them
+	// TODO: Parallelise
+	std::vector<Connection> res;
+	ssize_t cursor = 0;
+	for (const auto &descr : descrs) {
+		// Instantiate the connections
+		const size_t size = descr.size();
+		if ((res.size() - cursor) < size) {
+			res.resize(cursor + size);
+		}
+		const size_t written = descr.connect(&res[cursor]);
+
+		// Sort the generated connections, search the first invalid connection
+		const auto it_begin = res.begin() + cursor;
+		const auto it_end = res.begin() + (cursor + written);
+		std::sort(it_begin, it_end);
+		auto it = std::upper_bound(it_begin, it_end, LAST_VALID);
+
+		// Place the cursor after the first invalid connection
+		cursor = it - res.begin();
+	}
+
+	// Resize the result to the cursor position
+	res.resize(cursor);
+	return res;
 }
 
 /**
@@ -70,7 +115,7 @@ size_t OneToOneConnector::connect(const ConnectionDescriptor &descr,
 	for (; i < n; i++) {
 		tar_mem[i] =
 		    Connection(descr.pid_src(), descr.pid_tar(), descr.nid_src0() + i,
-		               descr.nid_src1() + i, weight(), delay());
+		               descr.nid_tar0() + i, weight(), delay());
 	}
 	return i;
 }
