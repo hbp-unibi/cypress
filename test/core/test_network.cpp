@@ -579,7 +579,7 @@ TEST(network, connect)
 	EXPECT_EQ(ConnectionDescriptor(0, 0, 1, 2, 0, 10), cs[1]);
 	EXPECT_EQ(ConnectionDescriptor(1, 0, 10, 3, 0, 10), cs[2]);
 	EXPECT_EQ(ConnectionDescriptor(2, 0, 10, 3, 10, 20), cs[3]);
-	EXPECT_EQ(ConnectionDescriptor(3, 0, 10, 2, 0, 10), cs[4]);
-	EXPECT_EQ(ConnectionDescriptor(3, 10, 20, 1, 0, 10), cs[5]);
+	EXPECT_EQ(ConnectionDescriptor(3, 10, 20, 1, 0, 10), cs[4]);
+	EXPECT_EQ(ConnectionDescriptor(3, 0, 10, 2, 0, 10), cs[5]);
 }
 }

@@ -139,9 +139,16 @@ private:
 	/**
 	 * Vector containing all connections.
 	 */
-	std::vector<ConnectionDescriptor> m_connections;
+	mutable std::vector<ConnectionDescriptor> m_connections;
+
+	/**
+	 * Flag indicating whether the connections are currently sorted.
+	 */
+	mutable bool m_connections_sorted;
 
 public:
+	NetworkImpl() : m_connections_sorted(true) {}
+
 	std::vector<PopulationImpl *> populations(const std::string &name,
 	                                          const NeuronType *type)
 	{
@@ -174,12 +181,20 @@ public:
 			    "expected by the chosen connector.");
 		}
 
-		// Append the descriptor to the connection list
+		// Append the descriptor to the connection list, update the sorted flag
 		m_connections.emplace_back(std::move(descr));
+		m_connections_sorted = (m_connections.size() <= 1) ||
+		                       (m_connections_sorted &&
+		                        m_connections[m_connections.size() - 2] <
+		                            m_connections[m_connections.size() - 1]);
 	}
 
 	const std::vector<ConnectionDescriptor> &connections() const
 	{
+		if (!m_connections_sorted) {
+			std::sort(m_connections.begin(), m_connections.end());
+			m_connections_sorted = true;
+		}
 		return m_connections;
 	}
 
