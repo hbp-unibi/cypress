@@ -70,8 +70,7 @@ private:
 	    PopulationMixin<Population<T>, Accessor, typename T::Parameters>;
 	using ParametersMixin_ =
 	    ParametersMixin<Population<T>, Accessor, typename T::Parameters>;
-	using IterableMixin_ =
-	    IterableMixin<Population<T>, Neuron<T>, Accessor>;
+	using IterableMixin_ = IterableMixin<Population<T>, Neuron<T>, Accessor>;
 	using ViewableMixin_ =
 	    ViewableMixin<Population<T>, PopulationView<T>, Accessor>;
 
@@ -110,8 +109,7 @@ public:
 	 * @param name is the (optional) name of the population.
 	 */
 	Population(Network &network, size_t size,
-	           const typename T::Parameters &params,
-	           const char *name = "");
+	           const typename T::Parameters &params, const char *name = "");
 
 	/**
 	 * Creates a new population in the given network.
@@ -133,9 +131,9 @@ public:
 	 * This class can be implicitly converted to PopulationBase, loosing the
 	 * neuron type information.
 	 */
-	operator PopulationBase() const {return m_population;}
-	operator const PopulationBase& () const { return m_population; }
-	operator PopulationBase&() { return m_population; }
+	operator PopulationBase() const { return m_population; }
+	operator const PopulationBase &() const { return m_population; }
+	operator PopulationBase &() { return m_population; }
 
 	/**
 	 * Returns the type of the population.
@@ -206,9 +204,9 @@ public:
 	 * This class can be implicitly converted to PopulationBase, loosing the
 	 * neuron type information.
 	 */
-	operator PopulationViewBase() const {return m_view;}
-	operator const PopulationViewBase& () const { return m_view; }
-	operator PopulationViewBase&() { return m_view; }
+	operator PopulationViewBase() const { return m_view; }
+	operator const PopulationViewBase &() const { return m_view; }
+	operator PopulationViewBase &() { return m_view; }
 
 	/**
 	 * Returns the type of the population.
@@ -260,8 +258,7 @@ private:
 	    NeuronMixin<Neuron<T>, Accessor, typename T::Parameters>;
 	using ParametersMixin_ =
 	    ParametersMixin<Neuron<T>, Accessor, typename T::Parameters>;
-	using IterableMixin_ =
-	    IterableMixin<Neuron<T>, Neuron<T>, Accessor>;
+	using IterableMixin_ = IterableMixin<Neuron<T>, Neuron<T>, Accessor>;
 	using ViewableMixin_ =
 	    ViewableMixin<Neuron<T>, PopulationViewBase, Accessor>;
 
@@ -281,7 +278,7 @@ public:
 	 * located in.
 	 * @param nid is the absolute index of the neuron in its population.
 	 */
-	template<typename Parent>
+	template <typename Parent>
 	Neuron(const Parent &parent, NeuronIndex nid)
 	    : m_neuron(parent, nid)
 	{
@@ -291,9 +288,9 @@ public:
 	 * This class can be implicitly converted to NeuronBase, loosing the
 	 * neuron type information.
 	 */
-	operator NeuronBase() const {return m_neuron;}
-	operator const NeuronBase& () const { return m_neuron; }
-	operator NeuronBase&() { return m_neuron; }
+	operator NeuronBase() const { return m_neuron; }
+	operator const NeuronBase &() const { return m_neuron; }
+	operator NeuronBase &() { return m_neuron; }
 
 	/**
 	 * Returns the type of the neuron.
@@ -311,7 +308,10 @@ public:
 	 * @return a Population<T> object pointing at the population this neuron
 	 * is located in.
 	 */
-	Population<T> population() const { return Population<T>(m_neuron.network(), pid()); }
+	Population<T> population() const
+	{
+		return Population<T>(m_neuron.network(), pid());
+	}
 
 	/**
 	 * Returns the population index of the population this neuron belongs to.
@@ -336,11 +336,13 @@ private:
 
 	template <typename T>
 	size_t create_population_index(
-	    size_t size,
-	    const std::vector<typename T::Parameters> &params,
+	    size_t size, const std::vector<typename T::Parameters> &params,
 	    const std::string &name = std::string())
 	{
-		return NetworkBase::create_population_index(size, T::inst(), std::vector<NeuronParametersBase>(params.begin(), params.end()), name);
+		return NetworkBase::create_population_index(
+		    size, T::inst(),
+		    std::vector<NeuronParametersBase>(params.begin(), params.end()),
+		    name);
 	}
 
 public:
@@ -350,8 +352,8 @@ public:
 	Network() = default;
 	Network(const Network &) = default;
 	Network(Network &&) noexcept = default;
-	Network& operator=(const Network &) = default;
-	Network& operator=(Network &&) = default;
+	Network &operator=(const Network &) = default;
+	Network &operator=(Network &&) = default;
 	~Network() = default;
 
 	/**
@@ -362,7 +364,8 @@ public:
 	/**
 	 * Allow assigning a NetworkBase instance to a Network instance.
 	 */
-	Network& operator=(const NetworkBase &o) {
+	Network &operator=(const NetworkBase &o)
+	{
 		*this = Network(o);
 		return *this;
 	}
@@ -443,11 +446,11 @@ public:
  */
 
 template <typename T>
-inline Population<T>::Population(
-    Network &network, size_t size,
-    const typename T::Parameters &params, const char *name)
-    : Population(network, network.create_population_index<T>(size, 
-                                                             {params}, name))
+inline Population<T>::Population(Network &network, size_t size,
+                                 const typename T::Parameters &params,
+                                 const char *name)
+    : Population(network,
+                 network.create_population_index<T>(size, {params}, name))
 {
 }
 
@@ -455,8 +458,8 @@ template <typename T>
 inline Population<T>::Population(
     Network &network, size_t size,
     std::initializer_list<typename T::Parameters> params, const char *name)
-    : Population(network, network.create_population_index<T>(size, 
-                                                             params, name))
+    : Population(network,
+                 network.create_population_index<T>(size, params, name))
 {
 }
 
