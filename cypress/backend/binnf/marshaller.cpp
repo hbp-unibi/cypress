@@ -105,15 +105,16 @@ static void write_uniform_parameters(const PopulationBase &population,
 	Header header = {{"pid", "nid"}, {INT, INT}};
 	for (const auto &name : population.type().parameter_names) {
 		header.names.emplace_back(name);
-		header.types.emplace_back(INT);
+		header.types.emplace_back(FLOAT);
 	}
 
 	// In case the population is homogeneous, just send one entry in
 	// the parameters matrix -- otherwise send an entry for each neuron in each
 	// population
 	const bool homogeneous = population.homogeneous();
-	Matrix<Number> mat(homogeneous ? 1 : population.size(), header.size());
-	for (size_t i = 0; i < population.size(); i++) {
+	const size_t mat_size = homogeneous ? 1 : population.size();
+	Matrix<Number> mat(mat_size, header.size());
+	for (size_t i = 0; i < mat_size; i++) {
 		mat(0, 0) = int32_t(population.pid());
 		mat(0, 1) = int32_t(homogeneous ? ALL_NEURONS : i);
 
