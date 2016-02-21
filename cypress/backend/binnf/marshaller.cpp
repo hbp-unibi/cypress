@@ -22,7 +22,9 @@
 
 #include <cypress/backend/binnf/binnf.hpp>
 #include <cypress/backend/binnf/marshaller.hpp>
-#include <cypress/core/network.hpp>
+#include <cypress/core/network_base.hpp>
+#include <cypress/core/network_base_objects.hpp>
+#include <cypress/core/neurons.hpp>
 #include <cypress/util/matrix.hpp>
 
 namespace cypress {
@@ -75,7 +77,73 @@ static void write_connections(const std::vector<ConnectionDescriptor> &descrs,
 	          reinterpret_cast<Number *>(&connections[0]), connections.size());
 }
 
-void marshall_network(Network &net, std::ostream &os)
+static void write_spike_source_array(const PopulationBase &population,
+                                     std::ostream &os)
+{
+	static const Header TARGET_HEADER = {{"pid", "nid"}, {INT, INT}};
+	static const Header SPIKE_TIMES_HEADER = {{"times"}, {FLOAT}};
+
+	for (size_t i = 0; i < population.size(); i++) {
+		Matrix<Number> mat(1, 2);
+		mat(0, 0) = int32_t(population.pid());
+		mat(0, 1) = int32_t(i);
+
+		serialise(os, "target", TARGET_HEADER, mat);
+		serialise(
+		    os, "spike_times", SPIKE_TIMES_HEADER,
+		    reinterpret_cast<const Number *>(population.parameters(i).begin()),
+		    population.parameters(i).size());
+	}
+}
+
+static void write_uniform_parameters(const PopulationBase &population,
+                                     std::ostream &os)
+{
+	static const int32_t ALL_NEURONS = std::numeric_limits<int32_t>::max();
+
+	// Assemble the parameter header
+	Header header = {{"pid", "nid"}, {INT, INT}};
+	for (const auto &name : population.type().parameter_names) {
+		header.names.emplace_back(name);
+		header.types.emplace_back(INT);
+	}
+
+	// In case the population is homogeneous, just send one entry in
+	// the parameters matrix -- otherwise send an entry for each neuron in each
+	// population
+	const bool homogeneous = population.homogeneous();
+	Matrix<Number> mat(homogeneous ? 1 : population.size(), header.size());
+	for (size_t i = 0; i < population.size(); i++) {
+		mat(0, 0) = int32_t(population.pid());
+		mat(0, 1) = int32_t(homogeneous ? ALL_NEURONS : i);
+
+		const auto &params = population.parameters(i);
+		std::copy(params.begin(), params.end(), mat.begin(i) + 2);
+	}
+
+	serialise(os, "parameters", header, mat);
+}
+
+/**
+ * Sends the parameters of an individual population to the simulator.
+ */
+static void write_parameters(const PopulationBase &population, std::ostream &os)
+{
+	// Do not write anything for zero-sized populations
+	if (population.size() == 0) {
+		return;
+	}
+
+	// Special treatment for spike source arrays
+	if (&population.type() == &SpikeSourceArray::inst()) {
+		write_spike_source_array(population, os);
+	}
+	else {
+		write_uniform_parameters(population, os);
+	}
+}
+
+void marshall_network(NetworkBase &net, std::ostream &os)
 {
 	// Write the populations
 	const std::vector<PopulationBase> populations = net.populations();
@@ -85,9 +153,12 @@ void marshall_network(Network &net, std::ostream &os)
 	write_connections(net.connections(), os);
 
 	// Write the population parameters
+	for (const auto &population : populations) {
+		write_parameters(population, os);
+	}
 }
 
-void marshall_response(Network &net, std::istream &os)
+void marshall_response(NetworkBase &net, std::istream &os)
 {
 	// TODO
 }

@@ -67,10 +67,15 @@ add_library(cypress
 	cypress/backend/binnf/marshaller
 	cypress/backend/nmpi/nmpi
 	cypress/backend/pynn/pynn
+	cypress/core/internal/network_impl
 	cypress/core/backend
 	cypress/core/connector
+	cypress/core/exceptions
 	cypress/core/neurons
 	cypress/core/network
+	cypress/core/network_base
+	cypress/core/network_base_objects
+	cypress/core/network_mixins
 	cypress/core/types
 	cypress/util/clone_ptr
 	cypress/util/comperator

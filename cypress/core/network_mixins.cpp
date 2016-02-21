@@ -16,24 +16,8 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <cypress/core/backend.hpp>
-#include <cypress/core/network_base.hpp>
+#include <cypress/core/network_mixins.hpp>
 
 namespace cypress {
-
-static constexpr float AUTO_TIME_EXTENSION = 1000.0;
-
-Backend::~Backend()
-{
-	// Do nothing here
-}
-
-void Backend::run(NetworkBase &network, float duration) const
-{
-	if (duration <= 0.0) {
-		duration =
-		    network.duration() + AUTO_TIME_EXTENSION;  // Auto time extension
-	}
-	do_run(network, duration);  // Now simply execute the network
-}
+// Do nothing here, just make sure the header compiles
 }

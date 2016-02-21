@@ -41,7 +41,7 @@ private:
 	std::vector<std::string> m_imports;
 	Json m_setup;
 
-	void do_run(Network &network, float duration) const override;
+	void do_run(NetworkBase &network, float duration) const override;
 
 public:
 	/**

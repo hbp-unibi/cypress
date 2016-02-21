@@ -38,7 +38,7 @@ namespace cypress {
 /*
  * Forward declarations.
  */
-class Network;
+class NetworkBase;
 
 namespace binnf {
 /**
@@ -48,7 +48,7 @@ namespace binnf {
  * the output stream.
  * @param os is the output stream to which the input network is written.
  */
-void marshall_network(Network &net, std::ostream &os);
+void marshall_network(NetworkBase &net, std::ostream &os);
 
 /**
  * Ten waits for a response from the simulator on the the given input stream and
@@ -60,7 +60,7 @@ void marshall_network(Network &net, std::ostream &os);
  * @param is is the input stream from which the simulator response is read and
  * written into the output network.
  */
-void marshall_response(Network &net, std::istream &is);
+void marshall_response(NetworkBase &net, std::istream &is);
 }
 }
 

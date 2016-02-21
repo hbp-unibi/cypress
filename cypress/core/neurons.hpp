@@ -44,6 +44,73 @@
 #include <cypress/core/neurons.hpp>
 
 namespace cypress {
+/**
+ * Base class for the storage of neuron parameters. Basically this class just
+ * contains a vector of floats, where each float in the vector corresponds to
+ * a single parameter.
+ */
+class NeuronParametersBase {
+private:
+	/**
+	 * Vector containing the parameters.
+	 */
+	std::vector<float> m_parameters;
+
+protected:
+	/**
+	 * Getter function which allows direct access at the underlying parameter
+	 * vector.
+	 */
+	std::vector<float> &parameters() { return m_parameters; }
+	const std::vector<float> &parameters() const { return m_parameters; }
+
+public:
+	/**
+	 * Default constructor.
+	 */
+	NeuronParametersBase() {}
+
+	/**
+	 * Constructor allowing to set the neuron parameters to the given values.
+	 */
+	NeuronParametersBase(std::initializer_list<float> parameters)
+	    : m_parameters(parameters)
+	{
+	}
+
+	/**
+	 * Constructor allowing to set the neuron parameters to the given values.
+	 */
+	NeuronParametersBase(const std::vector<float> &parameters)
+	    : m_parameters(parameters)
+	{
+	}
+
+	/**
+	 * Operator allowing to access the i-th parameter.
+	 */
+	float &operator[](size_t i) { return m_parameters[i]; }
+
+	/**
+	 * Operator allowing to access the i-th parameter.
+	 */
+	float operator[](size_t i) const { return m_parameters[i]; }
+
+	/**
+	 * Method returning a read-only pointer at the first parameter.
+	 */
+	const float *begin() const { return &m_parameters[0]; }
+
+	/**
+	 * Method returning a read-only pointer at the last parameter.
+	 */
+	const float *end() const { return &m_parameters[0] + size(); }
+
+	/**
+	 * Number of parameters.
+	 */
+	size_t size() const { return m_parameters.size(); }
+};
 
 /**
  * The NeuronType class contains data describing an individual neuron
@@ -93,7 +160,7 @@ public:
 	/**
 	 * Contains default values for the neuron parameters.
 	 */
-	const std::vector<float> parameter_defaults;
+	const NeuronParametersBase parameter_defaults;
 
 	/**
 	 * True if this is a conductance based neuron.
@@ -107,53 +174,11 @@ public:
 };
 
 /**
- * Base class for the storage of neuron parameters. Basically this class just
- * contains a vector of floats, where each float in the vector corresponds to
- * a single parameter.
+ * Internally used parameter type with no parameters.
  */
-class NeuronParametersBase {
-private:
-	/**
-	 * Vector containing the parameters.
-	 */
-	std::vector<float> m_parameters;
-
-protected:
-	/**
-	 * Getter function which allows direct access at the underlying parameter
-	 * vector.
-	 */
-	std::vector<float> &parameters() { return m_parameters; }
-	const std::vector<float> &parameters() const { return m_parameters; }
-
-	/**
-	 * Default constructor.
-	 */
-	NeuronParametersBase() {}
-
-	/**
-	 * Constructor allowing to set the neuron parameters to the given values.
-	 */
-	NeuronParametersBase(const std::vector<float> &parameters)
-	    : m_parameters(parameters)
-	{
-	}
-
+class NullNeuronParameters final : public NeuronParametersBase {
 public:
-	/**
-	 * Operator allowing to access the i-th parameter.
-	 */
-	float &operator[](size_t i) { return m_parameters[i]; }
-
-	/**
-	 * Operator allowing to access the i-th parameter.
-	 */
-	float operator[](size_t i) const { return m_parameters[i]; }
-
-	/**
-	 * Number of parameters.
-	 */
-	size_t size() const { return m_parameters.size(); }
+	NullNeuronParameters() : NeuronParametersBase(std::vector<float>{}) {}
 };
 
 /**
@@ -228,6 +253,19 @@ public:
 };
 
 #undef NAMED_VECTOR_ELEMENT
+
+/**
+ * Internally used neuron type representing no neuron type.
+ */
+class NullNeuronType final : public NeuronType {
+private:
+	NullNeuronType();
+
+public:
+	using Parameters = NullNeuronParameters;
+
+	static const NullNeuronType &inst();
+};
 
 class SpikeSourceArray final : public NeuronType {
 private:

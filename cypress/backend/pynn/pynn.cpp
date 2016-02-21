@@ -31,7 +31,8 @@
 #include <cypress/backend/binnf/marshaller.hpp>
 #include <cypress/backend/pynn/pynn.hpp>
 #include <cypress/backend/resources.hpp>
-#include <cypress/core/network.hpp>
+#include <cypress/core/exceptions.hpp>
+#include <cypress/core/network_base.hpp>
 #include <cypress/util/process.hpp>
 #include <cypress/util/filesystem.hpp>
 
@@ -269,7 +270,7 @@ PyNN::PyNN(const std::string &simulator, const Json &setup)
 
 PyNN::~PyNN() = default;
 
-void PyNN::do_run(Network &source, float duration) const
+void PyNN::do_run(NetworkBase &source, float duration) const
 {
 	// Find the import that should be used
 	std::vector<bool> available = PYNN_UTIL.has_imports(m_imports);

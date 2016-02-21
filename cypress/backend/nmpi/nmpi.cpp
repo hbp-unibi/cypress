@@ -146,7 +146,7 @@ NMPI::NMPI(const std::string &pynn_backend, int &argc, const char *argv[],
 
 NMPI::~NMPI() = default;
 
-void NMPI::do_run(Network &network, float duration) const
+void NMPI::do_run(NetworkBase &network, float duration) const
 {
 	m_pynn->run(network, duration);
 }
