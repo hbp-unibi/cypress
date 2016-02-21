@@ -213,9 +213,18 @@ int Process::wait() { return impl->wait(); }
 
 bool Process::signal(int signal) { return impl->signal(signal); }
 
-void Process::generic_writer(Process &proc, const std::string &input)
+void Process::generic_writer(Process &proc, std::istream &input)
 {
-	proc.child_stdin() << input;
+	while (input.good()) {
+		char c;
+		input.read(&c, 1);
+		if (input.gcount() == 1) {
+			proc.child_stdin().write(&c, 1);
+			if (c == '\n' || c == '\r') {
+				proc.child_stdin().flush();
+			}
+		}
+	}
 	proc.close_child_stdin();
 }
 
@@ -232,12 +241,11 @@ void Process::generic_reader(std::istream &source, std::ostream &output)
 }
 
 int Process::exec(const std::string &cmd, const std::vector<std::string> &args,
-                  std::ostream &cout, std::ostream &cerr,
-                  const std::string &input)
+                  std::istream &cin, std::ostream &cout, std::ostream &cerr)
 {
 	Process proc(cmd, args);
 
-	std::thread t1(generic_writer, std::ref(proc), std::ref(input));
+	std::thread t1(generic_writer, std::ref(proc), std::ref(cin));
 	std::thread t2(generic_reader, std::ref(proc.child_stdout()),
 	               std::ref(cout));
 	std::thread t3(generic_reader, std::ref(proc.child_stderr()),
@@ -249,6 +257,15 @@ int Process::exec(const std::string &cmd, const std::vector<std::string> &args,
 	t3.join();
 
 	return proc.wait();
+}
+
+int Process::exec(const std::string &cmd, const std::vector<std::string> &args,
+                  std::ostream &cout, std::ostream &cerr,
+                  const std::string &input)
+{
+	std::stringstream ss_in;
+	ss_in << input;
+	return exec(cmd, args, ss_in, cout, cerr);
 }
 
 std::tuple<int, std::string, std::string> Process::exec(

@@ -52,15 +52,14 @@ private:
 	std::unique_ptr<ProcessImpl> impl;
 
 public:
-
 	/**
-	 * Thread proc used to asynchronously write a buffer to the stdin of a
-	 * process.
+	 * Thread proc used to asynchronously stream an input stream to a process.
 	 *
 	 * @param proc is the process to which should be written.
-	 * @param input is the buffer that should be written to the stdin.
+	 * @param input is the stream that should be written to the stdin of the
+	 * process.
 	 */
-	static void generic_writer(Process &proc, const std::string &input);
+	static void generic_writer(Process &proc, std::istream &input);
 
 	/**
 	 * Thread proc used to asynchronously pipe data from a source input stream
@@ -156,8 +155,26 @@ public:
 	 *
 	 * @param cmd is the command that should be executed.
 	 * @param args is a vector of arguments that should be given to the command.
+	 * @param cout is the target stream to which the child process cout should
+	 * be written.
+	 * @param cerr is the target stream to which the child process cerr should
+	 * be written.
 	 * @param input is a string that should be sent to the child process via
 	 * its stdin.
+	 * @return the process return code.
+	 */
+	static int exec(const std::string &cmd,
+	                const std::vector<std::string> &args, std::ostream &cout,
+	                std::ostream &cerr,
+	                const std::string &input = std::string());
+
+	/**
+	 * Convenience method for executing a child process and sendings its stdout
+	 * and stderr streams to the given streams.
+	 *
+	 * @param cmd is the command that should be executed.
+	 * @param args is a vector of arguments that should be given to the command.
+	 * @param cin is a stream which should be sent to the child process.
 	 * @param cout is the target stream to which the child process cout should
 	 * be written.
 	 * @param cerr is the target stream to which the child process cerr should
@@ -165,9 +182,8 @@ public:
 	 * @return the process return code.
 	 */
 	static int exec(const std::string &cmd,
-	                const std::vector<std::string> &args, std::ostream &cout,
-	                std::ostream &cerr,
-	                const std::string &input = std::string());
+	                const std::vector<std::string> &args, std::istream &cin,
+	                std::ostream &cout, std::ostream &cerr);
 
 	/**
 	 * Convenience method for executing a child process, sending data via stdin
