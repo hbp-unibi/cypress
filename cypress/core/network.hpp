@@ -326,6 +326,11 @@ public:
 	NeuronIndex nid() const { return m_neuron.nid(); }
 };
 
+namespace internal {
+template <typename PopulationType>
+auto resolve_population(Network &, PopulationType p);
+}
+
 /**
  * Class representing the entire spiking neural network.
  */
@@ -371,35 +376,6 @@ public:
 	}
 
 	/**
-	 * Creates a new neuron population with the given size and name.
-	 *
-	 * @param size is the number of neurons in the population.
-	 * @param name is the (optional) name of the population. A C-style string
-	 * is used here to prevent iterpretation of an initializer list as string.
-	 */
-	template <typename T>
-	Population<T> create_population(size_t size, const char *name ="")
-	{
-		return Population<T>(*this, size, {}, name);
-	}
-
-	template <typename T>
-	Population<T> create_population(
-	    size_t size, const typename T::Parameters &params,
-	    const char *name ="")
-	{
-		return Population<T>(*this, size, params, name);
-	}
-
-	template <typename T>
-	Population<T> create_population(
-	    size_t size, std::initializer_list<typename T::Parameters> params,
-	    const char *name = "")
-	{
-		return Population<T>(*this, size, params, name);
-	}
-
-	/**
 	 * Returns population objects pointing at the population with the given
 	 * name.
 	 *
@@ -417,6 +393,26 @@ public:
 			res.emplace_back(*this, p.pid());
 		}
 		return res;
+	}
+
+	/**
+	 * Returns a PopulationBase object pointing at the last created population
+	 * with the given name. If no such population exists, an exception is
+	 * thrown.
+	 *
+	 * @tparam T is the neuron type of the population that should be returned.
+	 * @param name is the name of the population that should be looked up. If
+	 * empty, the last created population of the given type is returned.
+	 * @return a population handle pointing at the requested population.
+	 */
+	PopulationBase population(const std::string &name = std::string())
+	{
+		auto pops = populations(name);
+		if (pops.empty()) {
+			throw NoSuchPopulationException(
+			    std::string("Population with name \"") + name + "\" does not exist");
+		}
+		return pops.back();
 	}
 
 	/**
@@ -438,6 +434,78 @@ public:
 			    "\" with name \"" + name + "\" does not exist");
 		}
 		return pops.back();
+	}
+
+	/**
+	 * Creates a new neuron population with the given size and name.
+	 *
+	 * @param size is the number of neurons in the population.
+	 * @param name is the (optional) name of the population. A C-style string
+	 * is used here to prevent iterpretation of an initializer list as string.
+	 */
+	template <typename T>
+	Population<T> create_population(size_t size, const char *name = "")
+	{
+		return Population<T>(*this, size, {}, name);
+	}
+
+	template <typename T>
+	Population<T> create_population(size_t size,
+	                                const typename T::Parameters &params,
+	                                const char *name = "")
+	{
+		return Population<T>(*this, size, params, name);
+	}
+
+	/*
+	 * One-line builder-like interface
+	 */
+
+	template <typename T>
+	Population<T> create_population(
+	    size_t size, std::initializer_list<typename T::Parameters> params,
+	    const char *name = "")
+	{
+		return Population<T>(*this, size, params, name);
+	}
+
+	template <typename T>
+	Network &population(const char *name, size_t size)
+	{
+		create_population<T>(size, name);
+		return *this;
+	}
+
+	template <typename T>
+	Network &population(const char *name, size_t size,
+	                    std::initializer_list<typename T::Parameters> params)
+	{
+		create_population<T>(size, params, name);
+		return *this;
+	}
+
+	template <typename T>
+	Network &population(const char *name, size_t size,
+	                    const typename T::Parameters &params)
+	{
+		create_population<T>(size, params, name);
+		return *this;
+	}
+
+	template <typename Source, typename Target>
+	Network &connect(const Source &source, const Target &target,
+	                 std::unique_ptr<Connector> connector)
+	{
+		internal::resolve_population(*this, source)
+		    .connect_to(internal::resolve_population(*this, target),
+		                std::move(connector));
+		return *this;
+	}
+
+	Network &run(const Backend &backend, float duration = 0.0)
+	{
+		NetworkBase::run(backend, duration);
+		return *this;
 	}
 };
 
@@ -479,6 +547,26 @@ template <typename T>
 inline Network Neuron<T>::network() const
 {
 	return Network(m_neuron.network());
+}
+
+namespace internal {
+template <typename PopulationType>
+inline auto resolve_population(Network &, PopulationType p)
+{
+	return p;
+}
+
+template <>
+inline auto resolve_population(Network &net, const char *str)
+{
+	return net.population(str);
+}
+
+template <>
+inline auto resolve_population(Network &net, const std::string &str)
+{
+	return net.population(str);
+}
 }
 }
 
