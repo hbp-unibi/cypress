@@ -30,11 +30,14 @@
 
 #include <cypress/backend/binnf/marshaller.hpp>
 #include <cypress/backend/pynn/pynn.hpp>
+#include <cypress/backend/pynn/transformation.hpp>
 #include <cypress/backend/resources.hpp>
 #include <cypress/core/exceptions.hpp>
 #include <cypress/core/network_base.hpp>
 #include <cypress/util/process.hpp>
 #include <cypress/util/filesystem.hpp>
+
+using namespace cypress::pynn;
 
 namespace cypress {
 namespace {
@@ -243,6 +246,18 @@ public:
 		// Return the simulator name and the corresponding imports
 		return std::make_pair(simulator, imports);
 	}
+
+	/**
+	 * Returns properties of the chosen simulator.
+	 */
+	static SystemProperties properties(const std::string &normalised_simulator)
+	{
+		auto it = SIMULATOR_PROPERTIES.find(normalised_simulator);
+		if (it != SIMULATOR_PROPERTIES.end()) {
+			return it->second;
+		}
+		return SystemProperties(false, false, false);
+	}
 };
 
 /**
@@ -269,6 +284,15 @@ PyNN::PyNN(const std::string &simulator, const Json &setup)
 }
 
 PyNN::~PyNN() = default;
+
+float PyNN::timestep()
+{
+	SystemProperties props = PyNNUtil::properties(m_normalised_simulator);
+	if (props.analogue()) {
+		return 0.0;  // No minimum timestep on analogue neuromorphic hardware
+	}
+	return m_setup.value("timestep", 0.1); // Default is 0.1ms
+}
 
 void PyNN::do_run(NetworkBase &source, float duration) const
 {
@@ -300,6 +324,8 @@ void PyNN::do_run(NetworkBase &source, float duration) const
 
 	// Run the PyNN python backend
 	{
+		Transformation trafo(0.1);
+
 		std::vector<std::string> params(
 		    {Resources::PYNN_INTERFACE.open(), "run", "--simulator",
 		     m_normalised_simulator, "--library", import, "--setup",
@@ -312,8 +338,13 @@ void PyNN::do_run(NetworkBase &source, float duration) const
 		                       std::ref(proc.child_stderr()),
 		                       std::ref(log_stream));
 
-		// Send the network description to the simulator
-		binnf::marshall_network(source, proc.child_stdin());
+		// Send the network description to the simulator, inject the connection
+		// transformation to rewrite the connections
+		binnf::marshall_network(
+		    source, proc.child_stdin(),
+		    [&trafo](Connection cs[], size_t size) mutable -> size_t {
+			    return trafo.transform_connections(cs, size);
+			});
 		proc.close_child_stdin();
 
 		// Read the response back

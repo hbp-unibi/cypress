@@ -63,8 +63,10 @@ static void write_populations(const std::vector<PopulationBase> &populations,
 /**
  * Constructs and sends the connection matrix to the simulator.
  */
-static void write_connections(const std::vector<ConnectionDescriptor> &descrs,
-                              std::ostream &os)
+static void write_connections(
+    const std::vector<ConnectionDescriptor> &descrs, std::ostream &os,
+    std::function<size_t(Connection connections[], size_t count)>
+        connection_trafo)
 {
 	static const Header HEADER = {
 	    {"pid_src", "pid_tar", "nid_src", "nid_tar", "weight", "delay"},
@@ -72,6 +74,9 @@ static void write_connections(const std::vector<ConnectionDescriptor> &descrs,
 
 	// Vector containing all connection objects
 	std::vector<Connection> connections = instantiate_connections(descrs);
+
+	// Transform the connections
+	connections.resize(connection_trafo(&connections[0], connections.size()));
 
 	serialise(os, "connections", HEADER,
 	          reinterpret_cast<Number *>(&connections[0]), connections.size());
@@ -144,14 +149,16 @@ static void write_parameters(const PopulationBase &population, std::ostream &os)
 	}
 }
 
-void marshall_network(NetworkBase &net, std::ostream &os)
+void marshall_network(NetworkBase &net, std::ostream &os,
+                      std::function<size_t(Connection connections[],
+                                         size_t count)> connection_trafo)
 {
 	// Write the populations
 	const std::vector<PopulationBase> populations = net.populations();
 	write_populations(populations, os);
 
 	// Write the connections
-	write_connections(net.connections(), os);
+	write_connections(net.connections(), os, connection_trafo);
 
 	// Write the population parameters
 	for (const auto &population : populations) {

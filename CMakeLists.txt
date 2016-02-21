@@ -67,6 +67,7 @@ add_library(cypress
 	cypress/backend/binnf/marshaller
 	cypress/backend/nmpi/nmpi
 	cypress/backend/pynn/pynn
+	cypress/backend/pynn/transformation
 	cypress/core/internal/network_impl
 	cypress/core/backend
 	cypress/core/connector
