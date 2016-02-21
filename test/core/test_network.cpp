@@ -585,17 +585,19 @@ TEST(network, connect)
 	pop1.connect_to(pop3, Connector::all_to_all(0.016, 0.01));
 	pop2.connect_to(pop4.range(0, 10), Connector::one_to_one(0.016, 0.01));
 	pop3.connect_to(pop4.range(10, 20), Connector::one_to_one(0.016, 0.01));
-	pop4.range(0, 10).connect_to(pop3, Connector::all_to_all(0.016, 0.01));
-	pop4.range(10, 20).connect_to(pop2, Connector::all_to_all(0.016, 0.01));
+	pop4(0, 10).connect_to(pop3, Connector::all_to_all(0.016, 0.01));
+	pop4(10, 20).connect_to(pop2, Connector::all_to_all(0.016, 0.01));
+	pop1[0].connect_to(pop2(5), Connector::one_to_one(0.016, 0.01));
 
 	const auto &cs = n.connections();
-	ASSERT_EQ(6U, cs.size());
+	ASSERT_EQ(7U, cs.size());
 
 	EXPECT_EQ(ConnectionDescriptor(0, 0, 1, 1, 0, 10), cs[0]);
-	EXPECT_EQ(ConnectionDescriptor(0, 0, 1, 2, 0, 10), cs[1]);
-	EXPECT_EQ(ConnectionDescriptor(1, 0, 10, 3, 0, 10), cs[2]);
-	EXPECT_EQ(ConnectionDescriptor(2, 0, 10, 3, 10, 20), cs[3]);
-	EXPECT_EQ(ConnectionDescriptor(3, 10, 20, 1, 0, 10), cs[4]);
-	EXPECT_EQ(ConnectionDescriptor(3, 0, 10, 2, 0, 10), cs[5]);
+	EXPECT_EQ(ConnectionDescriptor(0, 0, 1, 1, 5, 6), cs[1]);
+	EXPECT_EQ(ConnectionDescriptor(0, 0, 1, 2, 0, 10), cs[2]);
+	EXPECT_EQ(ConnectionDescriptor(1, 0, 10, 3, 0, 10), cs[3]);
+	EXPECT_EQ(ConnectionDescriptor(2, 0, 10, 3, 10, 20), cs[4]);
+	EXPECT_EQ(ConnectionDescriptor(3, 10, 20, 1, 0, 10), cs[5]);
+	EXPECT_EQ(ConnectionDescriptor(3, 0, 10, 2, 0, 10), cs[6]);
 }
 }
