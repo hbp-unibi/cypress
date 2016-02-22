@@ -65,7 +65,7 @@ static int run_broker(const std::vector<std::string> &args,
 	params.emplace_back("--platform");
 	params.emplace_back(platform);
 
-	return Process::exec("python", params, std::cin, std::cout, std::cerr);
+	return Process::exec_no_redirect("python", params);
 }
 
 NMPI::NMPI(std::unique_ptr<PyNN> pynn, int &argc, const char *argv[],

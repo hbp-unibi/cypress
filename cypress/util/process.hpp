@@ -28,6 +28,7 @@
 #ifndef CYPRESS_PROCESS_HPP
 #define CYPRESS_PROCESS_HPP
 
+#include <atomic>
 #include <iosfwd>
 #include <memory>
 #include <string>
@@ -65,10 +66,22 @@ public:
 	 * Thread proc used to asynchronously pipe data from a source input stream
 	 * to a target stream. Used to read data from a process.
 	 *
-	 * @param source is the source stream.
+	 * @param input is the input stream.
 	 * @param output is the target stream.
 	 */
-	static void generic_reader(std::istream &source, std::ostream &output);
+	static void generic_pipe(std::istream &input, std::ostream &output);
+
+	/**
+	 * Thread proc used to asynchronously pipe data from a source filedescriptor
+	 * to the target stream.
+	 *
+	 * @param fd is the input file descriptor.
+	 * @param output is the target stream.
+	 * @param done should be set to true when the thread should no longer listen
+	 * on the fd.
+	 */
+	static void fd_input_pipe(int fd, std::ostream &output,
+	                          const std::atomic<bool> &done);
 
 	/**
 	 * Constructor of the process class. Executes the given command with the
@@ -184,6 +197,17 @@ public:
 	static int exec(const std::string &cmd,
 	                const std::vector<std::string> &args, std::istream &cin,
 	                std::ostream &cout, std::ostream &cerr);
+
+	/**
+	 * Convenience method for executing a child process without redirecting
+	 * stdin/stdout/stderr.
+	 *
+	 * @param cmd is the command that should be executed.
+	 * @param args is a vector of arguments that should be given to the command.
+	 * @return the process return code.
+	 */
+	static int exec_no_redirect(const std::string &cmd,
+	                const std::vector<std::string> &args);
 
 	/**
 	 * Convenience method for executing a child process, sending data via stdin

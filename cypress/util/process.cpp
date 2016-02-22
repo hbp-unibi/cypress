@@ -22,6 +22,8 @@
 #include <stdexcept>
 #include <sstream>
 
+#include <sys/fcntl.h>
+#include <sys/select.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
@@ -215,29 +217,87 @@ bool Process::signal(int signal) { return impl->signal(signal); }
 
 void Process::generic_writer(Process &proc, std::istream &input)
 {
-	while (input.good()) {
-		char c;
-		input.read(&c, 1);
-		if (input.gcount() == 1) {
-			proc.child_stdin().write(&c, 1);
-			if (c == '\n' || c == '\r') {
-				proc.child_stdin().flush();
-			}
-		}
-	}
+	generic_pipe(input, proc.child_stdin());
 	proc.close_child_stdin();
 }
 
-void Process::generic_reader(std::istream &source, std::ostream &output)
+void Process::generic_pipe(std::istream &source, std::ostream &output)
 {
-	while (source.good()) {
+	constexpr size_t BUF_SIZE = 4096;
+	char buf[BUF_SIZE];
+	size_t buf_ptr = 0;
+
+	while (source.good() && output.good()) {
 		char c;
 		source.read(&c, 1);
-		output.write(&c, source.gcount());
-		if (source.gcount() == 1 && (c == '\n' || c == '\r')) {
-			output.flush();
+		if (source.gcount() == 1) {
+			buf[buf_ptr++] = c;
+			if (buf_ptr == BUF_SIZE || c == '\n' || c == '\r') {
+				output.write(buf, buf_ptr);
+				output.flush();
+				buf_ptr = 0;
+			}
 		}
 	}
+	if (buf_ptr > 0 && output.good()) {
+		output.write(buf, buf_ptr);
+		output.flush();
+	}
+}
+
+void Process::fd_input_pipe(int fd, std::ostream &output,
+                      const std::atomic<bool> &done)
+{
+	constexpr size_t BUF_SIZE = 4096;
+	char buf[BUF_SIZE];
+
+	// Fetch the old file flags
+	int old_flags = fcntl(fd, F_GETFL);
+	if (old_flags < 0) {
+		return;
+	}
+
+	// Make the file descriptor asynchronous
+	int flags = old_flags | O_ASYNC;
+	if (fcntl(fd, F_SETFL, flags) < 0) {
+		return;
+	}
+
+	// Iterate until either an error happens or the output stream is no longer
+	// writeable
+	while (output.good() && !done) {
+		// Setup a timeout of 10ms
+		struct timeval timeout;
+		timeout.tv_sec = 0L;
+		timeout.tv_usec = 1000L * 10L;
+
+		// Add the file descriptor to the filedescriptor set
+		fd_set rfds;
+		FD_ZERO(&rfds);
+		FD_SET(fd, &rfds);
+		int retval = select(1, &rfds, nullptr, nullptr, &timeout);
+		if (retval == -1) {
+			break;  // Error, abort
+		}
+		if (retval == 1) {
+			int c = read(fd, buf, BUF_SIZE);
+			if (c > 0) {
+				output.write(buf, c);
+				for (int i = 0; i < c; i++) {
+					if (buf[i] == '\n' || buf[i] == 'r') {
+						output.flush();
+					}
+				}
+			}
+			else if (c < 0) {
+				// Error while reading
+				break;
+			}
+		}
+	}
+
+	// Restore the old file flags
+	fcntl(fd, F_SETFL, old_flags);
 }
 
 int Process::exec(const std::string &cmd, const std::vector<std::string> &args,
@@ -246,17 +306,17 @@ int Process::exec(const std::string &cmd, const std::vector<std::string> &args,
 	Process proc(cmd, args);
 
 	std::thread t1(generic_writer, std::ref(proc), std::ref(cin));
-	std::thread t2(generic_reader, std::ref(proc.child_stdout()),
-	               std::ref(cout));
-	std::thread t3(generic_reader, std::ref(proc.child_stderr()),
-	               std::ref(cerr));
+	std::thread t2(generic_pipe, std::ref(proc.child_stdout()), std::ref(cout));
+	std::thread t3(generic_pipe, std::ref(proc.child_stderr()), std::ref(cerr));
+
+	int res = proc.wait();
 
 	// Wait for all threads to complete
 	t1.join();
 	t2.join();
 	t3.join();
 
-	return proc.wait();
+	return res;
 }
 
 int Process::exec(const std::string &cmd, const std::vector<std::string> &args,
@@ -266,6 +326,33 @@ int Process::exec(const std::string &cmd, const std::vector<std::string> &args,
 	std::stringstream ss_in;
 	ss_in << input;
 	return exec(cmd, args, ss_in, cout, cerr);
+}
+
+int Process::exec_no_redirect(const std::string &cmd,
+                              const std::vector<std::string> &args)
+{
+	Process proc(cmd, args);
+
+	std::atomic<bool> done(false);
+
+	std::thread t1(Process::fd_input_pipe, STDIN_FILENO,
+	               std::ref(proc.child_stdin()), std::ref(done));
+	std::thread t2(Process::generic_pipe, std::ref(proc.child_stdout()),
+	               std::ref(std::cout));
+	std::thread t3(Process::generic_pipe, std::ref(proc.child_stderr()),
+	               std::ref(std::cerr));
+
+	// Close the process output stream
+	int res = proc.wait();
+
+	done = true;
+
+	// Wait for all threads to complete
+	t1.join();
+	t2.join();
+	t3.join();
+
+	return res;
 }
 
 std::tuple<int, std::string, std::string> Process::exec(
