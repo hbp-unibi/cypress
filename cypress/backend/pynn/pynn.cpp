@@ -334,7 +334,7 @@ void PyNN::do_run(NetworkBase &source, float duration) const
 
 		// Attach the error log
 		std::ofstream log_stream = filesystem::tmpfile(log_path);
-		std::thread log_thread(Process::generic_reader,
+		std::thread log_thread(Process::generic_pipe,
 		                       std::ref(proc.child_stderr()),
 		                       std::ref(log_stream));
 
@@ -352,9 +352,11 @@ void PyNN::do_run(NetworkBase &source, float duration) const
 
 		// Wait for the process to be done
 		if (proc.wait() != 0) {
+			std::ifstream log_stream_in(log_path);
+			Process::generic_pipe(log_stream_in, std::cerr);
 			throw ExecutionError(
 			    std::string("Error while executing the simulator, see ") +
-			    log_path + " for more information.");
+			    log_path + " for the above information.");
 		}
 
 		// Make sure the logging thread has finished
