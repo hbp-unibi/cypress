@@ -146,6 +146,11 @@ NMPI::NMPI(const std::string &pynn_backend, int &argc, const char *argv[],
 
 NMPI::~NMPI() = default;
 
+bool NMPI::check_args(int argc, const char *argv[])
+{
+	return (argc >= 2 && argv[argc - 1] == SERVER_ARG);
+}
+
 void NMPI::do_run(NetworkBase &network, float duration) const
 {
 	m_pynn->run(network, duration);

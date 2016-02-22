@@ -108,6 +108,12 @@ public:
 	 * Destructor. Destroys the PyNN backend.
 	 */
 	~NMPI() override;
+
+	/**
+	 * Returns true if the given arguments consititure a call on the NMPI server
+	 * in which case no further checking should be performed.
+	 */
+	static bool check_args(int argc, const char *argv[]);
 };
 }
 
