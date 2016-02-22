@@ -16,9 +16,36 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <algorithm>
+
+#include <cypress/core/exceptions.hpp>
 #include <cypress/core/neurons.hpp>
 
 namespace cypress {
+
+/*
+ * Class NeuronType
+ */
+
+size_t NeuronType::parameter_index(const std::string &name) const
+{
+	auto it = std::find(parameter_names.begin(), parameter_names.end(), name);
+	if (it == parameter_names.end()) {
+		throw InvalidParameter(std::string("Signal with name \"") + name +
+		                       "\" does not exist.");
+	}
+	return it - parameter_names.begin();
+}
+
+size_t NeuronType::signal_index(const std::string &name) const
+{
+	auto it = std::find(signal_names.begin(), signal_names.end(), name);
+	if (it == parameter_names.end()) {
+		throw InvalidSignal(std::string("Signal with name \"") + name +
+		                    "\" does not exist.");
+	}
+	return it - signal_names.begin();
+}
 
 /*
  * Class NullNeuronType

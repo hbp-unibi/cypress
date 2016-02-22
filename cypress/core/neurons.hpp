@@ -113,6 +113,49 @@ public:
 };
 
 /**
+ * Class allowing to specify which signals are being recorded and which are not.
+ */
+class NeuronSignalsBase {
+private:
+	/**
+	 * Vector signaling which signals are being recorded and which are not.
+	 */
+	std::vector<uint8_t> m_signals;
+
+protected:
+	/**
+	 * Constructor accepting the number of signals in the signal vector.
+	 *
+	 * @param signal_count number of signals available in the neuron.
+	 */
+	NeuronSignalsBase(size_t signal_count) : m_signals(signal_count) {}
+
+public:
+	/**
+	 * Default constructor.
+	 */
+	NeuronSignalsBase() {}
+
+	/**
+	 * Operator allowing to access the i-th signal.
+	 */
+	bool &operator[](size_t i)
+	{
+		return reinterpret_cast<bool &>(m_signals[i]);
+	}
+
+	/**
+	 * Operator allowing to access the i-th signal.
+	 */
+	bool operator[](size_t i) const { return m_signals[i]; }
+
+	/**
+	 * Number of parameters.
+	 */
+	size_t size() const { return m_signals.size(); }
+};
+
+/**
  * The NeuronType class contains data describing an individual neuron
  * type and its parameters.
  */
@@ -185,6 +228,16 @@ public:
 	 * True if this neuron type represents a spike source.
 	 */
 	const bool spike_source;
+
+	/**
+	 * Resolves the given parameter name into a parameter index.
+	 */
+	size_t parameter_index(const std::string &name) const;
+
+	/**
+	 * Resolves the given signal name into a signel index.
+	 */
+	size_t signal_index(const std::string &name) const;
 };
 
 /**
@@ -268,6 +321,48 @@ public:
 
 #undef NAMED_VECTOR_ELEMENT
 
+#define NAMED_SIGNAL(NAME, IDX)               \
+	static constexpr size_t idx_##NAME = IDX; \
+	auto &NAME(bool x = true)                 \
+	{                                         \
+		(*this)[IDX] = x;                     \
+		return *this;                         \
+	}
+
+class NullNeuronSignals final : public NeuronSignalsBase {
+public:
+	NullNeuronSignals() : NeuronSignalsBase(0) {}
+};
+
+class SpikeSourceArraySignals final : public NeuronSignalsBase {
+public:
+	SpikeSourceArraySignals() : NeuronSignalsBase(1) {}
+
+	NAMED_SIGNAL(spikes, 0);
+};
+
+class IfCondExpSignals final : public NeuronSignalsBase {
+public:
+	IfCondExpSignals() : NeuronSignalsBase(4) {}
+
+	NAMED_SIGNAL(spikes, 0);
+	NAMED_SIGNAL(v, 1);
+	NAMED_SIGNAL(gsyn_exc, 2);
+	NAMED_SIGNAL(gsyn_inh, 3);
+};
+
+class EifCondExpIsfaIstaSignals final : public NeuronSignalsBase {
+public:
+	EifCondExpIsfaIstaSignals() : NeuronSignalsBase(4) {}
+
+	NAMED_SIGNAL(spikes, 0);
+	NAMED_SIGNAL(v, 1);
+	NAMED_SIGNAL(gsyn_exc, 2);
+	NAMED_SIGNAL(gsyn_inh, 3);
+};
+
+#undef NAMED_SIGNAL
+
 /**
  * Internally used neuron type representing no neuron type.
  */
@@ -277,6 +372,7 @@ private:
 
 public:
 	using Parameters = NullNeuronParameters;
+	using Signals = NullNeuronSignals;
 
 	static const NullNeuronType &inst();
 };
@@ -287,6 +383,7 @@ private:
 
 public:
 	using Parameters = SpikeSourceArrayParameters;
+	using Signals = SpikeSourceArraySignals;
 
 	static const SpikeSourceArray &inst();
 };
@@ -297,6 +394,7 @@ private:
 
 public:
 	using Parameters = IfCondExpParameters;
+	using Signals = IfCondExpSignals;
 
 	static const IfCondExp &inst();
 };
@@ -307,6 +405,7 @@ private:
 
 public:
 	using Parameters = EifCondExpIsfaIstaParameters;
+	using Signals = EifCondExpIsfaIstaSignals;
 
 	static const EifCondExpIsfaIsta &inst();
 };

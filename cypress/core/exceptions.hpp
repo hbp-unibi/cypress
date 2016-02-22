@@ -75,6 +75,22 @@ class InvalidParameterArraySize : public CypressException {
 public:
 	using CypressException::CypressException;
 };
+
+/**
+ * Exception thrown if a non-existing signal is accessed.
+ */
+class InvalidParameter : public CypressException {
+public:
+	using CypressException::CypressException;
+};
+
+/**
+ * Exception thrown if a non-existing signal is accessed.
+ */
+class InvalidSignal : public CypressException {
+public:
+	using CypressException::CypressException;
+};
 }
 
 #endif /* CYPRESS_CORE_EXCEPTIONS_HPP */
