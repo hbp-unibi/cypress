@@ -111,7 +111,7 @@ import sys
 import tarfile
 
 # Remember which files were extracted -- we'll cleanup our traces after running
-dir = os.path.join(os.getcwd(), '""" + tmpdir + """')
+dir = os.path.realpath(os.path.join(os.getcwd(), '""" + tmpdir + """'))
 files = []
 
 # http://stackoverflow.com/questions/600268/mkdir-p-functionality-in-python
@@ -125,6 +125,19 @@ def mkdir_p(path):
         else:
             raise
 
+def setup():
+    # List files in the current directory and link them into the target
+    # directory
+    for filename in os.listdir("."):
+        source = os.path.realpath(os.path.join(".", filename))
+        target = os.path.join(dir, filename)
+        if target == dir or os.path.exists(target):
+            continue
+        os.symlink(source, target)
+
+        # Important! Unlink file before recursively deleting subdirectory
+        files.append(target)
+
 def extract(filename, mode, data):
     filename = os.path.join(dir, filename)
     files.append(filename)
@@ -137,7 +150,7 @@ def run(filename, args):
     old_cwd = os.getcwd()
     try:
         os.chdir(dir)
-        res = subprocess.call(["./" + filename] + args)
+        res = subprocess.call([os.path.join(dir, filename)] + args)
     finally:
         os.chdir(old_cwd)
 
@@ -166,6 +179,7 @@ for filename in files:
                                   tar_filename,
                                   filename == args.executable)
 
+script = script + "setup()\n"
 script = script + ("res = run('" + os.path.relpath(filename, args.base)
                    + "', " + str(args.args) + ")\n")
 script = script + "cleanup()\n"
