@@ -237,6 +237,10 @@ class Cypress:
         # Create the population and setup recording
         res = self.sim.Population(count, type_, {})
 
+        # Bug fix for old PyHMF version
+        if not hasattr(res, "size"):
+            setattr(res, "size", count)
+
         # Increment the neuron counter needed to work around a bug in spikey,
         # store the neuron index in the created population
         if not is_source:
