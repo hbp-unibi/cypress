@@ -54,7 +54,8 @@ class PopulationBase
     : public IterableMixin<PopulationBase, NeuronBase, Accessor>,
       public ViewableMixin<PopulationBase, PopulationViewBase, Accessor>,
       public ParametersMixin<PopulationBase, Accessor, NeuronParametersBase>,
-      public PopulationMixin<PopulationBase, Accessor, NeuronParametersBase>,
+      public PopulationMixin<PopulationBase, Accessor, NeuronParametersBase,
+                             NeuronSignalsBase>,
       public ConnectableMixin<PopulationBase, Accessor> {
 private:
 	NetworkBase m_network;
@@ -104,7 +105,8 @@ public:
 class PopulationViewBase
     : public IterableMixin<PopulationViewBase, NeuronBase, Accessor>,
       public ViewableMixin<PopulationViewBase, PopulationViewBase, Accessor>,
-      public ParametersMixin<PopulationViewBase, Accessor, NeuronParametersBase>,
+      public ParametersMixin<PopulationViewBase, Accessor,
+                             NeuronParametersBase>,
       public ConnectableMixin<PopulationViewBase, Accessor> {
 private:
 	NetworkBase m_network;
@@ -192,7 +194,7 @@ public:
 	 * is located in.
 	 * @param nid is the absolute index of the neuron in its population.
 	 */
-	template<typename Parent>
+	template <typename Parent>
 	NeuronBase(const Parent &parent, NeuronIndex nid)
 	    : m_network(parent.network()), m_pid(parent.pid()), m_nid(nid)
 	{

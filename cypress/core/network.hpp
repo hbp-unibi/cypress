@@ -63,11 +63,13 @@ class Population
     : public IterableMixin<Population<T>, Neuron<T>, Accessor>,
       public ViewableMixin<Population<T>, PopulationView<T>, Accessor>,
       public ParametersMixin<Population<T>, Accessor, typename T::Parameters>,
-      public PopulationMixin<Population<T>, Accessor, typename T::Parameters>,
+      public PopulationMixin<Population<T>, Accessor, typename T::Parameters,
+                             typename T::Signals>,
       public ConnectableMixin<Population<T>, Accessor> {
 private:
 	using PopulationMixin_ =
-	    PopulationMixin<Population<T>, Accessor, typename T::Parameters>;
+	    PopulationMixin<Population<T>, Accessor, typename T::Parameters,
+	                    typename T::Signals>;
 	using ParametersMixin_ =
 	    ParametersMixin<Population<T>, Accessor, typename T::Parameters>;
 	using IterableMixin_ = IterableMixin<Population<T>, Neuron<T>, Accessor>;
@@ -101,15 +103,52 @@ public:
 	 *
 	 * @param network is the network in which the population should be
 	 * instantiated.
+	 * @param size is the number of neurons in the population.
+	 * @param params is a vector of parameters with one entry for each neuron
+	 * in the population. Pass an empty vector if the default parameters should
+	 * be used. Set a single argument to share the same parameters between all
+	 * neurons.
+	 * @param signals describes from which signals should be recorded.
+	 * @param name is the (optional) name of the population.
+	 */
+	Population(Network &network, size_t size,
+	           const typename T::Parameters &params,
+	           const typename T::Signals &signals, const char *name = "");
+
+	/**
+	 * Creates a new population in the given network.
+	 *
+	 * @param network is the network in which the population should be
+	 * instantiated.
 	 * @param params is a vector of parameters with one entry for each neuron
 	 * in the population. Pass an empty vector if the default parameters should
 	 * be used. Set a single argument to share the same parameters between all
 	 * neurons.
 	 * @param size is the number of neurons in the population.
+	 * @param signals describes from which signals should be recorded.
 	 * @param name is the (optional) name of the population.
 	 */
 	Population(Network &network, size_t size,
-	           const typename T::Parameters &params, const char *name = "");
+	           std::initializer_list<typename T::Parameters> params,
+	           const typename T::Signals &signals, const char *name = "");
+
+	/**
+	 * Creates a new population in the given network.
+	 *
+	 * @param network is the network in which the population should be
+	 * instantiated.
+	 * @param size is the number of neurons in the population.
+	 * @param params is a vector of parameters with one entry for each neuron
+	 * in the population. Pass an empty vector if the default parameters should
+	 * be used. Set a single argument to share the same parameters between all
+	 * neurons.
+	 * @param name is the (optional) name of the population.
+	 */
+	Population(Network &network, size_t size,
+	           const typename T::Parameters &params, const char *name = "")
+	    : Population(network, size, params, typename T::Signals(), name)
+	{
+	}
 
 	/**
 	 * Creates a new population in the given network.
@@ -125,7 +164,10 @@ public:
 	 */
 	Population(Network &network, size_t size,
 	           std::initializer_list<typename T::Parameters> params,
-	           const char *name = "");
+	           const char *name = "")
+	    : Population(network, size, params, typename T::Signals(), name)
+	{
+	}
 
 	/**
 	 * This class can be implicitly converted to PopulationBase, loosing the
@@ -342,12 +384,13 @@ private:
 	template <typename T>
 	size_t create_population_index(
 	    size_t size, const std::vector<typename T::Parameters> &params,
+	    const typename T::Signals &signals,
 	    const std::string &name = std::string())
 	{
 		return NetworkBase::create_population_index(
 		    size, T::inst(),
 		    std::vector<NeuronParametersBase>(params.begin(), params.end()),
-		    name);
+		    signals, name);
 	}
 
 public:
@@ -410,7 +453,8 @@ public:
 		auto pops = populations(name);
 		if (pops.empty()) {
 			throw NoSuchPopulationException(
-			    std::string("Population with name \"") + name + "\" does not exist");
+			    std::string("Population with name \"") + name +
+			    "\" does not exist");
 		}
 		return pops.back();
 	}
@@ -457,10 +501,6 @@ public:
 		return Population<T>(*this, size, params, name);
 	}
 
-	/*
-	 * One-line builder-like interface
-	 */
-
 	template <typename T>
 	Population<T> create_population(
 	    size_t size, std::initializer_list<typename T::Parameters> params,
@@ -468,6 +508,27 @@ public:
 	{
 		return Population<T>(*this, size, params, name);
 	}
+
+	template <typename T>
+	Population<T> create_population(size_t size,
+	                                const typename T::Parameters &params,
+	                                const typename T::Signals &signals,
+	                                const char *name = "")
+	{
+		return Population<T>(*this, size, params, signals, name);
+	}
+
+	template <typename T>
+	Population<T> create_population(
+	    size_t size, std::initializer_list<typename T::Parameters> params,
+	    const typename T::Signals &signals, const char *name = "")
+	{
+		return Population<T>(*this, size, params, signals, name);
+	}
+
+	/*
+	 * One-line builder-like interface
+	 */
 
 	template <typename T>
 	Network &population(const char *name, size_t size)
@@ -516,18 +577,20 @@ public:
 template <typename T>
 inline Population<T>::Population(Network &network, size_t size,
                                  const typename T::Parameters &params,
+                                 const typename T::Signals &signals,
                                  const char *name)
-    : Population(network,
-                 network.create_population_index<T>(size, {params}, name))
+    : Population(network, network.create_population_index<T>(size, {params},
+                                                             signals, name))
 {
 }
 
 template <typename T>
 inline Population<T>::Population(
     Network &network, size_t size,
-    std::initializer_list<typename T::Parameters> params, const char *name)
-    : Population(network,
-                 network.create_population_index<T>(size, params, name))
+    std::initializer_list<typename T::Parameters> params,
+    const typename T::Signals &signals, const char *name)
+    : Population(network, network.create_population_index<T>(size, params,
+                                                             signals, name))
 {
 }
 

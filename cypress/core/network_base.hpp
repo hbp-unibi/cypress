@@ -56,7 +56,7 @@ class PopulationBase;
 class PopulationViewBase;
 class NeuronBase;
 
-template <typename Impl, typename Accessor, typename Params>
+template <typename Impl, typename Accessor, typename Params, typename Signals>
 class PopulationMixin;
 
 template <typename Impl, typename Accessor, typename Params>
@@ -82,7 +82,8 @@ private:
 	std::shared_ptr<internal::NetworkImpl> m_impl;
 
 protected:
-	template <typename Impl, typename Accessor, typename Params>
+	template <typename Impl, typename Accessor, typename Params,
+	          typename Signals>
 	friend class PopulationMixin;
 
 	template <typename Impl, typename Accessor, typename Params>
@@ -116,6 +117,23 @@ protected:
 	void population_name(PopulationIndex pid, const std::string &name);
 
 	/**
+	 * Returns a reference at the signals instance of the given population.
+	 */
+	NeuronSignalsBase &signals(PopulationIndex pid);
+
+	/**
+	 * Returns a const reference at the signals instance of the given
+	 * population.
+	 */
+	const NeuronSignalsBase &signals(PopulationIndex pid) const;
+
+	/**
+	 * Enables or disables recording of the given signal for the population with
+	 * the given id.
+	 */
+	void record(PopulationIndex pid, size_t signal_idx, bool record);
+
+	/**
 	 * Returns true if all neurons in the given population share the same
 	 * parameters.
 	 */
@@ -128,8 +146,8 @@ protected:
 	                                       NeuronIndex nid) const;
 
 	/**
-	 * Sets the neuron parameters for the neurons nid0 to nid1 (exclusive) in
-	 * the populatid pid to the parameters specified in the given parameter
+	 * Sets the neuron parameters for the neurons nid0 to nid1 (exclusive)
+	 * in the populatid pid to the parameters specified in the given parameter
 	 * list. If the size of the specified range and the number of elements
 	 * in the parameter vector do not match, an exception is thrown.
 	 *
@@ -239,6 +257,7 @@ protected:
 	PopulationIndex create_population_index(
 	    size_t size, const NeuronType &type,
 	    const std::vector<NeuronParametersBase> &params,
+	    const NeuronSignalsBase &signals,
 	    const std::string &name);
 
 public:
@@ -263,13 +282,13 @@ public:
 	 * Compares whether two NetworkBase instances point at the same underlying
 	 * network.
 	 */
-	bool operator==(const NetworkBase &o) const {return m_impl == o.m_impl;}
+	bool operator==(const NetworkBase &o) const { return m_impl == o.m_impl; }
 
 	/**
 	 * Compares whether two NetworkBase instances point at different underlying
 	 * network instances.
 	 */
-	bool operator!=(const NetworkBase &o) const {return m_impl != o.m_impl;}
+	bool operator!=(const NetworkBase &o) const { return m_impl != o.m_impl; }
 
 	/**
 	 * Creates and returns a copy of the network.

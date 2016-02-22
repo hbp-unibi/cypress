@@ -66,6 +66,21 @@ void NetworkBase::population_name(PopulationIndex pid, const std::string &name)
 	m_impl->populations()[pid].name = name;
 }
 
+NeuronSignalsBase &NetworkBase::signals(PopulationIndex pid)
+{
+	return m_impl->populations()[pid].signals;
+}
+
+const NeuronSignalsBase &NetworkBase::signals(PopulationIndex pid) const
+{
+	return m_impl->populations()[pid].signals;
+}
+
+void NetworkBase::record(PopulationIndex pid, size_t signal_idx, bool record)
+{
+	signals(pid)[signal_idx] = record;
+}
+
 bool NetworkBase::homogeneous(PopulationIndex pid)
 {
 	return m_impl->populations()[pid].parameters.size() <= 1;
@@ -217,14 +232,15 @@ void NetworkBase::connect(PopulationIndex pid_src, NeuronIndex nid_src0,
 
 PopulationIndex NetworkBase::create_population_index(
     size_t size, const NeuronType &type,
-    const std::vector<NeuronParametersBase> &params, const std::string &name)
+    const std::vector<NeuronParametersBase> &params,
+    const NeuronSignalsBase &signals, const std::string &name)
 {
 	if (params.size() > 1 && params.size() != size) {
 		throw InvalidParameterArraySize(
 		    "The parameter array must have as many entries as there are "
 		    "neurons in the population.");
 	}
-	m_impl->populations().emplace_back(size, type, params, name);
+	m_impl->populations().emplace_back(size, type, params, signals, name);
 	return population_count() - 1;
 }
 

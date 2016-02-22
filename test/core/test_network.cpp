@@ -600,4 +600,62 @@ TEST(network, connect)
 	EXPECT_EQ(ConnectionDescriptor(3, 10, 20, 1, 0, 10), cs[5]);
 	EXPECT_EQ(ConnectionDescriptor(3, 0, 10, 2, 0, 10), cs[6]);
 }
+
+TEST(network, record)
+{
+	Network n;
+
+	{
+		auto pop = n.create_population<IfCondExp>(10);
+		EXPECT_FALSE(pop.record()[IfCondExpSignals::idx_spikes]);
+		EXPECT_FALSE(pop.record()[IfCondExpSignals::idx_v]);
+		EXPECT_FALSE(pop.record()[IfCondExpSignals::idx_gsyn_exc]);
+		EXPECT_FALSE(pop.record()[IfCondExpSignals::idx_gsyn_inh]);
+	}
+
+	{
+		auto pop = n.create_population<IfCondExp>(10);
+		pop.record("spikes");
+		EXPECT_TRUE(pop.record()[IfCondExpSignals::idx_spikes]);
+		EXPECT_FALSE(pop.record()[IfCondExpSignals::idx_v]);
+		EXPECT_FALSE(pop.record()[IfCondExpSignals::idx_gsyn_exc]);
+		EXPECT_FALSE(pop.record()[IfCondExpSignals::idx_gsyn_inh]);
+	}
+
+	{
+		auto pop = n.create_population<IfCondExp>(10);
+		pop.record({"v", "spikes"});
+		EXPECT_TRUE(pop.record()[IfCondExpSignals::idx_spikes]);
+		EXPECT_TRUE(pop.record()[IfCondExpSignals::idx_v]);
+		EXPECT_FALSE(pop.record()[IfCondExpSignals::idx_gsyn_exc]);
+		EXPECT_FALSE(pop.record()[IfCondExpSignals::idx_gsyn_inh]);
+	}
+
+	{
+		auto pop = n.create_population<IfCondExp>(
+		    10, {}, IfCondExp::Signals().spikes());
+		EXPECT_TRUE(pop.record()[IfCondExpSignals::idx_spikes]);
+		EXPECT_FALSE(pop.record()[IfCondExpSignals::idx_v]);
+		EXPECT_FALSE(pop.record()[IfCondExpSignals::idx_gsyn_exc]);
+		EXPECT_FALSE(pop.record()[IfCondExpSignals::idx_gsyn_inh]);
+	}
+
+	{
+		auto pop = n.create_population<IfCondExp>(
+		    10, {}, IfCondExp::Signals().spikes().v());
+		EXPECT_TRUE(pop.record()[IfCondExpSignals::idx_spikes]);
+		EXPECT_TRUE(pop.record()[IfCondExpSignals::idx_v]);
+		EXPECT_FALSE(pop.record()[IfCondExpSignals::idx_gsyn_exc]);
+		EXPECT_FALSE(pop.record()[IfCondExpSignals::idx_gsyn_inh]);
+	}
+
+	{
+		auto pop = n.create_population<IfCondExp>(
+		    10, {}, IfCondExp::Signals().spikes().v(false));
+		EXPECT_TRUE(pop.record()[IfCondExpSignals::idx_spikes]);
+		EXPECT_FALSE(pop.record()[IfCondExpSignals::idx_v]);
+		EXPECT_FALSE(pop.record()[IfCondExpSignals::idx_gsyn_exc]);
+		EXPECT_FALSE(pop.record()[IfCondExpSignals::idx_gsyn_inh]);
+	}
+}
 }

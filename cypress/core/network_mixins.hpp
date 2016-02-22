@@ -30,11 +30,13 @@
 #ifndef CYPRESS_CORE_NETWORK_MIXINS_HPP
 #define CYPRESS_CORE_NETWORK_MIXINS_HPP
 
+#include <algorithm>
 #include <memory>
 #include <iterator>
 
 #include <cypress/core/connector.hpp>
 #include <cypress/core/exceptions.hpp>
+#include <cypress/core/network_base.hpp>
 #include <cypress/core/neurons.hpp>
 #include <cypress/core/types.hpp>
 
@@ -43,13 +45,13 @@ namespace cypress {
  * Mixin used by PopulationBase and Population to provide the functions that
  * are expected by a population class.
  */
-template <typename Impl, typename Accessor, typename Params>
+template <typename Impl, typename Accessor, typename Params, typename Signals>
 class PopulationMixin {
 private:
 	Impl &impl() { return reinterpret_cast<Impl &>(*this); }
 	const Impl &impl() const { return reinterpret_cast<const Impl &>(*this); }
 
-	auto network() const { return Accessor::network(impl()); }
+	NetworkBase network() const { return Accessor::network(impl()); }
 	PopulationIndex pid() const { return Accessor::pid(impl()); }
 
 public:
@@ -71,6 +73,53 @@ public:
 	{
 		network().population_name(pid(), name);
 		return impl();
+	}
+
+	/**
+	 * Allows to record the signal with the given name.
+	 *
+	 * @param name is the name of the signal that should be recorded.
+	 * @param record specifies whether the signal should be recorded or not
+	 * recorded.
+	 */
+	Impl &record(const std::string &signal, bool record = true)
+	{
+		network().record(pid(), impl().type().signal_index(signal), record);
+		return impl();
+	}
+
+	/**
+	 * Allows to record the signals with the given names.
+	 *
+	 * @param signals is a vector containing the names of the signals that should
+	 * be recorded.
+	 * @param record specifies whether the signal should be recorded or not
+	 * recorded.
+	 */
+	Impl &record(std::initializer_list<std::string> signals, bool record = true)
+	{
+		for (const auto &signal : signals) {
+			this->record(signal, record);
+		}
+		return impl();
+	}
+
+	/**
+	 * Returns the signal map for the population, which indicates which signals
+	 * are being recorded and which are not.
+	 */
+	Signals &record()
+	{
+		return reinterpret_cast<Signals&>(network().signals(pid()));
+	}
+
+	/**
+	 * Returns the signal map for the population, which indicates which signals
+	 * are being recorded and which are not.
+	 */
+	const Signals &record() const
+	{
+		return reinterpret_cast<Signals&>(network().signals(pid()));
 	}
 
 	/**

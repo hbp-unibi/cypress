@@ -62,6 +62,11 @@ struct PopulationImpl {
 	std::vector<NeuronParametersBase> parameters;
 
 	/**
+	 * Signals being recorded for this population.
+	 */
+	NeuronSignalsBase signals;
+
+	/**
 	 * Name of the population.
 	 */
 	std::string name;
@@ -79,8 +84,13 @@ struct PopulationImpl {
 	               const NeuronType &type = NullNeuronType::inst(),
 	               const std::vector<NeuronParametersBase> &parameters =
 	                   std::vector<NeuronParametersBase>(),
+	               const NeuronSignalsBase &signals = NeuronSignalsBase(),
 	               const std::string &name = std::string())
-	    : size(size), type(&type), parameters(parameters), name(name)
+	    : size(size),
+	      type(&type),
+	      parameters(parameters),
+	      signals(signals),
+	      name(name)
 	{
 	}
 };
