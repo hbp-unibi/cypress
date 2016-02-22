@@ -25,14 +25,6 @@ namespace cypress {
 namespace internal {
 NetworkImpl::NetworkImpl() : m_connections_sorted(true) {}
 
-PopulationIndex NetworkImpl::create_population(
-    size_t size, const NeuronType &type,
-    const std::vector<NeuronParametersBase> &params, const std::string &name)
-{
-	m_populations.emplace_back(size, type, params, name);
-	return m_populations.size();
-}
-
 std::vector<PopulationIndex> NetworkImpl::populations(const std::string &name,
                                                       const NeuronType &type)
 {

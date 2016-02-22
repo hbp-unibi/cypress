@@ -113,14 +113,6 @@ public:
 	NetworkImpl();
 
 	/**
-	 * Creates a new population. Returns the corresponding population index.
-	 */
-	PopulationIndex create_population(
-	    size_t size, const NeuronType &type,
-	    const std::vector<NeuronParametersBase> &params,
-	    const std::string &name);
-
-	/**
 	 * Returns a reference at the vector containing the population data.
 	 */
 	std::vector<PopulationImpl> &populations() { return m_populations; }
