@@ -182,9 +182,11 @@ if os.path.isfile(config_file):
             config = json.load(fd)
     except Exception as e:
         logger.error(e.message)
-        logger.warning("Error while parsing ~/.nmpi_config. Starting with empty configuration!")
+        logger.warning(
+            "Error while parsing ~/.nmpi_config. Starting with empty configuration!")
 else:
-    logger.warning("~/.nmpi_config not found. Starting with empty configuration!")
+    logger.warning(
+        "~/.nmpi_config not found. Starting with empty configuration!")
 
 # Prompt the project name
 if not "project" in config:
@@ -197,6 +199,15 @@ if not "username" in config:
 # Create the client instance
 token = config["token"] if "token" in config else None
 while True:
+    if token is None:
+        logger.info(
+            "No valid access token found or the access token has expired. Please re-enter your password to obtain a new access token.")
+
+    sys.stdout.flush()
+    sys.stderr.flush()
+
+    time.sleep(0.1)
+
     client = Client(username=config["username"], token=token)
     config["token"] = client.token
 
@@ -210,6 +221,12 @@ while True:
             source=script,
             platform=args.platform,
             project=config["project"])
+        logger.info(
+            "Created job with ID " +
+            str(job_id) +
+            ", you can go to https://www.hbpneuromorphic.eu/app/index.html#/queue/" +
+            str(job_id) +
+            " to retrieve the job results")
     except:
         if token is not None:
             token = None
@@ -248,7 +265,8 @@ for dataitem in datalist:
         # Extract the output to the temporary directory
         logger.info("Extracting data...")
         with tarfile.open(archive, "r:*") as tar:
-            members = [member for member in tar.getmembers() if member.name.startswith(tmpdir)]
+            members = [member for member in tar.getmembers(
+            ) if member.name.startswith(tmpdir)]
             tar.extractall(members=members)
         os.unlink(archive)
 

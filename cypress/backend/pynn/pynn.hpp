@@ -29,7 +29,6 @@
 #include <cypress/core/backend.hpp>
 
 namespace cypress {
-
 /**
  * The Backend class is an abstract base class which provides the facilities
  * for network execution.
@@ -41,7 +40,7 @@ private:
 	std::vector<std::string> m_imports;
 	Json m_setup;
 
-	void do_run(Network &network, float duration) const override;
+	void do_run(NetworkBase &network, float duration) const override;
 
 public:
 	/**
@@ -67,6 +66,15 @@ public:
 	 * Destructor of the PyNN class.
 	 */
 	~PyNN() override;
+
+	/**
+	 * Calculates the timestep the simulation will be running with. This does
+	 * not make any sense for analogue hardware, why zero is returned in this
+	 * case.
+	 *
+	 * @return the simulation timestep in milliseconds.
+	 */
+	float timestep();
 
 	/**
 	 * Returns the simulator name as provided by the user.

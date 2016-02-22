@@ -36,14 +36,14 @@ TEST(network, create_population)
 	}
 
 	{
-		auto pop = network.create_population<IfCondExp>(20, {}, "foo");
+		auto pop = network.create_population<IfCondExp>(20, "foo");
 		EXPECT_EQ(20U, pop.size());
 		EXPECT_EQ(&IfCondExp::inst(), &pop.type());
 		EXPECT_EQ("foo", pop.name());
 	}
 
 	{
-		Population<IfCondExp> pop(network, 30);
+		Population<IfCondExp> pop(network, 30, {});
 		EXPECT_EQ(30U, pop.size());
 		EXPECT_EQ(&IfCondExp::inst(), &pop.type());
 		EXPECT_EQ("", pop.name());
@@ -57,6 +57,17 @@ TEST(network, create_population)
 	}
 }
 
+TEST(network, equals)
+{
+	Network network;
+	auto pop = network.create_population<IfCondExp>(10);
+
+	EXPECT_TRUE(pop.network() == network);
+	EXPECT_TRUE(pop[0].network() == network);
+	EXPECT_TRUE(pop(0).network() == network);
+	EXPECT_TRUE(pop(0, 5).network() == network);
+}
+
 TEST(network, population_iterator)
 {
 	Network network;
@@ -64,11 +75,11 @@ TEST(network, population_iterator)
 
 	// Test the default iterator
 	{
-		size_t i = 0;
+		ssize_t i = 0;
 		for (auto neuron : pop) {
-			EXPECT_EQ(i++, neuron.idx());
+			EXPECT_EQ(i++, neuron.nid());
 		}
-		EXPECT_EQ(10U, i);
+		EXPECT_EQ(10, i);
 	}
 }
 
@@ -77,37 +88,37 @@ TEST(network, population_iterator_post_increment)
 	Network network;
 	auto pop = network.create_population<IfCondExp>(10);
 
-	EXPECT_EQ(0U, (pop.begin()++)->idx());
-	EXPECT_EQ(9U, (pop.rbegin()++)->idx());
-	EXPECT_EQ(0U, (pop.cbegin()++)->idx());
-	EXPECT_EQ(9U, (pop.crbegin()++)->idx());
+	EXPECT_EQ(0, (pop.begin()++)->nid());
+	EXPECT_EQ(9, (pop.rbegin()++)->nid());
+	EXPECT_EQ(0, (pop.cbegin()++)->nid());
+	EXPECT_EQ(9, (pop.crbegin()++)->nid());
 
 	// Explicit default iterator instantiation
 	{
-		size_t i = 0;
+		ssize_t i = 0;
 		for (auto it = pop.begin(); it != pop.end(); it++) {
-			ASSERT_EQ(i, it->idx());
-			ASSERT_EQ(i++, (*it).idx());
+			ASSERT_EQ(i, it->nid());
+			ASSERT_EQ(i++, (*it).nid());
 		}
-		EXPECT_EQ(10U, i);
+		EXPECT_EQ(10, i);
 	}
 
 	// Explicit constant iterator instantiation
 	{
-		size_t i = 0;
+		ssize_t i = 0;
 		for (auto it = pop.cbegin(); it != pop.cend(); it++) {
-			ASSERT_EQ(i, it->idx());
-			ASSERT_EQ(i++, (*it).idx());
+			ASSERT_EQ(i, it->nid());
+			ASSERT_EQ(i++, (*it).nid());
 		}
-		EXPECT_EQ(10U, i);
+		EXPECT_EQ(10, i);
 	}
 
 	// Explicit reverse iterator instantiation
 	{
 		ssize_t i = 9;
 		for (auto it = pop.rbegin(); it != pop.rend(); it++) {
-			ASSERT_EQ(i, ssize_t(it->idx()));
-			ASSERT_EQ(i--, ssize_t((*it).idx()));
+			ASSERT_EQ(i, ssize_t(it->nid()));
+			ASSERT_EQ(i--, ssize_t((*it).nid()));
 		}
 		EXPECT_EQ(-1, i);
 	}
@@ -116,8 +127,8 @@ TEST(network, population_iterator_post_increment)
 	{
 		ssize_t i = 9;
 		for (auto it = pop.crbegin(); it != pop.crend(); it++) {
-			ASSERT_EQ(i, ssize_t(it->idx()));
-			ASSERT_EQ(i--, ssize_t((*it).idx()));
+			ASSERT_EQ(i, ssize_t(it->nid()));
+			ASSERT_EQ(i--, ssize_t((*it).nid()));
 		}
 		EXPECT_EQ(-1, i);
 	}
@@ -128,37 +139,37 @@ TEST(network, population_iterator_pre_increment)
 	Network network;
 	auto pop = network.create_population<IfCondExp>(10);
 
-	EXPECT_EQ(1U, (++pop.begin())->idx());
-	EXPECT_EQ(8U, (++pop.rbegin())->idx());
-	EXPECT_EQ(1U, (++pop.cbegin())->idx());
-	EXPECT_EQ(8U, (++pop.crbegin())->idx());
+	EXPECT_EQ(1, (++pop.begin())->nid());
+	EXPECT_EQ(8, (++pop.rbegin())->nid());
+	EXPECT_EQ(1, (++pop.cbegin())->nid());
+	EXPECT_EQ(8, (++pop.crbegin())->nid());
 
 	// Explicit default iterator instantiation
 	{
-		size_t i = 0;
+		ssize_t i = 0;
 		for (auto it = pop.begin(); it != pop.end(); ++it) {
-			ASSERT_EQ(i, it->idx());
-			ASSERT_EQ(i++, (*it).idx());
+			ASSERT_EQ(i, it->nid());
+			ASSERT_EQ(i++, (*it).nid());
 		}
-		EXPECT_EQ(10U, i);
+		EXPECT_EQ(10, i);
 	}
 
 	// Explicit constant iterator instantiation
 	{
-		size_t i = 0;
+		ssize_t i = 0;
 		for (auto it = pop.cbegin(); it != pop.cend(); ++it) {
-			ASSERT_EQ(i, it->idx());
-			ASSERT_EQ(i++, (*it).idx());
+			ASSERT_EQ(i, it->nid());
+			ASSERT_EQ(i++, (*it).nid());
 		}
-		EXPECT_EQ(10U, i);
+		EXPECT_EQ(10, i);
 	}
 
 	// Explicit reverse iterator instantiation
 	{
 		ssize_t i = 9;
 		for (auto it = pop.rbegin(); it != pop.rend(); ++it) {
-			ASSERT_EQ(i, it->idx());
-			ASSERT_EQ(i--, (*it).idx());
+			ASSERT_EQ(i, it->nid());
+			ASSERT_EQ(i--, (*it).nid());
 		}
 		EXPECT_EQ(-1, i);
 	}
@@ -167,8 +178,8 @@ TEST(network, population_iterator_pre_increment)
 	{
 		ssize_t i = 9;
 		for (auto it = pop.crbegin(); it != pop.crend(); ++it) {
-			ASSERT_EQ(i, it->idx());
-			ASSERT_EQ(i--, (*it).idx());
+			ASSERT_EQ(i, it->nid());
+			ASSERT_EQ(i--, (*it).nid());
 		}
 		EXPECT_EQ(-1, i);
 	}
@@ -183,8 +194,8 @@ TEST(network, population_iterator_post_decrement)
 	{
 		ssize_t i = 9;
 		for (auto it = --pop.end(); it >= pop.begin(); it--) {
-			ASSERT_EQ(i, it->idx());
-			ASSERT_EQ(i--, (*it).idx());
+			ASSERT_EQ(i, it->nid());
+			ASSERT_EQ(i--, (*it).nid());
 		}
 		EXPECT_EQ(-1, i);
 	}
@@ -193,8 +204,8 @@ TEST(network, population_iterator_post_decrement)
 	{
 		ssize_t i = 9;
 		for (auto it = --pop.cend(); it >= pop.cbegin(); it--) {
-			ASSERT_EQ(i, it->idx());
-			ASSERT_EQ(i--, (*it).idx());
+			ASSERT_EQ(i, it->nid());
+			ASSERT_EQ(i--, (*it).nid());
 		}
 		EXPECT_EQ(-1, i);
 	}
@@ -203,8 +214,8 @@ TEST(network, population_iterator_post_decrement)
 	{
 		ssize_t i = 0;
 		for (auto it = --pop.rend(); it >= pop.rbegin(); it--) {
-			ASSERT_EQ(i, it->idx());
-			ASSERT_EQ(i++, (*it).idx());
+			ASSERT_EQ(i, it->nid());
+			ASSERT_EQ(i++, (*it).nid());
 		}
 		EXPECT_EQ(10, i);
 	}
@@ -213,8 +224,8 @@ TEST(network, population_iterator_post_decrement)
 	{
 		ssize_t i = 0;
 		for (auto it = --pop.crend(); it >= pop.crbegin(); it--) {
-			ASSERT_EQ(i, it->idx());
-			ASSERT_EQ(i++, (*it).idx());
+			ASSERT_EQ(i, it->nid());
+			ASSERT_EQ(i++, (*it).nid());
 		}
 		EXPECT_EQ(10, i);
 	}
@@ -229,8 +240,8 @@ TEST(network, population_iterator_pre_decrement)
 	{
 		ssize_t i = 9;
 		for (auto it = --pop.end(); it >= pop.begin(); --it) {
-			ASSERT_EQ(i, it->idx());
-			ASSERT_EQ(i--, (*it).idx());
+			ASSERT_EQ(i, it->nid());
+			ASSERT_EQ(i--, (*it).nid());
 		}
 		EXPECT_EQ(-1, i);
 	}
@@ -239,8 +250,8 @@ TEST(network, population_iterator_pre_decrement)
 	{
 		ssize_t i = 9;
 		for (auto it = --pop.cend(); it >= pop.cbegin(); --it) {
-			ASSERT_EQ(i, it->idx());
-			ASSERT_EQ(i--, (*it).idx());
+			ASSERT_EQ(i, it->nid());
+			ASSERT_EQ(i--, (*it).nid());
 		}
 		EXPECT_EQ(-1, i);
 	}
@@ -249,8 +260,8 @@ TEST(network, population_iterator_pre_decrement)
 	{
 		ssize_t i = 0;
 		for (auto it = --pop.rend(); it >= pop.rbegin(); --it) {
-			ASSERT_EQ(i, it->idx());
-			ASSERT_EQ(i++, (*it).idx());
+			ASSERT_EQ(i, it->nid());
+			ASSERT_EQ(i++, (*it).nid());
 		}
 		EXPECT_EQ(10, i);
 	}
@@ -259,8 +270,8 @@ TEST(network, population_iterator_pre_decrement)
 	{
 		ssize_t i = 0;
 		for (auto it = --pop.crend(); it >= pop.crbegin(); --it) {
-			ASSERT_EQ(i, it->idx());
-			ASSERT_EQ(i++, (*it).idx());
+			ASSERT_EQ(i, it->nid());
+			ASSERT_EQ(i++, (*it).nid());
 		}
 		EXPECT_EQ(10, i);
 	}
@@ -273,10 +284,10 @@ TEST(network, population_iterator_plus_equal)
 
 	// Explicit default iterator instantiation
 	{
-		size_t i = 0;
+		ssize_t i = 0;
 		for (auto it = pop.begin(); it < pop.end(); it += 2) {
-			ASSERT_EQ(i, it->idx());
-			ASSERT_EQ(i, (*it).idx());
+			ASSERT_EQ(i, it->nid());
+			ASSERT_EQ(i, (*it).nid());
 			i += 2;
 		}
 		EXPECT_EQ(10, i);
@@ -284,10 +295,10 @@ TEST(network, population_iterator_plus_equal)
 
 	// Explicit constant iterator instantiation
 	{
-		size_t i = 0;
+		ssize_t i = 0;
 		for (auto it = pop.cbegin(); it < pop.cend(); it += 2) {
-			ASSERT_EQ(i, it->idx());
-			ASSERT_EQ(i, (*it).idx());
+			ASSERT_EQ(i, it->nid());
+			ASSERT_EQ(i, (*it).nid());
 			i += 2;
 		}
 		EXPECT_EQ(10, i);
@@ -297,8 +308,8 @@ TEST(network, population_iterator_plus_equal)
 	{
 		ssize_t i = 9;
 		for (auto it = pop.rbegin(); it < pop.rend(); it += 2) {
-			ASSERT_EQ(i, it->idx());
-			ASSERT_EQ(i, (*it).idx());
+			ASSERT_EQ(i, it->nid());
+			ASSERT_EQ(i, (*it).nid());
 			i -= 2;
 		}
 		EXPECT_EQ(-1, i);
@@ -308,8 +319,8 @@ TEST(network, population_iterator_plus_equal)
 	{
 		ssize_t i = 9;
 		for (auto it = pop.crbegin(); it < pop.crend(); it += 2) {
-			ASSERT_EQ(i, it->idx());
-			ASSERT_EQ(i, (*it).idx());
+			ASSERT_EQ(i, it->nid());
+			ASSERT_EQ(i, (*it).nid());
 			i -= 2;
 		}
 		EXPECT_EQ(-1, i);
@@ -325,8 +336,8 @@ TEST(network, population_iterator_minus_equal)
 	{
 		ssize_t i = 9;
 		for (auto it = pop.end() - 1; it >= pop.begin(); it -= 2) {
-			ASSERT_EQ(i, it->idx());
-			ASSERT_EQ(i, (*it).idx());
+			ASSERT_EQ(i, it->nid());
+			ASSERT_EQ(i, (*it).nid());
 			i -= 2;
 		}
 		EXPECT_EQ(-1, i);
@@ -336,8 +347,8 @@ TEST(network, population_iterator_minus_equal)
 	{
 		ssize_t i = 9;
 		for (auto it = pop.cend() - 1; it >= pop.cbegin(); it -= 2) {
-			ASSERT_EQ(i, it->idx());
-			ASSERT_EQ(i, (*it).idx());
+			ASSERT_EQ(i, it->nid());
+			ASSERT_EQ(i, (*it).nid());
 			i -= 2;
 		}
 		EXPECT_EQ(-1, i);
@@ -347,8 +358,8 @@ TEST(network, population_iterator_minus_equal)
 	{
 		ssize_t i = 0;
 		for (auto it = pop.rend() - 1; it >= pop.rbegin(); it -= 2) {
-			ASSERT_EQ(i, it->idx());
-			ASSERT_EQ(i, (*it).idx());
+			ASSERT_EQ(i, it->nid());
+			ASSERT_EQ(i, (*it).nid());
 			i += 2;
 		}
 		EXPECT_EQ(10, i);
@@ -358,8 +369,8 @@ TEST(network, population_iterator_minus_equal)
 	{
 		ssize_t i = 0;
 		for (auto it = pop.crend() - 1; it >= pop.crbegin(); it -= 2) {
-			ASSERT_EQ(i, it->idx());
-			ASSERT_EQ(i, (*it).idx());
+			ASSERT_EQ(i, it->nid());
+			ASSERT_EQ(i, (*it).nid());
 			i += 2;
 		}
 		EXPECT_EQ(10, i);
@@ -391,10 +402,10 @@ TEST(network, population_iterator_arithmetic)
 	EXPECT_EQ(6, (pop.cend() - 2) - (pop.cbegin() + 2));
 	EXPECT_EQ(6, (pop.crend() - 2) - (pop.crbegin() + 2));
 
-	EXPECT_EQ(2, pop.begin()[2].idx());
-	EXPECT_EQ(7, pop.rbegin()[2].idx());
-	EXPECT_EQ(2, pop.cbegin()[2].idx());
-	EXPECT_EQ(7, pop.crbegin()[2].idx());
+	EXPECT_EQ(2, pop.begin()[2].nid());
+	EXPECT_EQ(7, pop.rbegin()[2].nid());
+	EXPECT_EQ(2, pop.cbegin()[2].nid());
+	EXPECT_EQ(7, pop.crbegin()[2].nid());
 
 	EXPECT_TRUE(pop.end() > pop.begin());
 	EXPECT_TRUE(pop.rend() > pop.rbegin());
@@ -448,8 +459,8 @@ TEST(network, population_iterator_const_conversion)
 	Population<IfCondExp>::const_iterator it1 = pop.begin();
 	Population<IfCondExp>::const_reverse_iterator it2 = pop.rbegin();
 
-	EXPECT_EQ(0, it1->idx());
-	EXPECT_EQ(9, it2->idx());
+	EXPECT_EQ(0, it1->nid());
+	EXPECT_EQ(9, it2->nid());
 }
 
 TEST(network, population_view_iterator)
@@ -459,29 +470,29 @@ TEST(network, population_view_iterator)
 
 	PopulationView<IfCondExp> view = pop.range(3, 8);
 
-	EXPECT_EQ(3, view.begin()->idx());
-	EXPECT_EQ(7, view.rbegin()->idx());
-	EXPECT_EQ(3, view.cbegin()->idx());
-	EXPECT_EQ(7, view.crbegin()->idx());
+	EXPECT_EQ(3, view.begin()->nid());
+	EXPECT_EQ(7, view.rbegin()->nid());
+	EXPECT_EQ(3, view.cbegin()->nid());
+	EXPECT_EQ(7, view.crbegin()->nid());
 
 	{
-		size_t i = 3;
+		ssize_t i = 3;
 		for (auto neuron : view) {
-			EXPECT_EQ(i++, neuron.idx());
+			EXPECT_EQ(i++, neuron.nid());
 		}
 		EXPECT_EQ(8, i);
 	}
 
 	PopulationView<IfCondExp> view2 = view.range(1, 2);
-	EXPECT_EQ(4, view2.begin()->idx());
-	EXPECT_EQ(4, view2.rbegin()->idx());
-	EXPECT_EQ(4, view2.cbegin()->idx());
-	EXPECT_EQ(4, view2.crbegin()->idx());
+	EXPECT_EQ(4, view2.begin()->nid());
+	EXPECT_EQ(4, view2.rbegin()->nid());
+	EXPECT_EQ(4, view2.cbegin()->nid());
+	EXPECT_EQ(4, view2.crbegin()->nid());
 
 	{
-		size_t i = 4;
+		ssize_t i = 4;
 		for (auto neuron : view2) {
-			EXPECT_EQ(i++, neuron.idx());
+			EXPECT_EQ(i++, neuron.nid());
 		}
 		EXPECT_EQ(5, i);
 	}
@@ -508,18 +519,24 @@ TEST(network, duration)
 TEST(network, clone)
 {
 	Network n2;
+	Network n3;
 	{
 		Network n1;
 		n1.create_population<SpikeSourceArray>(10, {100.0, 200.0, 300.0});
 		n1.create_population<SpikeSourceArray>(20, {});
-		n1.create_population<SpikeSourceArray>(30, {100.0, 400.0});
+		auto pop = n1.create_population<SpikeSourceArray>(30, {100.0, 400.0});
 
 		EXPECT_EQ(400.0, n1.duration());
 
-		n2 = n1;
+		n2 = n1.clone();
+		n3 = n1;
+
+		pop.parameters({{100.0, 200.0}});
+		EXPECT_EQ(300.0, n1.duration());
 	}
 
 	EXPECT_EQ(400.0, n2.duration());
+	EXPECT_EQ(300.0, n3.duration());
 }
 
 TEST(network, population_by_name)
@@ -550,9 +567,8 @@ TEST(network, population_by_name)
 	EXPECT_EQ(20U, n.population<SpikeSourceArray>().size());
 	EXPECT_EQ(40U, n.population<IfCondExp>().size());
 
-	ASSERT_THROW(n.population("foo"), Network::NoSuchPopulationException);
-	ASSERT_THROW(n.population<IfCondExp>("foo"),
-	             Network::NoSuchPopulationException);
+	ASSERT_THROW(n.population("foo"), NoSuchPopulationException);
+	ASSERT_THROW(n.population<IfCondExp>("foo"), NoSuchPopulationException);
 }
 
 TEST(network, connect)
@@ -565,21 +581,23 @@ TEST(network, connect)
 	Population<IfCondExp> pop3 = n.create_population<IfCondExp>(10, {});
 	Population<IfCondExp> pop4 = n.create_population<IfCondExp>(20, {});
 
-	pop1.connect(pop2, Connector::all_to_all(0.016, 0.01));
-	pop1.connect(pop3, Connector::all_to_all(0.016, 0.01));
-	pop2.connect(pop4.range(0, 10), Connector::one_to_one(0.016, 0.01));
-	pop3.connect(pop4.range(10, 20), Connector::one_to_one(0.016, 0.01));
-	pop4.range(0, 10).connect(pop3, Connector::all_to_all(0.016, 0.01));
-	pop4.range(10, 20).connect(pop2, Connector::all_to_all(0.016, 0.01));
+	pop1.connect_to(pop2, Connector::all_to_all(0.016, 0.01));
+	pop1.connect_to(pop3, Connector::all_to_all(0.016, 0.01));
+	pop2.connect_to(pop4.range(0, 10), Connector::one_to_one(0.016, 0.01));
+	pop3.connect_to(pop4.range(10, 20), Connector::one_to_one(0.016, 0.01));
+	pop4(0, 10).connect_to(pop3, Connector::all_to_all(0.016, 0.01));
+	pop4(10, 20).connect_to(pop2, Connector::all_to_all(0.016, 0.01));
+	pop1[0].connect_to(pop2(5), Connector::one_to_one(0.016, 0.01));
 
 	const auto &cs = n.connections();
-	ASSERT_EQ(6U, cs.size());
+	ASSERT_EQ(7U, cs.size());
 
 	EXPECT_EQ(ConnectionDescriptor(0, 0, 1, 1, 0, 10), cs[0]);
-	EXPECT_EQ(ConnectionDescriptor(0, 0, 1, 2, 0, 10), cs[1]);
-	EXPECT_EQ(ConnectionDescriptor(1, 0, 10, 3, 0, 10), cs[2]);
-	EXPECT_EQ(ConnectionDescriptor(2, 0, 10, 3, 10, 20), cs[3]);
-	EXPECT_EQ(ConnectionDescriptor(3, 10, 20, 1, 0, 10), cs[4]);
-	EXPECT_EQ(ConnectionDescriptor(3, 0, 10, 2, 0, 10), cs[5]);
+	EXPECT_EQ(ConnectionDescriptor(0, 0, 1, 1, 5, 6), cs[1]);
+	EXPECT_EQ(ConnectionDescriptor(0, 0, 1, 2, 0, 10), cs[2]);
+	EXPECT_EQ(ConnectionDescriptor(1, 0, 10, 3, 0, 10), cs[3]);
+	EXPECT_EQ(ConnectionDescriptor(2, 0, 10, 3, 10, 20), cs[4]);
+	EXPECT_EQ(ConnectionDescriptor(3, 10, 20, 1, 0, 10), cs[5]);
+	EXPECT_EQ(ConnectionDescriptor(3, 0, 10, 2, 0, 10), cs[6]);
 }
 }

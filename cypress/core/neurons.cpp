@@ -21,6 +21,20 @@
 namespace cypress {
 
 /*
+ * Class NullNeuronType
+ */
+
+NullNeuronType::NullNeuronType() : NeuronType(0, "", {}, {}, {}, false, false)
+{
+}
+
+const NullNeuronType &NullNeuronType::inst()
+{
+	static const NullNeuronType inst;
+	return inst;
+}
+
+/*
  * Class SpikeSourceArray
  */
 
@@ -36,7 +50,7 @@ const SpikeSourceArray &SpikeSourceArray::inst()
 	return inst;
 }
 
-/**
+/*
  * Class IfCondExp
  */
 
@@ -57,7 +71,7 @@ const IfCondExp &IfCondExp::inst()
 	return inst;
 }
 
-/**
+/*
  * Class EifCondExpIsfaIsta
  */
 
@@ -80,7 +94,7 @@ const EifCondExpIsfaIsta &EifCondExpIsfaIsta::inst()
 	return inst;
 }
 
-/**
+/*
  * Class IfCondExpParameters
  */
 
@@ -89,7 +103,7 @@ IfCondExpParameters::IfCondExpParameters()
 {
 }
 
-/**
+/*
  * Class EifCondExpIsfaIstaParameters
  */
 

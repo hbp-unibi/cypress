@@ -65,7 +65,7 @@ static int run_broker(const std::vector<std::string> &args,
 	params.emplace_back("--platform");
 	params.emplace_back(platform);
 
-	return Process::exec("python", params, std::cout, std::cerr);
+	return Process::exec_no_redirect("python", params);
 }
 
 NMPI::NMPI(std::unique_ptr<PyNN> pynn, int &argc, const char *argv[],
@@ -146,7 +146,12 @@ NMPI::NMPI(const std::string &pynn_backend, int &argc, const char *argv[],
 
 NMPI::~NMPI() = default;
 
-void NMPI::do_run(Network &network, float duration) const
+bool NMPI::check_args(int argc, const char *argv[])
+{
+	return (argc >= 2 && argv[argc - 1] == SERVER_ARG);
+}
+
+void NMPI::do_run(NetworkBase &network, float duration) const
 {
 	m_pynn->run(network, duration);
 }

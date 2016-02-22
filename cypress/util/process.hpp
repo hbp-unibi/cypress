@@ -28,6 +28,7 @@
 #ifndef CYPRESS_PROCESS_HPP
 #define CYPRESS_PROCESS_HPP
 
+#include <atomic>
 #include <iosfwd>
 #include <memory>
 #include <string>
@@ -52,24 +53,35 @@ private:
 	std::unique_ptr<ProcessImpl> impl;
 
 public:
-
 	/**
-	 * Thread proc used to asynchronously write a buffer to the stdin of a
-	 * process.
+	 * Thread proc used to asynchronously stream an input stream to a process.
 	 *
 	 * @param proc is the process to which should be written.
-	 * @param input is the buffer that should be written to the stdin.
+	 * @param input is the stream that should be written to the stdin of the
+	 * process.
 	 */
-	static void generic_writer(Process &proc, const std::string &input);
+	static void generic_writer(Process &proc, std::istream &input);
 
 	/**
 	 * Thread proc used to asynchronously pipe data from a source input stream
 	 * to a target stream. Used to read data from a process.
 	 *
-	 * @param source is the source stream.
+	 * @param input is the input stream.
 	 * @param output is the target stream.
 	 */
-	static void generic_reader(std::istream &source, std::ostream &output);
+	static void generic_pipe(std::istream &input, std::ostream &output);
+
+	/**
+	 * Thread proc used to asynchronously pipe data from a source filedescriptor
+	 * to the target stream.
+	 *
+	 * @param fd is the input file descriptor.
+	 * @param output is the target stream.
+	 * @param done should be set to true when the thread should no longer listen
+	 * on the fd.
+	 */
+	static void fd_input_pipe(int fd, std::ostream &output,
+	                          const std::atomic<bool> &done);
 
 	/**
 	 * Constructor of the process class. Executes the given command with the
@@ -156,8 +168,26 @@ public:
 	 *
 	 * @param cmd is the command that should be executed.
 	 * @param args is a vector of arguments that should be given to the command.
+	 * @param cout is the target stream to which the child process cout should
+	 * be written.
+	 * @param cerr is the target stream to which the child process cerr should
+	 * be written.
 	 * @param input is a string that should be sent to the child process via
 	 * its stdin.
+	 * @return the process return code.
+	 */
+	static int exec(const std::string &cmd,
+	                const std::vector<std::string> &args, std::ostream &cout,
+	                std::ostream &cerr,
+	                const std::string &input = std::string());
+
+	/**
+	 * Convenience method for executing a child process and sendings its stdout
+	 * and stderr streams to the given streams.
+	 *
+	 * @param cmd is the command that should be executed.
+	 * @param args is a vector of arguments that should be given to the command.
+	 * @param cin is a stream which should be sent to the child process.
 	 * @param cout is the target stream to which the child process cout should
 	 * be written.
 	 * @param cerr is the target stream to which the child process cerr should
@@ -165,9 +195,19 @@ public:
 	 * @return the process return code.
 	 */
 	static int exec(const std::string &cmd,
-	                const std::vector<std::string> &args, std::ostream &cout,
-	                std::ostream &cerr,
-	                const std::string &input = std::string());
+	                const std::vector<std::string> &args, std::istream &cin,
+	                std::ostream &cout, std::ostream &cerr);
+
+	/**
+	 * Convenience method for executing a child process without redirecting
+	 * stdin/stdout/stderr.
+	 *
+	 * @param cmd is the command that should be executed.
+	 * @param args is a vector of arguments that should be given to the command.
+	 * @return the process return code.
+	 */
+	static int exec_no_redirect(const std::string &cmd,
+	                const std::vector<std::string> &args);
 
 	/**
 	 * Convenience method for executing a child process, sending data via stdin

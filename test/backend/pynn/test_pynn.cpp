@@ -67,4 +67,14 @@ TEST(pynn, normalisation)
 	          PyNN("pyNN.hardware.brainscales").imports());
 	EXPECT_EQ("ESS", PyNN("pyNN.hardware.brainscales").nmpi_platform());
 }
+
+TEST(pynn, timestep)
+{
+	EXPECT_FLOAT_EQ(42.0, PyNN("bla", {{"timestep", 42.0}}).timestep());
+	EXPECT_FLOAT_EQ(0.1, PyNN("nest").timestep());
+	EXPECT_FLOAT_EQ(1.0, PyNN("nmmc1").timestep());
+	EXPECT_FLOAT_EQ(0.0, PyNN("nmpm1").timestep());
+	EXPECT_FLOAT_EQ(0.0, PyNN("spikey").timestep());
+}
+
 }

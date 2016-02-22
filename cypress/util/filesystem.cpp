@@ -31,11 +31,13 @@ namespace cypress {
 namespace filesystem {
 std::string canonicalise(const std::string &file)
 {
-	std::unique_ptr<char> resolved(realpath(file.c_str(), nullptr));
-	if (!resolved) {
+	char* res = realpath(file.c_str(), nullptr);
+	if (!res) {
 		return std::string();
 	}
-	return std::string(resolved.get());
+	std::string sres(res);
+	free(res);
+	return sres;
 }
 
 std::unordered_set<std::string> dirs(const std::vector<std::string> &files)

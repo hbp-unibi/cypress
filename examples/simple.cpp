@@ -23,11 +23,17 @@
 
 using namespace cypress;
 
-int main(int argc, const char *argv[]) {
-	if (argc != 2) {
+int main(int argc, const char *argv[])
+{
+	if (argc != 2 && !NMPI::check_args(argc, argv)) {
 		std::cout << "Usage: " << argv[0] << " <SIMULATOR>" << std::endl;
 		return 1;
 	}
-	PyNN backend(argv[1]);
-	Network().run(backend);
+
+	Network().population<SpikeSourceArray>("source", 1, {100.0, 200.0, 300.0})
+	    .population<IfCondExp>("neuron", 4, IfCondExpParameters().v_rest(-60.0))
+	    .connect("source", "neuron", Connector::all_to_all(0.016))
+	    .run(NMPI(argv[1], argc, argv));
+
+	return 0;
 }

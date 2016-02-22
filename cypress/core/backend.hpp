@@ -37,7 +37,7 @@ namespace cypress {
 /*
  * Forward declarations
  */
-class Network;
+class NetworkBase;
 
 /**
  * The Backend class is an abstract base class which provides the facilities
@@ -48,21 +48,13 @@ protected:
 	/**
 	 * Abstract method which has to be implemented by the backend.
 	 */
-	virtual void do_run(Network &network, float duration) const = 0;
+	virtual void do_run(NetworkBase &network, float duration) const = 0;
 
 public:
 	/**
-	 * Exception that should be thrown by implementing classes if do_run fails.
-	 */
-	class ExecutionError : public std::runtime_error {
-	public:
-		using std::runtime_error::runtime_error;
-	};
-
-	/**
 	 * Simulates the given spiking neural network for the given duration.
 	 */
-	void run(Network &network, float duration = 0.0) const;
+	void run(NetworkBase &network, float duration = 0.0) const;
 
 	/**
 	 * Destructor of the backend class.

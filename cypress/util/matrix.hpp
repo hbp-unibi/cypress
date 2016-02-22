@@ -203,11 +203,11 @@ public:
 		return *this;
 	}
 
-	T *begin() { return m_buf; }
+	T *begin(size_t row = 0) { return m_buf + row * cols(); }
 	T *end() { return m_buf + size(); }
-	const T *begin() const { return m_buf; }
+	const T *begin(size_t row = 0) const { return m_buf + row * cols(); }
 	const T *end() const { return m_buf + size(); }
-	const T *cbegin() const { return m_buf; }
+	const T *cbegin(size_t row = 0) const { return m_buf + row * cols(); }
 	const T *cend() const { return m_buf + size(); }
 
 	/**

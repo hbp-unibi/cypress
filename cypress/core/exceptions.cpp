@@ -1,6 +1,6 @@
 /*
- *  CppNAM -- C++ Neural Associative Memory Simulator
- *  Copyright (C) 2016  Christoph Jenzen, Andreas Stöckel
+ *  Cypress -- C++ Spiking Neural Network Simulation Framework
+ *  Copyright (C) 2016  Andreas Stöckel
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -16,7 +16,7 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <cypress/util/clone_ptr.hpp>
+#include <cypress/core/exceptions.hpp>
 
 namespace cypress {
 // Do nothing here, just make sure the header compiles

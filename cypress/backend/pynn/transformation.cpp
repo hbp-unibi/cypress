@@ -16,24 +16,22 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <cypress/core/backend.hpp>
-#include <cypress/core/network_base.hpp>
+#include <cypress/backend/pynn/transformation.hpp>
+#include <cypress/core/connector.hpp>
 
 namespace cypress {
-
-static constexpr float AUTO_TIME_EXTENSION = 1000.0;
-
-Backend::~Backend()
+namespace pynn {
+size_t Transformation::transform_connections(Connection connections[],
+                                             size_t size)
 {
-	// Do nothing here
-}
-
-void Backend::run(NetworkBase &network, float duration) const
-{
-	if (duration <= 0.0) {
-		duration =
-		    network.duration() + AUTO_TIME_EXTENSION;  // Auto time extension
+	// Make sure the synaptic delays are not smaller than the timestep.
+	// Otherwise NEST refuses to run the network
+	for (size_t i = 0; i < size; i++) {
+		if (connections[i].n.synapse.delay < m_timestep) {
+			connections[i].n.synapse.delay = m_timestep;
+		}
 	}
-	do_run(network, duration);  // Now simply execute the network
+	return size;
+}
 }
 }
