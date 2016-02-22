@@ -24,7 +24,8 @@ namespace cypress {
  * Class NullNeuronType
  */
 
-NullNeuronType::NullNeuronType() : NeuronType(0, "", {}, {}, {}, false, false)
+NullNeuronType::NullNeuronType()
+    : NeuronType(0, "", {}, {}, {}, {}, {}, false, false)
 {
 }
 
@@ -39,8 +40,8 @@ const NullNeuronType &NullNeuronType::inst()
  */
 
 SpikeSourceArray::SpikeSourceArray()
-    : NeuronType(0, "SpikeSourceArray", {"spike_times"}, {"ms"}, {}, false,
-                 true)
+    : NeuronType(0, "SpikeSourceArray", {"spike_times"}, {"ms"}, {}, {"spikes"},
+                 {"ms"}, false, true)
 {
 }
 
@@ -61,6 +62,7 @@ IfCondExp::IfCondExp()
            "v_thresh", "v_reset", "e_rev_E", "e_rev_I", "i_offset"},
           {"nF", "ms", "ms", "ms", "ms", "mV", "mV", "mV", "mV", "mV", "nA"},
           {1.0, 20.0, 5.0, 5.0, 0.1, -65.0, -50.0, -65.0, 0.0, -70.0, 0.0},
+          {"spikes", "v", "gsyn_exc", "gsyn_inh"}, {"ms", "mV", "uS", "uS"},
           true, false)
 {
 }
@@ -84,7 +86,8 @@ EifCondExpIsfaIsta::EifCondExpIsfaIsta()
                   "mV", "nA", "nS", "nA", "mV"},
                  {1.0, 20.0, 5.0, 5.0, 0.1, 144.0, -70.6, -50.4, -70.6, 0.0,
                   -80.0, 0.0, 4.0, 0.0805, 2.0},
-                 true, false)
+                 {"spikes", "v", "gsyn_exc", "gsyn_inh"},
+                 {"ms", "mV", "uS", "uS"}, true, false)
 {
 }
 

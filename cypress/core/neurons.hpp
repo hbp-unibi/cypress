@@ -125,12 +125,16 @@ protected:
 	           const std::vector<std::string> &parameter_names,
 	           const std::vector<std::string> &parameter_units,
 	           const std::vector<float> &parameter_defaults,
+	           const std::vector<std::string> &signal_names,
+	           const std::vector<std::string> &signal_units,
 	           bool conductance_based, bool spike_source)
 	    : type_id(type_id),
 	      name(name),
 	      parameter_names(parameter_names),
 	      parameter_units(parameter_units),
 	      parameter_defaults(parameter_defaults),
+	      signal_names(signal_names),
+	      signal_units(signal_units),
 	      conductance_based(conductance_based),
 	      spike_source(spike_source)
 	{
@@ -161,6 +165,16 @@ public:
 	 * Contains default values for the neuron parameters.
 	 */
 	const NeuronParametersBase parameter_defaults;
+
+	/**
+	 * Names of the signals that can be recorded from this neuron.
+	 */
+	const std::vector<std::string> signal_names;
+
+	/**
+	 * Units of the signals listed in the signal_names vector.
+	 */
+	const std::vector<std::string> signal_units;
 
 	/**
 	 * True if this is a conductance based neuron.
