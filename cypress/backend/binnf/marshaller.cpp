@@ -182,13 +182,26 @@ void marshall_network(NetworkBase &net, std::ostream &os,
 bool marshall_response(NetworkBase &net, std::istream &is)
 {
 	bool had_block = false;
+	PopulationIndex tar_pid = 0;
+	NeuronIndex tar_nid = 0;
 	while (is.good()) {
+		// Deserialise the incomming data, continue until the end of the input
+		// stream is reached, skip faulty blocks
 		std::pair<bool, Block> res = deserialise(is);
-		if (res.first) {
-			std::cout << "received block " << res.second.name << std::endl;
-			std::cout << res.second.matrix << std::endl;
-			had_block = true;
+		if (!res.first) {
+			continue;
 		}
+		had_block = true;
+
+//		// Handle the block, depending on its name
+//		const auto &block = res.second;
+//		if (block.name == "target") {
+//			size_t pid_col = std::find(block.header)
+//		}
+
+		std::cout << "received block " << res.second.name << std::endl;
+		std::cout << res.second.matrix << std::endl;
+		had_block = true;
 	}
 	return had_block;
 }
