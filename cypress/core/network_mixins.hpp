@@ -123,6 +123,25 @@ public:
 	}
 
 	/**
+	 * Returns whether the signal with the given name is being recorded.
+	 *
+	 * @param name is the name of the signal that should be recorded. If a
+	 * signal with the given name does not exist for this neuron type, false
+	 * is returned.
+	 * @return true if the signal with the given name exists and is being
+	 * recorded for this population, false in any other case.
+	 */
+	bool is_recording(const std::string &signal) const
+	{
+		const auto &signals = impl().type().signal_names;
+		auto it = std::find(signals.begin(), signals.end(), signal);
+		if (it == signals.end()) {
+			return false;
+		}
+		return record()[it - signals.begin()];
+	}
+
+	/**
 	 * Returns the number of neurons in the population.
 	 */
 	size_t size() const { return network().population_size(pid()); }

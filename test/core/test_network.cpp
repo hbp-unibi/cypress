@@ -620,6 +620,10 @@ TEST(network, record)
 		EXPECT_FALSE(pop.record()[IfCondExpSignals::idx_v]);
 		EXPECT_FALSE(pop.record()[IfCondExpSignals::idx_gsyn_exc]);
 		EXPECT_FALSE(pop.record()[IfCondExpSignals::idx_gsyn_inh]);
+		EXPECT_FALSE(pop.is_recording("foo"));
+		EXPECT_FALSE(pop.is_recording("gsyn_exc"));
+		EXPECT_FALSE(pop.is_recording("v"));
+		EXPECT_TRUE(pop.is_recording("spikes"));
 	}
 
 	{
