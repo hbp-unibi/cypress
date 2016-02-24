@@ -91,6 +91,23 @@ class InvalidSignal : public CypressException {
 public:
 	using CypressException::CypressException;
 };
+
+/**
+ * Exception thrown if an error happens during deserialisation of a binnf
+ * stream.
+ */
+class BinnfDecodeException : public CypressException {
+public:
+	using CypressException::CypressException;
+};
+
+/**
+ * Exception thrown if a column is missing in a binnf response stream.
+ */
+class MissingColumnException : public CypressException {
+public:
+	using CypressException::CypressException;
+};
 }
 
 #endif /* CYPRESS_CORE_EXCEPTIONS_HPP */

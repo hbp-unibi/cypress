@@ -193,11 +193,12 @@ bool marshall_response(NetworkBase &net, std::istream &is)
 		}
 		had_block = true;
 
-//		// Handle the block, depending on its name
-//		const auto &block = res.second;
-//		if (block.name == "target") {
-//			size_t pid_col = std::find(block.header)
-//		}
+		// Handle the block, depending on its name
+		const auto &block = res.second;
+		if (block.name == "target") {
+			const size_t pid_col = block.colidx("pid");
+			const size_t nid_col = block.colidx("nid");
+		}
 
 		std::cout << "received block " << res.second.name << std::endl;
 		std::cout << res.second.matrix << std::endl;

@@ -108,7 +108,7 @@ void read(std::istream &is, T &res)
 {
 	is.read((char *)&res, sizeof(T));
 	if (is.gcount() != sizeof(T)) {
-		throw 0;
+		throw BinnfDecodeException("Unexpected end of stream");
 	}
 }
 
@@ -120,14 +120,14 @@ void read(std::istream &is, std::string &str)
 	read(is, size);
 
 	if (size > MAX_STR_SIZE) {
-		throw 0;
+		throw BinnfDecodeException("Maximum string size exceeded");
 	}
 
 	// Read the actual string content
 	str.resize(size);
 	is.read(&str[0], size);
 	if (is.gcount() != size) {
-		throw 0;
+		throw BinnfDecodeException("Unexpected end of stream");
 	}
 }
 
@@ -144,7 +144,7 @@ void read(std::istream &is, Matrix<Number> &matrix)
 	SizeType size = matrix.size() * NUMBER_LEN;
 	is.read((char *)(matrix.data()), size);
 	if (is.gcount() != size) {
-		throw 0;
+		throw BinnfDecodeException("Unexpected end of stream");
 	}
 }
 }
@@ -185,14 +185,14 @@ void serialise(std::ostream &os, const Block &block)
 
 /* Entire block deserialisation method */
 
-std::pair<bool, Block> deserialise(std::istream &is)
+Block deserialise(std::istream &is)
 {
 	Block res;
 
 	try {
 		// Try to read the block start header
 		if (!synchronise(is, BLOCK_START_SEQUENCE)) {
-			throw 0;
+			throw BinnfDecodeException("Header not found.");
 		}
 
 		// Read the block size
@@ -224,20 +224,17 @@ std::pair<bool, Block> deserialise(std::istream &is)
 		// Make sure the block size is correct
 		const std::streampos pos1 = is.tellg();
 		if (pos0 >= 0 && pos1 >= 0 && pos1 - pos0 != block_size) {
-			throw 0;
+			throw BinnfDecodeException("Invalid block size");
 		}
 
 		// Make sure the block ends with the block end sequence
 		uint32_t block_end = 0;
 		read(is, block_end);
 		if (block_end != BLOCK_END_SEQUENCE) {
-			throw 0;
+			throw BinnfDecodeException("Expected block end");
 		}
 	}
-	catch (...) {
-		return std::make_pair(false, Block());
-	}
-	return std::make_pair(true, std::move(res));
+	return std::move(res);
 }
 
 void deserialise(std::istream &is, const Callback &callback)

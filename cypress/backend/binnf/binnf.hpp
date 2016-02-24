@@ -21,6 +21,7 @@
 #ifndef CYPRESS_CORE_BINNF_HPP
 #define CYPRESS_CORE_BINNF_HPP
 
+#include <algorithm>
 #include <cstdint>
 #include <cassert>
 #include <string>
@@ -101,6 +102,13 @@ struct Block {
 	    : name(name), header(header), matrix(matrix)
 	{
 	}
+
+	size_t colidx(const std::string &name) const
+	{
+		return std::find(names.begin(), names.end(), name) - names.begin();
+	}
+
+	size_t size() const { return header.size(); }
 };
 
 /**
@@ -109,7 +117,6 @@ struct Block {
  */
 using Callback = std::function<bool(const std::string &, const Header &,
                                     const Matrix<Number> &)>;
-
 
 /**
  * Serialises a named matrix along with its content and the given header to
@@ -122,8 +129,8 @@ using Callback = std::function<bool(const std::string &, const Header &,
  * should be serialised.
  * @param rows is the number of data rows.
  */
-void serialise(std::ostream &os, const std::string &name,
-                      const Header &header, const Number data[], size_t rows);
+void serialise(std::ostream &os, const std::string &name, const Header &header,
+               const Number data[], size_t rows);
 
 /**
  * Serialises a named matrix along with its content and the given header to
@@ -134,8 +141,8 @@ void serialise(std::ostream &os, const std::string &name,
  * @param header is the header describing each column of the matrix.
  * @param matrix is the matrix that should be written to file.
  */
-void serialise(std::ostream &os, const std::string &name,
-                      const Header &header, const Matrix<Number> &matrix);
+void serialise(std::ostream &os, const std::string &name, const Header &header,
+               const Matrix<Number> &matrix);
 
 /**
  * Serialises a named matrix along with its content and the given header to
