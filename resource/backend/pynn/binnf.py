@@ -347,6 +347,11 @@ def read_network(fd):
     return network
 
 # Headers used during serialisation
+HEADER_DONE = [{"name": "time_prepare", "type": TYPE_FLOAT},
+               {"name": "time_sim", "type": TYPE_FLOAT},
+               {"name": "time_read", "type": TYPE_FLOAT}]
+HEADER_DONE_DTYPE = header_to_dtype(HEADER_DONE)
+
 HEADER_TARGET = [{"name": "pid", "type": TYPE_INT},
                  {"name": "nid", "type": TYPE_INT}]
 HEADER_TARGET_DTYPE = header_to_dtype(HEADER_TARGET)
@@ -366,6 +371,8 @@ def write_result(fd, res):
     :param fd: target file descriptor.
     :param res: simulation result.
     """
+    serialise(fd, "done", HEADER_DONE, np.array(
+        [(0, 0, 0)], dtype=HEADER_DONE_DTYPE))
     for pid in xrange(len(res)):
         for signal in res[pid]:
             for nid in xrange(len(res[pid][signal])):
