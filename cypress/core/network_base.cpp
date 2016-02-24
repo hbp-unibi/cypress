@@ -78,7 +78,7 @@ const NeuronSignalsBase &NetworkBase::signals(PopulationIndex pid) const
 
 void NetworkBase::record(PopulationIndex pid, size_t signal_idx, bool record)
 {
-	signals(pid)[signal_idx] = record;
+	signals(pid).record(signal_idx, record);
 }
 
 bool NetworkBase::homogeneous(PopulationIndex pid)

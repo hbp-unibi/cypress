@@ -38,10 +38,12 @@
 #ifndef CYPRESS_CORE_NEURONS_HPP
 #define CYPRESS_CORE_NEURONS_HPP
 
+#include <cstdint>
+#include <memory>
 #include <string>
 #include <vector>
 
-#include <cypress/core/neurons.hpp>
+#include <cypress/util/matrix.hpp>
 
 namespace cypress {
 /**
@@ -113,14 +115,32 @@ public:
 };
 
 /**
- * Class allowing to specify which signals are being recorded and which are not.
+ * The NeuronSignalsBase class is both responsible for flagging which signals
+ * should be recorded in a simulation and for actually storing the data traces
+ * which are recorded during a simulation.
  */
 class NeuronSignalsBase {
 private:
 	/**
 	 * Vector signaling which signals are being recorded and which are not.
 	 */
-	std::vector<uint8_t> m_signals;
+	std::vector<uint8_t> m_record;
+
+	/**
+	 * Vector signaling which signals are being recorded and which are not.
+	 */
+	mutable std::vector<std::shared_ptr<Matrix<float>>> m_data;
+
+	/**
+	 * Internally used to create the data matrices upon access.
+	 */
+	Matrix<float> &get_data(size_t i) const
+	{
+		if (!m_data[i]) {
+			m_data[i] = std::make_shared<Matrix<float>>();
+		}
+		return *m_data[i];
+	}
 
 protected:
 	/**
@@ -128,7 +148,10 @@ protected:
 	 *
 	 * @param signal_count number of signals available in the neuron.
 	 */
-	NeuronSignalsBase(size_t signal_count) : m_signals(signal_count) {}
+	NeuronSignalsBase(size_t signal_count)
+	    : m_record(signal_count), m_data(signal_count)
+	{
+	}
 
 public:
 	/**
@@ -137,22 +160,56 @@ public:
 	NeuronSignalsBase() {}
 
 	/**
-	 * Operator allowing to access the i-th signal.
+	 * Setter for the record flag of the i-th signal.
+	 *
+	 * @param i is the index of the signal for which the record flag should
+	 * be set.
+	 * @param record specifies whether the signal should be recorded (true) or
+	 * not recorded (false).
 	 */
-	bool &operator[](size_t i)
-	{
-		return reinterpret_cast<bool &>(m_signals[i]);
-	}
+	void record(size_t i, bool record = true) { m_record[i] = record; }
 
 	/**
-	 * Operator allowing to access the i-th signal.
+	 * Getter for the record flag of the i-th signal.
 	 */
-	bool operator[](size_t i) const { return m_signals[i]; }
+	bool is_recording(size_t i) const { return m_record[i]; }
+
+	/**
+	 * Returns a mutable reference at the data stored for the given signal.
+	 * Create a new, empty matrix if no data has been stored yet for this
+	 * signal.
+	 *
+	 * @param i is the index of the signal for which the data should be
+	 * returned.
+	 * @return a reference at the data stored for the signal with the given
+	 * name.
+	 */
+	Matrix<float> &data(size_t i) { return get_data(i); }
+
+	/**
+	 * Returns a const-reference at the data stored for the given signal.
+	 * Create a new, empty matrix if no data has been stored yet for this
+	 * signal.
+	 *
+	 * @param i is the index of the signal for which the data should be
+	 * returned.
+	 * @return a reference at the data stored for the signal with the given
+	 * name.
+	 */
+	const Matrix<float> &data(size_t i) const { return get_data(i); }
+
+	/**
+	 * Retruns true if data exists for the given signal.
+	 *
+	 * @return true if data has been stored for this signal and the data matrix
+	 * is not empty.
+	 */
+	bool has_data(size_t i) const { return m_data[i] && !m_data[i]->empty(); }
 
 	/**
 	 * Number of parameters.
 	 */
-	size_t size() const { return m_signals.size(); }
+	size_t size() const { return m_record.size(); }
 };
 
 /**
@@ -323,12 +380,12 @@ public:
 
 #define NAMED_SIGNAL(NAME, IDX)               \
 	static constexpr size_t idx_##NAME = IDX; \
-	auto &NAME(bool x = true)                 \
+	auto &record_##NAME(bool x = true)        \
 	{                                         \
-		(*this)[IDX] = x;                     \
+		record(IDX, x);                       \
 		return *this;                         \
 	}                                         \
-	bool is_recording_##NAME() { return (*this)[IDX]; }
+	bool is_recording_##NAME() { return is_recording(IDX); }
 
 class NullNeuronSignals final : public NeuronSignalsBase {
 public:

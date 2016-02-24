@@ -111,9 +111,10 @@ public:
 	/**
 	 * Initialiser list constructor.
 	 */
-	Matrix(std::initializer_list<T> init) : Matrix(init.size(), 1) {
+	Matrix(std::initializer_list<T> init) : Matrix(init.size(), 1)
+	{
 		size_t i = 0;
-		for (const auto &elem: init) {
+		for (const auto &elem : init) {
 			(*this)[i++] = elem;
 		}
 	}
@@ -318,15 +319,22 @@ public:
 		}
 		return os;
 	}
+
+	/**
+	 * Returns true if the matrix contains no data.
+	 */
+	bool empty() const { return size() == 0; }
 };
 
 template <typename T, size_t Rows, size_t Cols>
-Matrix<T> make_matrix(const std::array<std::array<T, Cols>, Rows> &init) {
+Matrix<T> make_matrix(const std::array<std::array<T, Cols>, Rows> &init)
+{
 	return Matrix<T>(init);
 }
 
 template <typename T>
-Matrix<T> make_matrix(std::initializer_list<T> list) {
+Matrix<T> make_matrix(std::initializer_list<T> list)
+{
 	return Matrix<T>(list);
 }
 
@@ -338,9 +346,10 @@ public:
 	    : Matrix<T>(s, 1, flags)
 	{
 	}
-	Vector(std::initializer_list<T> init) : Vector(init.size()) {
+	Vector(std::initializer_list<T> init) : Vector(init.size())
+	{
 		size_t i = 0;
-		for (const auto &elem: init) {
+		for (const auto &elem : init) {
 			(*this)[i++] = elem;
 		}
 	}

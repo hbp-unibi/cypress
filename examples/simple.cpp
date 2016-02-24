@@ -32,9 +32,9 @@ int main(int argc, const char *argv[])
 
 	Network()
 	    .population<SpikeSourceArray>("source", 1, {100.0, 200.0, 300.0},
-	                                  SpikeSourceArraySignals().spikes())
+	                                  SpikeSourceArraySignals().record_spikes())
 	    .population<IfCondExp>("neuron", 4, IfCondExpParameters().v_rest(-60.0),
-	                           IfCondExpSignals().spikes())
+	                           IfCondExpSignals().record_spikes())
 	    .connect("source", "neuron", Connector::all_to_all(0.16))
 	    .run(PyNN(argv[1]));
 

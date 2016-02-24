@@ -607,19 +607,19 @@ TEST(network, record)
 
 	{
 		auto pop = n.create_population<IfCondExp>(10);
-		EXPECT_FALSE(pop.record()[IfCondExpSignals::idx_spikes]);
-		EXPECT_FALSE(pop.record()[IfCondExpSignals::idx_v]);
-		EXPECT_FALSE(pop.record()[IfCondExpSignals::idx_gsyn_exc]);
-		EXPECT_FALSE(pop.record()[IfCondExpSignals::idx_gsyn_inh]);
+		EXPECT_FALSE(pop.signals().is_recording_spikes());
+		EXPECT_FALSE(pop.signals().is_recording_v());
+		EXPECT_FALSE(pop.signals().is_recording_gsyn_exc());
+		EXPECT_FALSE(pop.signals().is_recording_gsyn_inh());
 	}
 
 	{
 		auto pop = n.create_population<IfCondExp>(10);
 		pop.record("spikes");
-		EXPECT_TRUE(pop.record()[IfCondExpSignals::idx_spikes]);
-		EXPECT_FALSE(pop.record()[IfCondExpSignals::idx_v]);
-		EXPECT_FALSE(pop.record()[IfCondExpSignals::idx_gsyn_exc]);
-		EXPECT_FALSE(pop.record()[IfCondExpSignals::idx_gsyn_inh]);
+		EXPECT_TRUE(pop.signals().is_recording_spikes());
+		EXPECT_FALSE(pop.signals().is_recording_v());
+		EXPECT_FALSE(pop.signals().is_recording_gsyn_exc());
+		EXPECT_FALSE(pop.signals().is_recording_gsyn_inh());
 		EXPECT_FALSE(pop.is_recording("foo"));
 		EXPECT_FALSE(pop.is_recording("gsyn_exc"));
 		EXPECT_FALSE(pop.is_recording("v"));
@@ -629,37 +629,38 @@ TEST(network, record)
 	{
 		auto pop = n.create_population<IfCondExp>(10);
 		pop.record({"v", "spikes"});
-		EXPECT_TRUE(pop.record()[IfCondExpSignals::idx_spikes]);
-		EXPECT_TRUE(pop.record()[IfCondExpSignals::idx_v]);
-		EXPECT_FALSE(pop.record()[IfCondExpSignals::idx_gsyn_exc]);
-		EXPECT_FALSE(pop.record()[IfCondExpSignals::idx_gsyn_inh]);
+		EXPECT_TRUE(pop.signals().is_recording_spikes());
+		EXPECT_TRUE(pop.signals().is_recording_v());
+		EXPECT_FALSE(pop.signals().is_recording_gsyn_exc());
+		EXPECT_FALSE(pop.signals().is_recording_gsyn_inh());
 	}
 
 	{
 		auto pop = n.create_population<IfCondExp>(
-		    10, {}, IfCondExp::Signals().spikes());
-		EXPECT_TRUE(pop.record()[IfCondExpSignals::idx_spikes]);
-		EXPECT_FALSE(pop.record()[IfCondExpSignals::idx_v]);
-		EXPECT_FALSE(pop.record()[IfCondExpSignals::idx_gsyn_exc]);
-		EXPECT_FALSE(pop.record()[IfCondExpSignals::idx_gsyn_inh]);
+		    10, {}, IfCondExp::Signals().record_spikes());
+		EXPECT_TRUE(pop.signals().is_recording_spikes());
+		EXPECT_FALSE(pop.signals().is_recording_v());
+		EXPECT_FALSE(pop.signals().is_recording_gsyn_exc());
+		EXPECT_FALSE(pop.signals().is_recording_gsyn_inh());
 	}
 
 	{
 		auto pop = n.create_population<IfCondExp>(
-		    10, {}, IfCondExp::Signals().spikes().v());
-		EXPECT_TRUE(pop.record()[IfCondExpSignals::idx_spikes]);
-		EXPECT_TRUE(pop.record()[IfCondExpSignals::idx_v]);
-		EXPECT_FALSE(pop.record()[IfCondExpSignals::idx_gsyn_exc]);
-		EXPECT_FALSE(pop.record()[IfCondExpSignals::idx_gsyn_inh]);
+		    10, {}, IfCondExp::Signals().record_spikes().record_v());
+		EXPECT_TRUE(pop.signals().is_recording_spikes());
+		EXPECT_TRUE(pop.signals().is_recording_v());
+		EXPECT_FALSE(pop.signals().is_recording_gsyn_exc());
+		EXPECT_FALSE(pop.signals().is_recording_gsyn_inh());
 	}
 
 	{
 		auto pop = n.create_population<IfCondExp>(
-		    10, {}, IfCondExp::Signals().spikes().v(false));
-		EXPECT_TRUE(pop.record()[IfCondExpSignals::idx_spikes]);
-		EXPECT_FALSE(pop.record()[IfCondExpSignals::idx_v]);
-		EXPECT_FALSE(pop.record()[IfCondExpSignals::idx_gsyn_exc]);
-		EXPECT_FALSE(pop.record()[IfCondExpSignals::idx_gsyn_inh]);
+		    10, {});
+		pop.signals().record_v();
+		EXPECT_FALSE(pop.signals().is_recording_spikes());
+		EXPECT_TRUE(pop.signals().is_recording_v());
+		EXPECT_FALSE(pop.signals().is_recording_gsyn_exc());
+		EXPECT_FALSE(pop.signals().is_recording_gsyn_inh());
 	}
 }
 }

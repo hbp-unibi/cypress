@@ -105,19 +105,21 @@ public:
 	}
 
 	/**
-	 * Returns the signal map for the population, which indicates which signals
-	 * are being recorded and which are not.
+	 * Returns the signal map for the population, which contains the data
+	 * recorded from the neurons and is used to setup which signals should be
+	 * recorded and which are not.
 	 */
-	Signals &record()
+	Signals &signals()
 	{
 		return reinterpret_cast<Signals&>(network().signals(pid()));
 	}
 
 	/**
-	 * Returns the signal map for the population, which indicates which signals
-	 * are being recorded and which are not.
+	 * Returns the signal map for the population, which contains the data
+	 * recorded from the neurons and is used to setup which signals should be
+	 * recorded and which are not.
 	 */
-	const Signals &record() const
+	const Signals &signals() const
 	{
 		return reinterpret_cast<Signals&>(network().signals(pid()));
 	}
@@ -133,12 +135,12 @@ public:
 	 */
 	bool is_recording(const std::string &signal) const
 	{
-		const auto &signals = impl().type().signal_names;
-		auto it = std::find(signals.begin(), signals.end(), signal);
-		if (it == signals.end()) {
+		const auto &signal_names = impl().type().signal_names;
+		auto it = std::find(signal_names.begin(), signal_names.end(), signal);
+		if (it == signal_names.end()) {
 			return false;
 		}
-		return record()[it - signals.begin()];
+		return signals().is_recording(it - signal_names.begin());
 	}
 
 	/**
