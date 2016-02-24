@@ -291,7 +291,7 @@ float PyNN::timestep()
 	if (props.analogue()) {
 		return 0.0;  // No minimum timestep on analogue neuromorphic hardware
 	}
-	return m_setup.value("timestep", 0.1); // Default is 0.1ms
+	return m_setup.value("timestep", 0.1);  // Default is 0.1ms
 }
 
 void PyNN::do_run(NetworkBase &source, float duration) const
