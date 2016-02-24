@@ -62,6 +62,18 @@ at Heidelberg University.
 ### Harness the power of C++
 
 Especially when procedurally constructing large neural networks, Python might be
-a major bottleneck -- constructing networks in C++ is extremely fast. Furthermore,
-the amazing alien C++ technology allows to detect most errors in your code before actually
+a major bottleneck. However, constructing networks in C++ is extremely fast. Furthermore,
+this amazing alien C++ technology-thingy allows to detect most errors in your code before actually
 executing it. Who would have thought of that?
+
+## Authors
+
+This project has been initiated by Andreas Stöckel in 2016 while working
+at Bielefeld University in the [Cognitronics and Sensor Systems Group](http://www.ks.cit-ec.uni-bielefeld.de/) which is
+part of the [Human Brain Project, SP 9](https://www.humanbrainproject.eu/neuromorphic-computing-platform).
+
+## License
+
+This project and all its files are licensed under the
+[GPL version 3](http://www.gnu.org/licenses/gpl.txt) unless explicitly stated
+differently.
