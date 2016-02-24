@@ -16,10 +16,10 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <stdexcept>
 #include <sstream>
 
 #include <cypress/backend/binnf/binnf.hpp>
+#include <cypress/core/exceptions.hpp>
 
 namespace cypress {
 namespace binnf {
@@ -54,8 +54,7 @@ SizeType matrix_len(size_t rows, size_t cols)
 	return 2 * SIZE_LEN + rows * cols * NUMBER_LEN;
 }
 
-SizeType block_len(const std::string &name, const Header &header,
-                   size_t rows)
+SizeType block_len(const std::string &name, const Header &header, size_t rows)
 {
 	return BLOCK_TYPE_LEN + str_len(name) + header_len(header) +
 	       matrix_len(rows, header.size());
@@ -73,10 +72,7 @@ template <>
 void write(std::ostream &os, const std::string &str)
 {
 	if (str.size() > MAX_STR_SIZE) {
-		std::stringstream ss;
-		ss << "String exceeds string size limit of " << MAX_STR_SIZE
-		   << " bytes.";
-		throw std::overflow_error(ss.str());
+		throw BinnfDecodeException("Maximum string size exceeded");
 	}
 	write(os, SizeType(str.size()));
 	os.write(str.c_str(), str.size());
@@ -155,9 +151,8 @@ void serialise(std::ostream &os, const std::string &name, const Header &header,
                const Number data[], size_t rows)
 {
 
-	write(os, BLOCK_START_SEQUENCE);  // Write the block start mark
-	write(os,
-	      block_len(name, header, rows));  //  Write the total block length
+	write(os, BLOCK_START_SEQUENCE);           // Write the block start mark
+	write(os, block_len(name, header, rows));  //  Write the total block length
 	write(os, BLOCK_TYPE_MATRIX);
 	write(os, name);                     // Write the name of the block
 	write(os, SizeType(header.size()));  // Write the length of the header
@@ -189,64 +184,50 @@ Block deserialise(std::istream &is)
 {
 	Block res;
 
-	try {
-		// Try to read the block start header
-		if (!synchronise(is, BLOCK_START_SEQUENCE)) {
-			throw BinnfDecodeException("Header not found.");
-		}
+	// Try to read the block start header
+	if (!synchronise(is, BLOCK_START_SEQUENCE)) {
+		throw BinnfDecodeException("Header not found.");
+	}
 
-		// Read the block size
-		SizeType block_size;
-		read(is, block_size);
+	// Read the block size
+	SizeType block_size;
+	read(is, block_size);
 
-		// Fetch the current stream position
-		const std::streampos pos0 = is.tellg();
+	// Fetch the current stream position
+	const std::streampos pos0 = is.tellg();
 
-		uint32_t block_type;
-		read(is, block_type);
-		read(is, res.name);
+	uint32_t block_type;
+	read(is, block_type);
+	read(is, res.name);
 
-		// Read the number of header elements
-		SizeType header_count;
-		read(is, header_count);
+	// Read the number of header elements
+	SizeType header_count;
+	read(is, header_count);
 
-		// Read the header elements
-		res.header.names.resize(header_count);
-		res.header.types.resize(header_count);
-		for (size_t i = 0; i < header_count; i++) {
-			read(is, res.header.names[i]);
-			read(is, res.header.types[i]);
-		}
+	// Read the header elements
+	res.header.names.resize(header_count);
+	res.header.types.resize(header_count);
+	for (size_t i = 0; i < header_count; i++) {
+		read(is, res.header.names[i]);
+		read(is, res.header.types[i]);
+	}
 
-		// Read the matrix
-		read(is, res.matrix);
+	// Read the matrix
+	read(is, res.matrix);
 
-		// Make sure the block size is correct
-		const std::streampos pos1 = is.tellg();
-		if (pos0 >= 0 && pos1 >= 0 && pos1 - pos0 != block_size) {
-			throw BinnfDecodeException("Invalid block size");
-		}
+	// Make sure the block size is correct
+	const std::streampos pos1 = is.tellg();
+	if (pos0 >= 0 && pos1 >= 0 && pos1 - pos0 != block_size) {
+		throw BinnfDecodeException("Invalid block size");
+	}
 
-		// Make sure the block ends with the block end sequence
-		uint32_t block_end = 0;
-		read(is, block_end);
-		if (block_end != BLOCK_END_SEQUENCE) {
-			throw BinnfDecodeException("Expected block end");
-		}
+	// Make sure the block ends with the block end sequence
+	uint32_t block_end = 0;
+	read(is, block_end);
+	if (block_end != BLOCK_END_SEQUENCE) {
+		throw BinnfDecodeException("Expected block end");
 	}
 	return std::move(res);
-}
-
-void deserialise(std::istream &is, const Callback &callback)
-{
-	std::pair<bool, Block> res;  // Result structure
-	do {
-		res = deserialise(is);
-		if (res.first) {
-			res.first =
-			    callback(res.second.name, res.second.header, res.second.matrix);
-		}
-	} while (res.first);
 }
 }
 }

@@ -39,14 +39,17 @@ namespace binnf {
  * a 32-bit float.
  */
 union Number {
-	uint32_t i;
+	int32_t i;
 	float f;
 
 	Number() : i(0){};
 
-	Number(int i) : i(i) {}
+	Number(int32_t i) : i(i) {}
 
 	Number(double d) : f(d) {}
+
+	operator int32_t() const {return i;}
+	operator double() const {return f;}
 
 	bool operator==(const Number &o) const { return o.i == i; }
 
@@ -105,7 +108,8 @@ struct Block {
 
 	size_t colidx(const std::string &name) const
 	{
-		return std::find(names.begin(), names.end(), name) - names.begin();
+		return std::find(header.names.begin(), header.names.end(), name) -
+		       header.names.begin();
 	}
 
 	size_t size() const { return header.size(); }
@@ -157,13 +161,7 @@ void serialise(std::ostream &os, const Block &block);
 /**
  * Deserialises a single block.
  */
-std::pair<bool, Block> deserialise(std::istream &is);
-
-/**
- * Deserialises blocks stored in the given input stream, calls the callback
- * function for each deserialised block.
- */
-void deserialise(std::istream &is, const Callback &callback);
+Block deserialise(std::istream &is);
 }
 }
 
