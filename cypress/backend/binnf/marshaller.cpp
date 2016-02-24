@@ -48,14 +48,14 @@ static void write_populations(const std::vector<PopulationBase> &populations,
 
 	// Fetch all signals available in the populations
 	std::unordered_set<std::string> signals;
-	for (auto const &population: populations) {
-		for (auto const &signal_name: population.type().signal_names) {
+	for (auto const &population : populations) {
+		for (auto const &signal_name : population.type().signal_names) {
 			signals.emplace(signal_name);
 		}
 	}
 
 	// Add the signals to the header
-	for (auto const &signal: signals) {
+	for (auto const &signal : signals) {
 		header.names.emplace_back(std::string("record_") + signal);
 		header.types.emplace_back(INT);
 	}
@@ -65,7 +65,7 @@ static void write_populations(const std::vector<PopulationBase> &populations,
 		mat(i, 0) = int32_t(populations[i].size());
 		mat(i, 1) = int32_t(populations[i].type().type_id);
 		size_t j = 2;
-		for (auto const &signal: signals) {
+		for (auto const &signal : signals) {
 			mat(i, j++) = populations[i].is_recording(signal);
 		}
 	}
@@ -164,7 +164,7 @@ static void write_parameters(const PopulationBase &population, std::ostream &os)
 
 void marshall_network(NetworkBase &net, std::ostream &os,
                       std::function<size_t(Connection connections[],
-                                         size_t count)> connection_trafo)
+                                           size_t count)> connection_trafo)
 {
 	// Write the populations
 	const std::vector<PopulationBase> populations = net.populations();
@@ -181,28 +181,45 @@ void marshall_network(NetworkBase &net, std::ostream &os,
 
 bool marshall_response(NetworkBase &net, std::istream &is)
 {
+	Block block;
 	bool had_block = false;
+	bool has_target = false;
 	PopulationIndex tar_pid = 0;
 	NeuronIndex tar_nid = 0;
 	while (is.good()) {
 		// Deserialise the incomming data, continue until the end of the input
 		// stream is reached, skip faulty blocks
-		std::pair<bool, Block> res = deserialise(is);
-		if (!res.first) {
+		try {
+			block = deserialise(is);
+			had_block = true;
+		}
+		catch (BinnfDecodeException ex) {
+			// TODO: Log
 			continue;
 		}
-		had_block = true;
 
 		// Handle the block, depending on its name
-		const auto &block = res.second;
 		if (block.name == "target") {
 			const size_t pid_col = block.colidx("pid");
 			const size_t nid_col = block.colidx("nid");
+			if (block.matrix.rows() != 1) {
+				throw BinnfDecodeException("Invalid target block row count");
+			}
+			tar_pid = block.matrix(0, pid_col);
+			tar_nid = block.matrix(0, nid_col);
+			if (tar_pid >= ssize_t(net.population_count()) ||
+			    tar_nid >= ssize_t(net.population(tar_pid).size())) {
+				throw BinnfDecodeException("Invalid target neuron");
+			}
+			has_target = true;
+		} else if (block.name == "spike_times") {
+			if (!has_target) {
+				throw BinnfDecodeException("No target neuron set");
+			}
+//			const auto &neuron = net.populations()[tar_pid][tar_nid];
+//			neuron.signals()[neuron.type.signal_idx("spikes")] = block.matrix;
+			has_target = false;
 		}
-
-		std::cout << "received block " << res.second.name << std::endl;
-		std::cout << res.second.matrix << std::endl;
-		had_block = true;
 	}
 	return had_block;
 }

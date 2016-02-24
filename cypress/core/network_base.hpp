@@ -212,12 +212,6 @@ protected:
 	               size_t index, float value);
 
 	/**
-	 * Returns a PopulationBase instance pointing at the population with the
-	 * given index.
-	 */
-	PopulationBase population(PopulationIndex pid);
-
-	/**
 	 * Base connection method. Connects a range of neurons in the source
 	 * population to a range of neurons in the target population. All connection
 	 * methods in ConnectableMixin are relayed to this method.
@@ -299,6 +293,12 @@ public:
 	 * Returns the number of created populations.
 	 */
 	size_t population_count() const;
+
+	/**
+	 * Returns a PopulationBase instance pointing at the population with the
+	 * given index.
+	 */
+	PopulationBase population(PopulationIndex pid);
 
 	/**
 	 * Returns a list of populations available in the network, filtered by the
