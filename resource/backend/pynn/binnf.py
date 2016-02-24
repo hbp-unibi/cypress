@@ -183,7 +183,7 @@ def serialise(fd, name, header, matrix):
 
     _write_int(fd, rows)
     _write_int(fd, cols)
-    if hasattr(matrix, 'tobytes'): # only exists since Numpy 1.9
+    if hasattr(matrix, 'tobytes'):  # only exists since Numpy 1.9
         fd.write(matrix.tobytes())
     else:
         matrix.tofile(fd, sep="")
@@ -357,6 +357,7 @@ HEADER_SPIKE_TIMES_DTYPE = header_to_dtype(HEADER_SPIKE_TIMES)
 HEADER_TRACE = [{"name": "times", "type": TYPE_FLOAT},
                 {"name": "values", "type": TYPE_FLOAT}]
 HEADER_TRACE_DTYPE = header_to_dtype(HEADER_TRACE)
+
 
 def write_result(fd, res):
     """
