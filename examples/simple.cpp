@@ -30,10 +30,13 @@ int main(int argc, const char *argv[])
 		return 1;
 	}
 
-	Network().population<SpikeSourceArray>("source", 1, {100.0, 200.0, 300.0})
-	    .population<IfCondExp>("neuron", 4, IfCondExpParameters().v_rest(-60.0))
-	    .connect("source", "neuron", Connector::all_to_all(0.016))
-	    .run(NMPI(argv[1], argc, argv));
+	Network()
+	    .population<SpikeSourceArray>("source", 1, {100.0, 200.0, 300.0},
+	                                  SpikeSourceArraySignals().spikes())
+	    .population<IfCondExp>("neuron", 4, IfCondExpParameters().v_rest(-60.0),
+	                           IfCondExpSignals().spikes())
+	    .connect("source", "neuron", Connector::all_to_all(0.16))
+	    .run(PyNN(argv[1]));
 
 	return 0;
 }
