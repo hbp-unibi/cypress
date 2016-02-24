@@ -327,7 +327,8 @@ public:
 	{                                         \
 		(*this)[IDX] = x;                     \
 		return *this;                         \
-	}
+	}                                         \
+	bool is_recording_##NAME() { return (*this)[IDX]; }
 
 class NullNeuronSignals final : public NeuronSignalsBase {
 public:
