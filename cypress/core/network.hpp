@@ -531,25 +531,30 @@ public:
 	 */
 
 	template <typename T>
-	Network &population(const char *name, size_t size)
+	Network &population(
+	    const char *name, size_t size,
+	    const typename T::Signals &signals = typename T::Signals())
 	{
-		create_population<T>(size, name);
+		create_population<T>(size, signals, name);
 		return *this;
 	}
 
 	template <typename T>
-	Network &population(const char *name, size_t size,
-	                    std::initializer_list<typename T::Parameters> params)
+	Network &population(
+	    const char *name, size_t size,
+	    std::initializer_list<typename T::Parameters> params,
+	    const typename T::Signals &signals = typename T::Signals())
 	{
-		create_population<T>(size, params, name);
+		create_population<T>(size, params, signals, name);
 		return *this;
 	}
 
 	template <typename T>
-	Network &population(const char *name, size_t size,
-	                    const typename T::Parameters &params)
+	Network &population(
+	    const char *name, size_t size, const typename T::Parameters &params,
+	    const typename T::Signals &signals = typename T::Signals())
 	{
-		create_population<T>(size, params, name);
+		create_population<T>(size, params, signals, name);
 		return *this;
 	}
 
