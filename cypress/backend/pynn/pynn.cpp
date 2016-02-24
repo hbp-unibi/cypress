@@ -347,11 +347,9 @@ void PyNN::do_run(NetworkBase &source, float duration) const
 			});
 		proc.close_child_stdin();
 
-		// Read the response back
-		binnf::marshall_response(source, proc.child_stdout());
-
 		// Wait for the process to be done
-		if (proc.wait() != 0) {
+		if ((!binnf::marshall_response(source, proc.child_stdout())) |
+		    (proc.wait() != 0)) {
 			std::ifstream log_stream_in(log_path);
 			Process::generic_pipe(log_stream_in, std::cerr);
 			throw ExecutionError(
