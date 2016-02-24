@@ -19,6 +19,7 @@
 #include <algorithm>
 #include <vector>
 #include <string>
+#include <unordered_set>
 
 #include <cypress/backend/binnf/binnf.hpp>
 #include <cypress/backend/binnf/marshaller.hpp>
@@ -43,21 +44,33 @@ static const auto FLOAT = NumberType::FLOAT;
 static void write_populations(const std::vector<PopulationBase> &populations,
                               std::ostream &os)
 {
-	static const Header HEADER = {{"count", "type", "record_spikes", "record_v",
-	                               "record_gsyn_exc", "record_gsyn_inh"},
-	                              {INT, INT, INT, INT, INT, INT}};
+	Header header = {{"count", "type"}, {INT, INT}};
 
-	Matrix<Number> mat(populations.size(), 6);
+	// Fetch all signals available in the populations
+	std::unordered_set<std::string> signals;
+	for (auto const &population: populations) {
+		for (auto const &signal_name: population.type().signal_names) {
+			signals.emplace(signal_name);
+		}
+	}
+
+	// Add the signals to the header
+	for (auto const &signal: signals) {
+		header.names.emplace_back(std::string("record_") + signal);
+		header.types.emplace_back(INT);
+	}
+
+	Matrix<Number> mat(populations.size(), header.size());
 	for (size_t i = 0; i < populations.size(); i++) {
 		mat(i, 0) = int32_t(populations[i].size());
 		mat(i, 1) = int32_t(populations[i].type().type_id);
-		mat(i, 2) = int32_t(false);
-		mat(i, 3) = int32_t(false);
-		mat(i, 4) = int32_t(false);
-		mat(i, 5) = int32_t(false);
+		size_t j = 2;
+		for (auto const &signal: signals) {
+			mat(i, j++) = populations[i].is_recording(signal);
+		}
 	}
 
-	serialise(os, "populations", HEADER, mat);
+	serialise(os, "populations", header, mat);
 }
 
 /**
@@ -166,9 +179,18 @@ void marshall_network(NetworkBase &net, std::ostream &os,
 	}
 }
 
-void marshall_response(NetworkBase &net, std::istream &os)
+bool marshall_response(NetworkBase &net, std::istream &is)
 {
-	// TODO
+	bool had_block = false;
+	while (is.good()) {
+		std::pair<bool, Block> res = deserialise(is);
+		if (res.first) {
+			std::cout << "received block " << res.second.name << std::endl;
+			std::cout << res.second.matrix << std::endl;
+			had_block = true;
+		}
+	}
+	return had_block;
 }
 }
 }

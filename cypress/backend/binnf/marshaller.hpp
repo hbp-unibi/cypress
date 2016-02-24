@@ -68,8 +68,9 @@ void marshall_network(NetworkBase &net, std::ostream &os,
  *  written.
  * @param is is the input stream from which the simulator response is read and
  * written into the output network.
+ * @return true if valid result data was received from the simulator
  */
-void marshall_response(NetworkBase &net, std::istream &is);
+bool marshall_response(NetworkBase &net, std::istream &is);
 }
 }
 
