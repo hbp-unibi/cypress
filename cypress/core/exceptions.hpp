@@ -108,6 +108,21 @@ class MissingColumnException : public CypressException {
 public:
 	using CypressException::CypressException;
 };
+
+/**
+ * Exception thrown when reading data for a range of neurons from a heterogenous
+ * population.
+ */
+class HomogeneousPopulationRequiredException : public CypressException {
+public:
+	HomogeneousPopulationRequiredException()
+	    : CypressException(
+	          "Trying to read a parameter from a set of neurons, yet the "
+	          "underlying population is not homogeneous. Iterate over the "
+	          "individual neurons instead.")
+	{
+	}
+};
 }
 
 #endif /* CYPRESS_CORE_EXCEPTIONS_HPP */
