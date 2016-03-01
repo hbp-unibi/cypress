@@ -145,6 +145,21 @@ public:
 		}
 	}
 
+	/**
+	 * Constructor of the Matrix type, creates a new matrix with the given
+	 * extent, copying the data from the given address.
+	 *
+	 * @param rows is the number of rows in the matrix.
+	 * @param cols is the number of columns in the matrix.
+	 * @param data is a pointer at a pre-existing data region from which the
+	 * data will be copied.
+	 */
+	Matrix(size_t rows, size_t cols, T* data)
+	    : m_buf(new T[rows * cols]), m_rows(rows), m_cols(cols)
+	{
+		std::copy(data, data + (rows * cols), begin());
+	}
+
 	Matrix(const Matrix &o)
 	    : m_buf(new T[o.rows() * o.cols()]), m_rows(o.rows()), m_cols(o.cols())
 	{
