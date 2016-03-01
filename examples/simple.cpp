@@ -30,13 +30,19 @@ int main(int argc, const char *argv[])
 		return 1;
 	}
 
-	Network()
-	    .population<SpikeSourceArray>("source", 1, {100.0, 200.0, 300.0},
+	auto net = Network()
+	    .add_population<SpikeSourceArray>("source", 1, {100.0, 200.0, 300.0},
 	                                  SpikeSourceArraySignals().record_spikes())
-	    .population<IfCondExp>("neuron", 4, IfCondExpParameters().v_rest(-60.0),
+	    .add_population<IfCondExp>("neuron", 4, IfCondExpParameters().v_rest(-60.0),
 	                           IfCondExpSignals().record_spikes())
-	    .connect("source", "neuron", Connector::all_to_all(0.16))
+	    .add_connection("source", "neuron", Connector::all_to_all(0.16))
 	    .run(PyNN(argv[1]));
+
+	// Print the spike times for each neuron
+	for (auto neuron: net.population<IfCondExp>("neuron")) {
+		std::cout << "Spike times for neuron " << neuron.nid() << std::endl;
+		std::cout << neuron.signals().get_spikes();
+	}
 
 	return 0;
 }
