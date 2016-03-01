@@ -36,7 +36,7 @@ TEST(network, create_population)
 	}
 
 	{
-		auto pop = network.create_population<IfCondExp>(20, "foo");
+		auto pop = network.create_population<IfCondExp>(20, {}, "foo");
 		EXPECT_EQ(20U, pop.size());
 		EXPECT_EQ(&IfCondExp::inst(), &pop.type());
 		EXPECT_EQ("foo", pop.name());
@@ -469,7 +469,7 @@ TEST(network, population_view_iterator)
 	Population<IfCondExp> pop = network.create_population<IfCondExp>(10);
 
 	PopulationView<IfCondExp> view = pop.range(3, 8);
-
+	EXPECT_EQ(5U, view.size());
 	EXPECT_EQ(3, view.begin()->nid());
 	EXPECT_EQ(7, view.rbegin()->nid());
 	EXPECT_EQ(3, view.cbegin()->nid());
@@ -484,6 +484,7 @@ TEST(network, population_view_iterator)
 	}
 
 	PopulationView<IfCondExp> view2 = view.range(1, 2);
+	EXPECT_EQ(1U, view2.size());
 	EXPECT_EQ(4, view2.begin()->nid());
 	EXPECT_EQ(4, view2.rbegin()->nid());
 	EXPECT_EQ(4, view2.cbegin()->nid());
@@ -510,7 +511,7 @@ TEST(network, duration)
 	Network network;
 
 	network.create_population<SpikeSourceArray>(10, {100.0, 200.0, 300.0});
-	network.create_population<SpikeSourceArray>(20, {});
+	network.create_population<SpikeSourceArray>(20);
 	network.create_population<SpikeSourceArray>(30, {100.0, 400.0});
 
 	EXPECT_EQ(400.0, network.duration());
