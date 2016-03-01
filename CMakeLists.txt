@@ -82,6 +82,7 @@ add_library(cypress
 	cypress/util/filesystem
 	cypress/util/json
 	cypress/util/matrix
+	cypress/util/optional
 	cypress/util/process
 	cypress/util/resource
 )
