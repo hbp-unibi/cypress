@@ -68,11 +68,12 @@ add_library(cypress
 	cypress/backend/nmpi/nmpi
 	cypress/backend/pynn/pynn
 	cypress/backend/pynn/transformation
-	cypress/core/internal/network_impl
 	cypress/core/backend
 	cypress/core/connector
+	cypress/core/data
 	cypress/core/exceptions
 	cypress/core/neurons
+	cypress/core/neurons_base
 	cypress/core/network
 	cypress/core/network_base
 	cypress/core/network_base_objects
