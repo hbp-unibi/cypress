@@ -40,7 +40,7 @@ int main(int argc, const char *argv[])
 }
 ```
 
-This one-line example creates a network consisting of one spike source array and a
+This example creates a network consisting of one spike source array and a
 population of four linear integrate and fire neurons with conductance based synapses,
 uploads the program to the NMPI and prints the results on the standard output.
 
