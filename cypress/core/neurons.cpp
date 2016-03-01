@@ -16,59 +16,16 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <algorithm>
-
-#include <cypress/core/exceptions.hpp>
 #include <cypress/core/neurons.hpp>
 
 namespace cypress {
-
-/*
- * Class NeuronType
- */
-
-size_t NeuronType::parameter_index(const std::string &name) const
-{
-	auto it = std::find(parameter_names.begin(), parameter_names.end(), name);
-	if (it == parameter_names.end()) {
-		throw InvalidParameter(std::string("Signal with name \"") + name +
-		                       "\" does not exist.");
-	}
-	return it - parameter_names.begin();
-}
-
-size_t NeuronType::signal_index(const std::string &name) const
-{
-	auto it = std::find(signal_names.begin(), signal_names.end(), name);
-	if (it == parameter_names.end()) {
-		throw InvalidSignal(std::string("Signal with name \"") + name +
-		                    "\" does not exist.");
-	}
-	return it - signal_names.begin();
-}
-
-/*
- * Class NullNeuronType
- */
-
-NullNeuronType::NullNeuronType()
-    : NeuronType(0, "", {}, {}, {}, {}, {}, false, false)
-{
-}
-
-const NullNeuronType &NullNeuronType::inst()
-{
-	static const NullNeuronType inst;
-	return inst;
-}
-
 /*
  * Class SpikeSourceArray
  */
 
 SpikeSourceArray::SpikeSourceArray()
-    : NeuronType(0, "SpikeSourceArray", {"spike_times"}, {"ms"}, {}, {"spikes"},
-                 {"ms"}, false, true)
+    : NeuronTypeBase(0, "SpikeSourceArray", {"spike_times"}, {"ms"}, {},
+                     {"spikes"}, {"ms"}, false, true)
 {
 }
 
@@ -83,7 +40,7 @@ const SpikeSourceArray &SpikeSourceArray::inst()
  */
 
 IfCondExp::IfCondExp()
-    : NeuronType(
+    : NeuronTypeBase(
           1, "IfCondExp",
           {"cm", "tau_m", "tau_syn_E", "tau_syn_I", "tau_refrac", "v_rest",
            "v_thresh", "v_reset", "e_rev_E", "e_rev_I", "i_offset"},
@@ -105,16 +62,16 @@ const IfCondExp &IfCondExp::inst()
  */
 
 EifCondExpIsfaIsta::EifCondExpIsfaIsta()
-    : NeuronType(2, "EifCondExpIsfaIsta",
-                 {"cm", "tau_m", "tau_syn_E", "tau_syn_I", "tau_refrac",
-                  "tau_w", "v_rest", "v_thresh", "v_reset", "e_rev_E",
-                  "e_rev_I", "i_offset", "a", "b", "delta_T"},
-                 {"nF", "ms", "ms", "ms", "ms", "ms", "mV", "mV", "mV", "mV",
-                  "mV", "nA", "nS", "nA", "mV"},
-                 {1.0, 20.0, 5.0, 5.0, 0.1, 144.0, -70.6, -50.4, -70.6, 0.0,
-                  -80.0, 0.0, 4.0, 0.0805, 2.0},
-                 {"spikes", "v", "gsyn_exc", "gsyn_inh"},
-                 {"ms", "mV", "uS", "uS"}, true, false)
+    : NeuronTypeBase(2, "EifCondExpIsfaIsta",
+                     {"cm", "tau_m", "tau_syn_E", "tau_syn_I", "tau_refrac",
+                      "tau_w", "v_rest", "v_thresh", "v_reset", "e_rev_E",
+                      "e_rev_I", "i_offset", "a", "b", "delta_T"},
+                     {"nF", "ms", "ms", "ms", "ms", "ms", "mV", "mV", "mV",
+                      "mV", "mV", "nA", "nS", "nA", "mV"},
+                     {1.0, 20.0, 5.0, 5.0, 0.1, 144.0, -70.6, -50.4, -70.6, 0.0,
+                      -80.0, 0.0, 4.0, 0.0805, 2.0},
+                     {"spikes", "v", "gsyn_exc", "gsyn_inh"},
+                     {"ms", "mV", "uS", "uS"}, true, false)
 {
 }
 
@@ -122,23 +79,5 @@ const EifCondExpIsfaIsta &EifCondExpIsfaIsta::inst()
 {
 	static EifCondExpIsfaIsta inst;
 	return inst;
-}
-
-/*
- * Class IfCondExpParameters
- */
-
-IfCondExpParameters::IfCondExpParameters()
-    : NeuronParametersBase(IfCondExp::inst().parameter_defaults)
-{
-}
-
-/*
- * Class EifCondExpIsfaIstaParameters
- */
-
-EifCondExpIsfaIstaParameters::EifCondExpIsfaIstaParameters()
-    : NeuronParametersBase(EifCondExpIsfaIsta::inst().parameter_defaults)
-{
 }
 }

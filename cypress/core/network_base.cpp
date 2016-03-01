@@ -17,19 +17,127 @@
  */
 
 #include <algorithm>
+#include <memory>
 
-#include <cypress/core/internal/network_impl.hpp>
 #include <cypress/core/backend.hpp>
+#include <cypress/core/data.hpp>
 #include <cypress/core/exceptions.hpp>
 #include <cypress/core/network_base.hpp>
 #include <cypress/core/network_base_objects.hpp>
 
 namespace cypress {
+namespace internal {
+/**
+ * Spiking neural network data container. Stores all the data describing the
+ * network.
+ */
+class NetworkData {
+private:
+	/**
+	 * Vector containing the PopulationData instances.
+	 */
+	std::vector<std::shared_ptr<PopulationData>> m_populations;
+
+	/**
+	 * Vector containing all connections.
+	 */
+	mutable std::vector<ConnectionDescriptor> m_connections;
+
+	/**
+	 * Flag indicating whether the connections are currently sorted.
+	 */
+	mutable bool m_connections_sorted;
+
+public:
+	/**
+	 * Default constructor of the NetworkData class.
+	 */
+	NetworkData() : m_connections_sorted(true){};
+
+	/**
+	 * Creates an independent NetworkData instance.
+	 */
+	NetworkData clone()
+	{
+		NetworkData res = *this;
+		for (auto &sp : res.m_populations) {
+			sp = std::make_shared<PopulationData>(*sp);
+		}
+		return res;
+	}
+
+	/**
+	 * Returns a reference at the vector containing the population data.
+	 */
+	std::vector<std::shared_ptr<PopulationData>> &populations()
+	{
+		return m_populations;
+	}
+
+	/**
+	 * Returns the indices fo the populations which match the given search
+	 * criteria.
+	 */
+	std::vector<PopulationIndex> populations(const std::string &name,
+	                                         const NeuronType &type)
+	{
+		std::vector<PopulationIndex> res;
+		for (size_t pid = 0; pid < m_populations.size(); pid++) {
+			const PopulationData &pop = *m_populations[pid];
+			if ((name.empty() || pop.name() == name) &&
+			    (&type == &NullNeuron::inst() || pop.type() == &type)) {
+				res.push_back(pid);
+			}
+		}
+		return res;
+	}
+
+	/**
+	 * Adds the given connector to the connection list.
+	 */
+	void connect(const ConnectionDescriptor &descr)
+	{
+		// Make sure the target population is not a spike source
+		if (m_populations[descr.pid_tar()]->type()->spike_source) {
+			throw InvalidConnectionException(
+			    "Spike sources are not valid connection targets.");
+		}
+
+		// Assemble the connection descriptor and check its validity
+		if (!descr.valid()) {
+			throw InvalidConnectionException(
+			    "The source and target population sizes do not match the size "
+			    "expected by the chosen connector.");
+		}
+
+		// Append the descriptor to the connection list, update the sorted flag
+		m_connections.emplace_back(std::move(descr));
+		m_connections_sorted = (m_connections.size() <= 1) ||
+		                       (m_connections_sorted &&
+		                        m_connections[m_connections.size() - 2] <
+		                            m_connections[m_connections.size() - 1]);
+	}
+
+	/**
+	 * Returns the list of connections. Makes sure the returned connections are
+	 * sorted.
+	 */
+	const std::vector<ConnectionDescriptor> &connections() const
+	{
+		if (!m_connections_sorted) {
+			std::sort(m_connections.begin(), m_connections.end());
+			m_connections_sorted = true;
+		}
+		return m_connections;
+	}
+};
+}
+
 /*
  * Class NetworkBase
  */
 
-NetworkBase::NetworkBase() : m_impl(std::make_shared<internal::NetworkImpl>())
+NetworkBase::NetworkBase() : m_impl(std::make_shared<internal::NetworkData>())
 {
 	// Do nothing here
 }
@@ -38,186 +146,8 @@ NetworkBase::~NetworkBase() = default;
 
 NetworkBase NetworkBase::clone() const
 {
-	return NetworkBase(std::make_shared<internal::NetworkImpl>(*m_impl));
-}
-
-size_t NetworkBase::population_count() const
-{
-	return m_impl->populations().size();
-}
-
-size_t NetworkBase::population_size(PopulationIndex pid) const
-{
-	return m_impl->populations()[pid].size;
-}
-
-const NeuronType &NetworkBase::population_type(PopulationIndex pid) const
-{
-	return *(m_impl->populations()[pid].type);
-}
-
-const std::string &NetworkBase::population_name(PopulationIndex pid) const
-{
-	return m_impl->populations()[pid].name;
-}
-
-void NetworkBase::population_name(PopulationIndex pid, const std::string &name)
-{
-	m_impl->populations()[pid].name = name;
-}
-
-NeuronSignalsBase &NetworkBase::signals(PopulationIndex pid)
-{
-	return m_impl->populations()[pid].signals;
-}
-
-const NeuronSignalsBase &NetworkBase::signals(PopulationIndex pid) const
-{
-	return m_impl->populations()[pid].signals;
-}
-
-void NetworkBase::record(PopulationIndex pid, size_t signal_idx, bool record)
-{
-	signals(pid).record(signal_idx, record);
-}
-
-bool NetworkBase::homogeneous(PopulationIndex pid)
-{
-	return m_impl->populations()[pid].parameters.size() <= 1;
-}
-
-const NeuronParametersBase &NetworkBase::parameters(PopulationIndex pid,
-                                                    NeuronIndex nid) const
-{
-	const internal::PopulationImpl &pop = m_impl->populations()[pid];
-	const size_t n_params = pop.parameters.size();
-	if (n_params == 0) {
-		return pop.type->parameter_defaults;
-	}
-	if (n_params == 1 || nid >= NeuronIndex(n_params)) {
-		return pop.parameters[0];
-	}
-	return pop.parameters[nid];
-}
-
-static void heterogenise(internal::PopulationImpl &pop, NeuronIndex nid0,
-                         NeuronIndex nid1)
-{
-	// If the parameter vector is currently homogeneous, resize it such that it
-	// contains an entry for each neuron in the population. Then store the old
-	// parameter set in the neurons
-	if (pop.size > 1 && pop.parameters.size() <= 1) {
-		// Fetch the old paramter set
-		NeuronParametersBase old = (pop.parameters.size() == 0)
-		                               ? pop.type->parameter_defaults
-		                               : pop.parameters[0];
-
-		// Resize the parameter storage
-		pop.parameters.resize(pop.size);
-
-		// Fill the old parameters in, leave a gap for the new parameters
-		std::fill(pop.parameters.begin(), pop.parameters.begin() + nid0, old);
-		std::fill(pop.parameters.begin() + nid1, pop.parameters.end(), old);
-	}
-}
-
-void NetworkBase::parameters(PopulationIndex pid, NeuronIndex nid0,
-                             NeuronIndex nid1,
-                             const std::vector<NeuronParametersBase> &params)
-{
-	internal::PopulationImpl &pop = m_impl->populations()[pid];
-
-	if (params.size() == 0) {
-		parameters(pid, nid0, nid1, pop.type->parameter_defaults);
-	}
-	else if (params.size() == 1) {
-		parameters(pid, nid0, nid1, params[0]);
-	}
-	else {
-		if (NeuronIndex(params.size()) != (nid1 - nid0)) {
-			throw InvalidParameterArraySize(
-			    "The parameter array must have the same size as the target "
-			    "Population, PopulationView or Neuron.");
-		}
-
-		heterogenise(pop, nid0, nid1);
-		std::copy(params.begin(), params.end(), pop.parameters.begin() + nid0);
-	}
-}
-
-void NetworkBase::parameters(PopulationIndex pid, NeuronIndex nid0,
-                             NeuronIndex nid1,
-                             const NeuronParametersBase &params)
-{
-	internal::PopulationImpl &pop = m_impl->populations()[pid];
-
-	// If the parameters of all neurons in the population are set, only use
-	// a single entry in the parameters vector to indicate that the
-	// parameters should be set homogeneously
-	if (nid0 == 0 && nid1 == NeuronIndex(pop.size)) {
-		pop.parameters.clear();  // No parameters => default parameters
-		if (&params != &pop.type->parameter_defaults) {
-			pop.parameters.emplace_back(params);  // One entry => homogeneous
-		}
-	}
-	else {
-		heterogenise(pop, nid0, nid1);
-		std::fill(pop.parameters.begin() + nid0, pop.parameters.begin() + nid1,
-		          params);
-	}
-}
-
-void NetworkBase::parameter(PopulationIndex pid, NeuronIndex nid0,
-                            NeuronIndex nid1, size_t index,
-                            const std::vector<float> &values)
-{
-	if (NeuronIndex(values.size()) != (nid1 - nid0)) {
-		throw InvalidParameterArraySize(
-		    "The values array must have the same size as the target "
-		    "Population, PopulationView or Neuron.");
-	}
-
-	internal::PopulationImpl &pop = m_impl->populations()[pid];
-	heterogenise(pop, 0, pop.size);
-	for (size_t i = 0; i < values.size(); i++) {
-		auto &params = pop.parameters[nid0 + i];
-		if (index < params.size()) {
-			params[index] = values[i];
-		}
-		else {
-			throw std::out_of_range("Given parameter index is out of range.");
-		}
-	}
-}
-
-void NetworkBase::parameter(PopulationIndex pid, NeuronIndex nid0,
-                            NeuronIndex nid1, size_t index, float value)
-{
-	internal::PopulationImpl &pop = m_impl->populations()[pid];
-	if (nid0 == 0 && nid1 == NeuronIndex(pop.size) &&
-	    pop.parameters.size() <= 1) {
-		if (pop.parameters.size() == 0) {
-			pop.parameters.emplace_back(pop.type->parameter_defaults);
-		}
-		nid0 = 0;
-		nid1 = 0;
-	}
-	else {
-		heterogenise(pop, 0, pop.size);
-	}
-	for (NeuronIndex nid = nid0; nid < nid1; nid++) {
-		if (index < pop.parameters[nid].size()) {
-			pop.parameters[nid][index] = value;
-		}
-		else {
-			throw std::out_of_range("Given parameter index is out of range.");
-		}
-	}
-}
-
-PopulationBase NetworkBase::population(PopulationIndex pid)
-{
-	return PopulationBase(*this, pid);
+	return NetworkBase(
+	    std::make_shared<internal::NetworkData>(m_impl->clone()));
 }
 
 void NetworkBase::connect(PopulationIndex pid_src, NeuronIndex nid_src0,
@@ -231,17 +161,51 @@ void NetworkBase::connect(PopulationIndex pid_src, NeuronIndex nid_src0,
 }
 
 PopulationIndex NetworkBase::create_population_index(
-    size_t size, const NeuronType &type,
-    const std::vector<NeuronParametersBase> &params,
-    const NeuronSignalsBase &signals, const std::string &name)
+    size_t size, const NeuronType &type, const NeuronParameters &params,
+    const NeuronSignals &signals, const std::string &name)
 {
-	if (params.size() > 1 && params.size() != size) {
-		throw InvalidParameterArraySize(
-		    "The parameter array must have as many entries as there are "
-		    "neurons in the population.");
-	}
-	m_impl->populations().emplace_back(size, type, params, signals, name);
+	// Create a new population data store
+	auto data = std::make_shared<PopulationData>(
+	    size, &type, name);
+
+	// Copy the given parameters to the new population
+	NeuronParameters(data, 0, size) = params;
+	NeuronSignals(data, 0, size) = signals;
+
+	// Append the population the the existing list of populations
+	m_impl->populations().emplace_back(data);
 	return population_count() - 1;
+}
+
+size_t NetworkBase::population_count() const
+{
+	return m_impl->populations().size();
+}
+
+std::shared_ptr<PopulationData> NetworkBase::population_data(
+    PopulationIndex pid)
+{
+	return m_impl->populations()[pid];
+}
+
+PopulationBase NetworkBase::population(const std::string &name)
+{
+	auto pops = populations(name);
+	if (pops.empty()) {
+		throw NoSuchPopulationException(std::string("Population with name \"") +
+		                                name + "\" does not exist");
+	}
+	return pops.back();
+}
+
+PopulationBase NetworkBase::population(PopulationIndex pid)
+{
+	return PopulationBase(m_impl, pid);
+}
+
+PopulationBase NetworkBase::operator[](PopulationIndex pid)
+{
+	return population(pid);
 }
 
 const std::vector<PopulationBase> NetworkBase::populations(
@@ -261,16 +225,6 @@ const std::vector<PopulationBase> NetworkBase::populations(
 	return populations(std::string(), type);
 }
 
-PopulationBase NetworkBase::population(const std::string &name)
-{
-	auto pops = populations(name);
-	if (pops.empty()) {
-		throw NoSuchPopulationException(std::string("Population with name \"") +
-		                                name + "\" does not exist");
-	}
-	return pops.back();
-}
-
 const std::vector<ConnectionDescriptor> &NetworkBase::connections() const
 {
 	return m_impl->connections();
@@ -287,9 +241,9 @@ float NetworkBase::duration() const
 	for (const auto &population : populations()) {
 		if (&population.type() == &SpikeSourceArray::inst()) {
 			const NeuronIndex nid_end =
-			    population.homogeneous() ? 1 : population.size();
+			    population.homogeneous_parameters() ? 1 : population.size();
 			for (NeuronIndex nid = 0; nid < nid_end; nid++) {
-				auto &params = population.parameters(nid);
+				auto &params = population[nid].parameters().parameters();
 				if (params.size() > 0) {
 					// Note: the spike times are supposed to be sorted!
 					res = std::max(res, params[params.size() - 1]);

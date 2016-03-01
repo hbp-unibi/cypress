@@ -39,13 +39,14 @@
 #include <cypress/core/network_base.hpp>
 #include <cypress/core/neurons.hpp>
 #include <cypress/core/types.hpp>
+#include <cypress/util/comperator.hpp>
 
 namespace cypress {
 /**
  * Mixin used by PopulationBase and Population to provide the functions that
  * are expected by a population class.
  */
-template <typename Impl, typename Accessor, typename Params, typename Signals>
+template <typename Impl, typename Accessor>
 class PopulationMixin {
 private:
 	Impl &impl() { return reinterpret_cast<Impl &>(*this); }
@@ -53,17 +54,16 @@ private:
 
 	NetworkBase network() const { return Accessor::network(impl()); }
 	PopulationIndex pid() const { return Accessor::pid(impl()); }
+	std::shared_ptr<PopulationData> data() const
+	{
+		return network().population_data(pid());
+	}
 
 public:
 	/**
-	 * Returns the type of the population. All neurons share the same type.
-	 */
-	const NeuronType &type() const { return network().population_type(pid()); }
-
-	/**
 	 * Returns the name of the population.
 	 */
-	const std::string &name() const { return network().population_name(pid()); }
+	const std::string &name() const { return data()->name(); }
 
 	/**
 	 * Sets the name of the population and returns a reference at the population
@@ -71,125 +71,41 @@ public:
 	 */
 	Impl &name(const std::string &name)
 	{
-		network().population_name(pid(), name);
+		data()->name(name);
 		return impl();
-	}
-
-	/**
-	 * Allows to record the signal with the given name.
-	 *
-	 * @param name is the name of the signal that should be recorded.
-	 * @param record specifies whether the signal should be recorded or not
-	 * recorded.
-	 */
-	Impl &record(const std::string &signal, bool record = true)
-	{
-		network().record(pid(), impl().type().signal_index(signal), record);
-		return impl();
-	}
-
-	/**
-	 * Allows to record the signals with the given names.
-	 *
-	 * @param signals is a vector containing the names of the signals that should
-	 * be recorded.
-	 * @param record specifies whether the signal should be recorded or not
-	 * recorded.
-	 */
-	Impl &record(std::initializer_list<std::string> signals, bool record = true)
-	{
-		for (const auto &signal : signals) {
-			this->record(signal, record);
-		}
-		return impl();
-	}
-
-	/**
-	 * Returns the signal map for the population, which contains the data
-	 * recorded from the neurons and is used to setup which signals should be
-	 * recorded and which are not.
-	 */
-	Signals &signals()
-	{
-		return reinterpret_cast<Signals&>(network().signals(pid()));
-	}
-
-	/**
-	 * Returns the signal map for the population, which contains the data
-	 * recorded from the neurons and is used to setup which signals should be
-	 * recorded and which are not.
-	 */
-	const Signals &signals() const
-	{
-		return reinterpret_cast<Signals&>(network().signals(pid()));
-	}
-
-	/**
-	 * Returns whether the signal with the given name is being recorded.
-	 *
-	 * @param name is the name of the signal that should be recorded. If a
-	 * signal with the given name does not exist for this neuron type, false
-	 * is returned.
-	 * @return true if the signal with the given name exists and is being
-	 * recorded for this population, false in any other case.
-	 */
-	bool is_recording(const std::string &signal) const
-	{
-		const auto &signal_names = impl().type().signal_names;
-		auto it = std::find(signal_names.begin(), signal_names.end(), signal);
-		if (it == signal_names.end()) {
-			return false;
-		}
-		return signals().is_recording(it - signal_names.begin());
 	}
 
 	/**
 	 * Returns the number of neurons in the population.
 	 */
-	size_t size() const { return network().population_size(pid()); }
+	size_t size() const { return data()->size(); }
 
 	/**
-	 * Returns true if all neurons in the population share the same parameters.
+	 * Returns true if the population possesses homogeneous neuron parameters.
 	 */
-	bool homogeneous() const { return network().homogeneous(pid()); }
-
-	/**
-	 * Returns the parameters for the nid-th neuron in the population.
-	 */
-	const Params &parameters(NeuronIndex nid) const
+	bool homogeneous_parameters() const
 	{
-		return network().parameters(pid(), nid);
+		return data()->homogeneous_parameters();
 	}
+
+	/**
+	 * Returns true if the population possesses homogeneous record flags.
+	 */
+	bool homogeneous_record() const { return data()->homogeneous_record(); }
+
+	/**
+	 * Returns true if the population possesses homogeneous data.
+	 */
+	bool homogeneous_data() const { return data()->homogeneous_data(); }
 };
 
-/**
- * Mixin used by NeuronBase and Neuron to provide the functions that are
- * expected by a population class.
- */
-template <typename Impl, typename Accessor, typename Params>
+template <typename Impl>
 class NeuronMixin {
 private:
 	Impl &impl() { return reinterpret_cast<Impl &>(*this); }
 	const Impl &impl() const { return reinterpret_cast<const Impl &>(*this); }
 
-	auto network() const { return Accessor::network(impl()); }
-	PopulationIndex pid() const { return Accessor::pid(impl()); }
-	NeuronIndex nid() const { return Accessor::begin(impl()); }
-
 public:
-	/**
-	 * Returns the type of the neuron.
-	 */
-	const NeuronType &type() const { return network().population_type(pid()); }
-
-	/**
-	 * Returns the parameters for the nid-th neuron in the population.
-	 */
-	const Params &parameters() const
-	{
-		return network().population_parameters(pid(), nid());
-	}
-
 	Impl *operator->() { return &impl(); }
 	const Impl *operator->() const { return &impl(); }
 	Impl &operator*() { return impl(); }
@@ -249,86 +165,98 @@ public:
 };
 
 /**
- * Mixin which allows to set the parameters of a Population, PopulationView or
- * Neuron.
+ * Mixin which allows to set and access the parameters and signals of a
+ * Population, PopulationView or Neuron.
  */
-template <typename Impl, typename Accessor, typename Params>
-class ParametersMixin {
+template <typename Impl, typename Accessor, typename Params, typename Signals>
+class DataMixin {
 private:
 	Impl &impl() { return reinterpret_cast<Impl &>(*this); }
 	const Impl &impl() const { return reinterpret_cast<const Impl &>(*this); }
 
 	auto network() const { return Accessor::network(impl()); }
 	PopulationIndex pid() const { return Accessor::pid(impl()); }
+	std::shared_ptr<PopulationData> data() const
+	{
+		return network().population_data(pid());
+	}
 	NeuronIndex i0() const { return Accessor::begin(impl()); }
 	NeuronIndex i1() const { return Accessor::end(impl()); }
 
 public:
+	template <typename Other>
+	bool operator==(const Other &o) const
+	{
+		return Comperator<int32_t>::equals(pid(), o.pid())(
+		    i0(), o.begin()->nid())(i1(), o.end()->nid())();
+	}
+
+	template <typename Other>
+	bool operator!=(const Other &o) const
+	{
+		return Comperator<int32_t>::inequal(pid(), o.pid())(
+		    i0(), o.begin()->nid())(i1(), o.end()->nid())();
+	}
+
+	template <typename Other>
+	bool operator<(const Other &o) const
+	{
+		return Comperator<int32_t>::smaller(pid(), o.pid())(
+		    i0(), o.begin()->nid())(i1(), o.end()->nid())();
+	}
+
+	template <typename Other>
+	bool operator<=(const Other &o) const
+	{
+		return Comperator<int32_t>::smaller_equals(pid(), o.pid())(
+		    i0(), o.begin()->nid())(i1(), o.end()->nid())();
+	}
+
+	template <typename Other>
+	bool operator>(const Other &o) const
+	{
+		return Comperator<int32_t>::larger(pid(), o.pid())(
+		    i0(), o.begin()->nid())(i1(), o.end()->nid())();
+	}
+
+	template <typename Other>
+	bool operator>=(const Other &o) const
+	{
+		return Comperator<int32_t>::larger_equals(pid(), o.pid())(
+		    i0(), o.begin()->nid())(i1(), o.end()->nid())();
+	}
+
 	/**
 	 * Returns the type of the population. All neurons share the same type.
 	 */
-	const NeuronType &type() const { return network().population_type(pid()); }
+	const NeuronType &type() const { return *(data()->type()); }
 
 	/**
-	 * Sets the parameters of the neurons in this Population or PopulationView
-	 * to the parameters specified in the given vector. The vector must have
-	 * exactly the same size as the number of neurons represented by this
-	 * object, otherwise an exception will be thrown.
-	 *
-	 * @param params is a vector containing the parameters for each neuron
-	 * represented by this object.
-	 * @return a reference at this object for function call chaining.
+	 * Returns an object which can be used for reading the parameters of the
+	 * neurons represented by this object. Note that read access may be
+	 * constrained when the parameters in the underlying neurons do not possess
+	 * the same parameters.
 	 */
-	Impl &parameters(std::initializer_list<Params> params)
-	{
-		network().parameters(
-		    pid(), i0(), i1(),
-		    std::vector<NeuronParametersBase>(params.begin(), params.end()));
-		return impl();
-	}
+	const Params parameters() const { return Params(data(), i0(), i1()); }
 
 	/**
-	 * Sets the parameters of all neurons represented by this object to the
-	 * given value.
+	 * Returns an object which can be used for setting the parameters of the
+	 * neurons. Note that read access may be constrained when the parameters in
+	 * the underlying neurons do not possess the same parameters.
 	 */
-	Impl &parameters(const Params &params)
-	{
-		network().parameters(pid(), i0(), i1(), params);
-		return impl();
-	}
+	Params parameters() { return Params(data(), i0(), i1()); }
 
 	/**
-	 * Sets a single parameter of the neurons in this Population or
-	 * PopulationView to the values specified in the given vector. The vector
-	 * must have exactly the same size as the number of neurons represented by
-	 * this object, otherwise an exception will be thrown.
-	 *
-	 * @param index is the index of the parameter that should be set. If the
-	 * index is out of range, an exception will be thrown.
-	 * @param params is a vector containing the parameters for each neuron
-	 * represented by this object.
-	 * @return a reference at this object for function call chaining.
+	 * Returns an object which can be used for reading the record flags and the
+	 * recorded data.
 	 */
-	Impl &parameter(size_t index, const std::vector<float> &values)
-	{
-		network().parameter(pid(), i0(), i1(), index, values);
-		return impl();
-	}
+	const Signals signals() const { return Signals(data(), i0(), i1()); }
 
 	/**
-	 * Sets the specified parameter of all neurons represented by this object to
-	 * the given value.
-	 *
-	 * @param index is the index of the parameter that should be set. If the
-	 * index is out of range, an exception will be thrown.
-	 * @param value is the value the parameter should be set to.
-	 * @return a reference at this object for function call chaining.
+	 * Returns an object which can be used for reading and writing the record
+	 * flags and the recorded data.
 	 */
-	Impl &parameter(size_t index, float value)
-	{
-		network().parameter(pid(), i0(), i1(), index, value);
-		return impl();
-	}
+	Signals signals() { return Signals(data(), i0(), i1()); }
 };
 
 /**
@@ -370,8 +298,7 @@ public:
 	 * @param begin is the index of the first neuron in the resulting view,
 	 * relative to the first neuron in this object.
 	 * @param end is the index of the last-plus-one neuron in the resulting
-	 * view,
-	 * relative to the first neuron in this object.
+	 * view, relative to the first neuron in this object.
 	 * @return a new view representing only the given range of neurons.
 	 */
 	const View range(NeuronIndex begin, NeuronIndex end) const
@@ -387,8 +314,7 @@ public:
 	 * @param begin is the index of the first neuron in the resulting view,
 	 * relative to the first neuron in this object.
 	 * @param end is the index of the last-plus-one neuron in the resulting
-	 * view,
-	 * relative to the first neuron in this object.
+	 * view, relative to the first neuron in this object.
 	 * @return a new view representing only the given range of neurons.
 	 */
 	View range(NeuronIndex begin, NeuronIndex end)
@@ -404,8 +330,7 @@ public:
 	 * @param begin is the index of the first neuron in the resulting view,
 	 * relative to the first neuron in this object.
 	 * @param end is the index of the last-plus-one neuron in the resulting
-	 * view,
-	 * relative to the first neuron in this object.
+	 * view, relative to the first neuron in this object.
 	 * @return a new view representing only the given range of neurons.
 	 */
 	const View operator()(NeuronIndex begin, NeuronIndex end) const
@@ -420,8 +345,7 @@ public:
 	 * @param begin is the index of the first neuron in the resulting view,
 	 * relative to the first neuron in this object.
 	 * @param end is the index of the last-plus-one neuron in the resulting
-	 * view,
-	 * relative to the first neuron in this object.
+	 * view, relative to the first neuron in this object.
 	 * @return a new view representing only the given range of neurons.
 	 */
 	View operator()(NeuronIndex begin, NeuronIndex end)
@@ -442,8 +366,7 @@ public:
 	 * Generic class implementing the various iterator types exposed by the
 	 * Population class. Note that comparison operators only compare the neuron
 	 * index and do not check for equivalence of the population object.
-	 * Comparing
-	 * iterators from different population objects is nonsense.
+	 * Comparing iterators from different population objects is nonsense.
 	 *
 	 * @tparam Dir is the direction into which the iterator advances.
 	 * @tparam Const if true, the iterator allows no write access to the
