@@ -38,7 +38,8 @@
 #include <vector>
 
 #include <cypress/core/connector.hpp>
-#include <cypress/core/neurons.hpp>
+#include <cypress/core/data.hpp>
+#include <cypress/core/neurons_base.hpp>
 #include <cypress/core/types.hpp>
 
 namespace cypress {
@@ -47,7 +48,7 @@ namespace cypress {
  * Forward declarations
  */
 namespace internal {
-class NetworkImpl;
+class NetworkData;
 }
 
 class Backend;
@@ -56,14 +57,11 @@ class PopulationBase;
 class PopulationViewBase;
 class NeuronBase;
 
-template <typename Impl, typename Accessor, typename Params, typename Signals>
+template <typename Impl, typename Accessor>
 class PopulationMixin;
 
-template <typename Impl, typename Accessor, typename Params>
-class NeuronMixin;
-
-template <typename Impl, typename Accessor, typename Params>
-class ParametersMixin;
+template <typename Impl, typename Accessor, typename Params, typename Signals>
+class DataMixin;
 
 template <typename Impl, typename Accessor>
 class ConnectableMixin;
@@ -79,137 +77,26 @@ private:
 	/**
 	 * Reference at the object providing the actual network implementation.
 	 */
-	std::shared_ptr<internal::NetworkImpl> m_impl;
+	std::shared_ptr<internal::NetworkData> m_impl;
 
 protected:
-	template <typename Impl, typename Accessor, typename Params,
-	          typename Signals>
+	template <typename Impl, typename Accessor>
 	friend class PopulationMixin;
 
-	template <typename Impl, typename Accessor, typename Params>
-	friend class NeuronMixin;
-
-	template <typename Impl, typename Accessor, typename Params>
-	friend class ParametersMixin;
+	template <typename Impl, typename Accessor, typename Params,
+	          typename Signals>
+	friend class DataMixin;
 
 	template <typename Impl, typename Accessor>
 	friend class ConnectableMixin;
 
 	/**
-	 * Returns the size of the given population.
-	 */
-	size_t population_size(PopulationIndex pid) const;
-
-	/**
-	 * Returns true if all neurons in the given population share the same
-	 * parameters.
-	 */
-	const NeuronType &population_type(PopulationIndex pid) const;
-
-	/**
-	 * Returns the name of the given population.
-	 */
-	const std::string &population_name(PopulationIndex pid) const;
-
-	/**
-	 * Allows to set the name of the population with the given index.
-	 */
-	void population_name(PopulationIndex pid, const std::string &name);
-
-	/**
-	 * Returns a reference at the signals instance of the given population.
-	 */
-	NeuronSignalsBase &signals(PopulationIndex pid);
-
-	/**
-	 * Returns a const reference at the signals instance of the given
-	 * population.
-	 */
-	const NeuronSignalsBase &signals(PopulationIndex pid) const;
-
-	/**
-	 * Enables or disables recording of the given signal for the population with
-	 * the given id.
-	 */
-	void record(PopulationIndex pid, size_t signal_idx, bool record);
-
-	/**
-	 * Returns true if all neurons in the given population share the same
-	 * parameters.
-	 */
-	bool homogeneous(PopulationIndex pid);
-
-	/**
-	 * Returns the parameters of the nid-th neuron in the given population.
-	 */
-	const NeuronParametersBase &parameters(PopulationIndex pid,
-	                                       NeuronIndex nid) const;
-
-	/**
-	 * Sets the neuron parameters for the neurons nid0 to nid1 (exclusive)
-	 * in the populatid pid to the parameters specified in the given parameter
-	 * list. If the size of the specified range and the number of elements
-	 * in the parameter vector do not match, an exception is thrown.
+	 * Returns the population data associated with the given population index.
 	 *
-	 * @param pid is the index of the population that should be modified.
-	 * @param nid0 is the index of the first neuron that should be modified.
-	 * @param nid1 is the index of the last-plus-one neuron that should be
-	 * modified.
-	 * @param params is a vector containing parameters for each of the neurons
-	 * that should be updated.
+	 * @param pid is the index of the population for which a reference at the
+	 * internal data should be returned.
 	 */
-	void parameters(PopulationIndex pid, NeuronIndex nid0, NeuronIndex nid1,
-	                const std::vector<NeuronParametersBase> &params);
-
-	/**
-	 * Sets the neuron parameters for the neurons nid0 to nid1 (exclusive) in
-	 * the populatid pid to the parameters specified in the given parameter
-	 * list.
-	 *
-	 * @param pid is the index of the population that should be modified.
-	 * @param nid0 is the index of the first neuron that should be modified.
-	 * @param nid1 is the index of the last-plus-one neuron that should be
-	 * modified.
-	 * @param params describes the parameters all neurons in the specified range
-	 * should be set to.
-	 */
-	void parameters(PopulationIndex pid, NeuronIndex nid0, NeuronIndex nid1,
-	                const NeuronParametersBase &params);
-
-	/**
-	 * Sets the neuron parameters for the neurons nid0 to nid1 (exclusive) in
-	 * the populatid pid to the parameters specified in the given parameter
-	 * list. If the size of the specified range and the number of elements
-	 * in the parameter vector do not match, an exception is thrown.
-	 *
-	 * @param pid is the index of the population that should be modified.
-	 * @param nid0 is the index of the first neuron that should be modified.
-	 * @param nid1 is the index of the last-plus-one neuron that should be
-	 * modified.
-	 * @param index is the index of the parameter that should be updated. If the
-	 * index is out of bounds, an exception will be thrown.
-	 * @param values is a vector containing value for each of the neurons
-	 * that should be updated.
-	 */
-	void parameter(PopulationIndex pid, NeuronIndex nid0, NeuronIndex nid1,
-	               size_t index, const std::vector<float> &values);
-
-	/**
-	 * Sets a single neuron parameter for the neurons nid0 to nid1 (exclusive)
-	 * in the populatid pid to the parameters specified in the given parameter
-	 * list.
-	 *
-	 * @param pid is the index of the population that should be modified.
-	 * @param nid0 is the index of the first neuron that should be modified.
-	 * @param nid1 is the index of the last-plus-one neuron that should be
-	 * modified.
-	 * @param index is the index of the parameter that should be updated. If the
-	 * index is out of bounds, an exception will be thrown.
-	 * @param value is the value the parameter with the given index should be
-	 * set to.
-	 */
-	void parameter(PopulationIndex pid, NeuronIndex nid0, NeuronIndex nid1,
-	               size_t index, float value);
+	std::shared_ptr<PopulationData> population_data(PopulationIndex pid);
 
 	/**
 	 * Base connection method. Connects a range of neurons in the source
@@ -241,18 +128,19 @@ protected:
 	 *
 	 * @param size is the number of neurons in the population.
 	 * @param type is the type of the neurons in the population.
-	 * @param params contains the initial neuron parameters. A vector with no
-	 * entries corresponds to the default parameters, a vector whith one entry
-	 * corresponds to homogeneous parameters accross the entire population,
-	 * a vector with as many elements as the size of the population corresponds
-	 * to individual parameters for each neuron in the population.
+	 * @param params contains the initial neuron parameters. The parameters
+	 * may be a list of neuron parameters, in which case the size of the list
+	 * must be equal to the size of the population.
+	 * @param signals contains the initial flags describing which signals should
+	 * be recorded. The signals object may contain a list of signal instances,
+	 * in which case the size of the list must be equal to the size of the
+	 * population.
 	 * @param name is the name of the population.
 	 */
 	PopulationIndex create_population_index(
 	    size_t size, const NeuronType &type,
-	    const std::vector<NeuronParametersBase> &params,
-	    const NeuronSignalsBase &signals,
-	    const std::string &name);
+	    const NeuronParameters &params,
+	    const NeuronSignals &signals, const std::string &name);
 
 public:
 	/**
@@ -264,7 +152,7 @@ public:
 	 * Creates a network instance with a reference at an already existing
 	 * network. Used internally.
 	 */
-	NetworkBase(std::shared_ptr<internal::NetworkImpl> impl) : m_impl(impl) {}
+	NetworkBase(std::shared_ptr<internal::NetworkData> impl) : m_impl(impl) {}
 
 	/**
 	 * Destructor. Destroys this network instance and the handle pointing at
@@ -300,6 +188,8 @@ public:
 	 */
 	PopulationBase population(PopulationIndex pid);
 
+	PopulationBase operator[](PopulationIndex pid);
+
 	/**
 	 * Returns a list of populations available in the network, filtered by the
 	 * given name and type.
@@ -307,20 +197,20 @@ public:
 	 * @param name is the name the returned populations should be filtered by.
 	 * If an empty string is given, no filtering is performed (default).
 	 * @param type is the neuron type the list should be filtered for. If
-	 * a pointer at the special NullNeuronType instance  is given, no filtering
+	 * a pointer at the special NullNeuron instance is given, no filtering
 	 * by type is performed (default).
 	 * @return a list of PopulationBase instances, pointing at the populations
 	 * matching the given requirements.
 	 */
 	const std::vector<PopulationBase> populations(
 	    const std::string &name = std::string(),
-	    const NeuronType &type = NullNeuronType::inst()) const;
+	    const NeuronType &type = NullNeuron::inst()) const;
 
 	/**
 	 * Returns a list of populations filtered by the given neuron type.
 	 *
 	 * @param type is the neuron type the list should be filtered for. If
-	 * a pointer at the special NullNeuronType instance  is given, no filtering
+	 * a pointer at the special NullNeuron instance is given, no filtering
 	 * by type is performed (default).
 	 * @return a list of PopulationBase instances, pointing at the populations
 	 * matching the given requirements.
@@ -370,4 +260,4 @@ public:
 };
 }
 
-#endif /* CYPRESS_CORE_NETWORK_BASE_HPP */
+#endif /* CYPRESS_CORE_NETWORK_BASE_HPP */	

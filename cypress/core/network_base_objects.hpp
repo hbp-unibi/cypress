@@ -51,11 +51,12 @@ class Accessor;
  * of any type. If possible, prefer the usage of Population<T>.
  */
 class PopulationBase
-    : public IterableMixin<PopulationBase, NeuronBase, Accessor>,
+    : public PopulationMixin<PopulationBase, Accessor>,
+      public IterableMixin<PopulationBase, NeuronBase, Accessor>,
       public ViewableMixin<PopulationBase, PopulationViewBase, Accessor>,
-      public ParametersMixin<PopulationBase, Accessor, NeuronParametersBase>,
-      public PopulationMixin<PopulationBase, Accessor, NeuronParametersBase,
-                             NeuronSignalsBase>,
+      public DataMixin<PopulationBase, Accessor, NeuronParameters,
+                       NeuronSignals>,
+
       public ConnectableMixin<PopulationBase, Accessor> {
 private:
 	NetworkBase m_network;
@@ -63,9 +64,6 @@ private:
 
 public:
 	using PopulationMixin::size;
-	using PopulationMixin::type;
-	using PopulationMixin::parameters;
-	using ParametersMixin::parameters;
 	using IterableMixin::operator();
 	using ViewableMixin::operator();
 
@@ -105,8 +103,8 @@ public:
 class PopulationViewBase
     : public IterableMixin<PopulationViewBase, NeuronBase, Accessor>,
       public ViewableMixin<PopulationViewBase, PopulationViewBase, Accessor>,
-      public ParametersMixin<PopulationViewBase, Accessor,
-                             NeuronParametersBase>,
+      public DataMixin<PopulationViewBase, Accessor, NeuronParameters,
+                       NeuronSignals>,
       public ConnectableMixin<PopulationViewBase, Accessor> {
 private:
 	NetworkBase m_network;
@@ -169,10 +167,11 @@ public:
  * prefer the usage of Neuron<T>.
  */
 class NeuronBase
-    : public IterableMixin<NeuronBase, NeuronBase, Accessor>,
+    : public NeuronMixin<NeuronBase>,
+      public IterableMixin<NeuronBase, NeuronBase, Accessor>,
       public ViewableMixin<NeuronBase, PopulationViewBase, Accessor>,
-      public ParametersMixin<NeuronBase, Accessor, NeuronParametersBase>,
-      public NeuronMixin<NeuronBase, Accessor, NeuronParametersBase>,
+      public DataMixin<NeuronBase, Accessor, NeuronParameters,
+                       NeuronSignals>,
       public ConnectableMixin<NeuronBase, Accessor> {
 private:
 	NetworkBase m_network;
@@ -180,9 +179,6 @@ private:
 	NeuronIndex m_nid;
 
 public:
-	using NeuronMixin::parameters;
-	using NeuronMixin::type;
-	using ParametersMixin::parameters;
 	using IterableMixin::operator();
 	using ViewableMixin::operator();
 

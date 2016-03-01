@@ -60,13 +60,33 @@ static void write_populations(const std::vector<PopulationBase> &populations,
 		header.types.emplace_back(INT);
 	}
 
+	// Fill the populations matrix
 	Matrix<Number> mat(populations.size(), header.size());
 	for (size_t i = 0; i < populations.size(); i++) {
 		mat(i, 0) = int32_t(populations[i].size());
 		mat(i, 1) = int32_t(populations[i].type().type_id);
 		size_t j = 2;
 		for (auto const &signal : signals) {
-			mat(i, j++) = populations[i].is_recording(signal);
+			// Lookup the signal index for this population
+			auto idx = populations[i].type().signal_index(signal);
+			bool record = false;  // If this signal does not exist in this
+			                      // population, do not try to record it
+			if (idx.valid()) {
+				if (populations[i].homogeneous_record()) {
+					// All neurons in this population use the same record flag
+					record = populations[i].signals().is_recording(idx.value());
+				}
+				else {
+					// Check whether any neuron in this population wants to
+					// record this signal
+					for (size_t k = 0; k < populations[i].size(); k++) {
+						record = record ||
+						         populations[i][k].signals().is_recording(
+						             idx.value());
+					}
+				}
+			}
+			mat(i, j++) = record;
 		}
 	}
 
@@ -102,15 +122,17 @@ static void write_spike_source_array(const PopulationBase &population,
 	static const Header SPIKE_TIMES_HEADER = {{"times"}, {FLOAT}};
 
 	for (size_t i = 0; i < population.size(); i++) {
-		Matrix<Number> mat(1, 2);
-		mat(0, 0) = int32_t(population.pid());
-		mat(0, 1) = int32_t(i);
+		const auto &params = population[i].parameters();
+		if (params.size() > 0) {
+			Matrix<Number> mat(1, 2);
+			mat(0, 0) = int32_t(population.pid());
+			mat(0, 1) = int32_t(i);
 
-		serialise(os, "target", TARGET_HEADER, mat);
-		serialise(
-		    os, "spike_times", SPIKE_TIMES_HEADER,
-		    reinterpret_cast<const Number *>(population.parameters(i).begin()),
-		    population.parameters(i).size());
+			serialise(os, "target", TARGET_HEADER, mat);
+			serialise(os, "spike_times", SPIKE_TIMES_HEADER,
+			          reinterpret_cast<const Number *>(params.begin()),
+			          params.size());
+		}
 	}
 }
 
@@ -129,14 +151,14 @@ static void write_uniform_parameters(const PopulationBase &population,
 	// In case the population is homogeneous, just send one entry in
 	// the parameters matrix -- otherwise send an entry for each neuron in each
 	// population
-	const bool homogeneous = population.homogeneous();
+	const bool homogeneous = population.homogeneous_parameters();
 	const size_t mat_size = homogeneous ? 1 : population.size();
 	Matrix<Number> mat(mat_size, header.size());
 	for (size_t i = 0; i < mat_size; i++) {
 		mat(0, 0) = int32_t(population.pid());
 		mat(0, 1) = int32_t(homogeneous ? ALL_NEURONS : i);
 
-		const auto &params = population.parameters(i);
+		const auto &params = population[i].parameters();
 		std::copy(params.begin(), params.end(), mat.begin(i) + 2);
 	}
 
@@ -212,12 +234,23 @@ bool marshall_response(NetworkBase &net, std::istream &is)
 				throw BinnfDecodeException("Invalid target neuron");
 			}
 			has_target = true;
-		} else if (block.name == "spike_times") {
+		}
+		else if (block.name == "spike_times") {
 			if (!has_target) {
 				throw BinnfDecodeException("No target neuron set");
 			}
-//			const auto &neuron = net.populations()[tar_pid][tar_nid];
-//			neuron.signals()[neuron.type.signal_idx("spikes")] = block.matrix;
+			if (block.matrix.cols() != 1 || block.colidx("times") != 0) {
+				throw BinnfDecodeException("Invalid spike_times column count");
+			}
+			auto pop = net[tar_pid];
+			auto idx = pop.type().signal_index("spikes");
+			if (idx.valid() && pop.signals().is_recording(idx.value())) {
+				pop[tar_nid].signals().data(
+				    idx.value(),
+				    std::make_shared<Matrix<float>>(
+				        block.matrix.rows(), 1,
+				        reinterpret_cast<float *>(block.matrix.begin())));
+			}
 			has_target = false;
 		}
 	}

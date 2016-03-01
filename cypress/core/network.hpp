@@ -62,16 +62,14 @@ template <typename T>
 class Population
     : public IterableMixin<Population<T>, Neuron<T>, Accessor>,
       public ViewableMixin<Population<T>, PopulationView<T>, Accessor>,
-      public ParametersMixin<Population<T>, Accessor, typename T::Parameters>,
-      public PopulationMixin<Population<T>, Accessor, typename T::Parameters,
-                             typename T::Signals>,
+      public DataMixin<Population<T>, Accessor, typename T::Parameters,
+                       typename T::Signals>,
+      public PopulationMixin<Population<T>, Accessor>,
       public ConnectableMixin<Population<T>, Accessor> {
 private:
-	using PopulationMixin_ =
-	    PopulationMixin<Population<T>, Accessor, typename T::Parameters,
-	                    typename T::Signals>;
-	using ParametersMixin_ =
-	    ParametersMixin<Population<T>, Accessor, typename T::Parameters>;
+	using PopulationMixin_ = PopulationMixin<Population<T>, Accessor>;
+	using DataMixin_ = DataMixin<Population<T>, Accessor,
+	                             typename T::Parameters, typename T::Signals>;
 	using IterableMixin_ = IterableMixin<Population<T>, Neuron<T>, Accessor>;
 	using ViewableMixin_ =
 	    ViewableMixin<Population<T>, PopulationView<T>, Accessor>;
@@ -80,8 +78,6 @@ private:
 
 public:
 	using PopulationMixin_::size;
-	using PopulationMixin_::parameters;
-	using ParametersMixin_::parameters;
 	using IterableMixin_::operator();
 	using ViewableMixin_::operator();
 
@@ -120,51 +116,16 @@ public:
 	 *
 	 * @param network is the network in which the population should be
 	 * instantiated.
+	 * @param size is the number of neurons in the population.
 	 * @param params is a vector of parameters with one entry for each neuron
 	 * in the population. Pass an empty vector if the default parameters should
 	 * be used. Set a single argument to share the same parameters between all
 	 * neurons.
-	 * @param size is the number of neurons in the population.
 	 * @param signals describes from which signals should be recorded.
 	 * @param name is the (optional) name of the population.
 	 */
 	Population(Network &network, size_t size,
-	           std::initializer_list<typename T::Parameters> params,
-	           const typename T::Signals &signals, const char *name = "");
-
-	/**
-	 * Creates a new population in the given network.
-	 *
-	 * @param network is the network in which the population should be
-	 * instantiated.
-	 * @param size is the number of neurons in the population.
-	 * @param params is a vector of parameters with one entry for each neuron
-	 * in the population. Pass an empty vector if the default parameters should
-	 * be used. Set a single argument to share the same parameters between all
-	 * neurons.
-	 * @param name is the (optional) name of the population.
-	 */
-	Population(Network &network, size_t size,
 	           const typename T::Parameters &params, const char *name = "")
-	    : Population(network, size, params, typename T::Signals(), name)
-	{
-	}
-
-	/**
-	 * Creates a new population in the given network.
-	 *
-	 * @param network is the network in which the population should be
-	 * instantiated.
-	 * @param params is a vector of parameters with one entry for each neuron
-	 * in the population. Pass an empty vector if the default parameters should
-	 * be used. Set a single argument to share the same parameters between all
-	 * neurons.
-	 * @param size is the number of neurons in the population.
-	 * @param name is the (optional) name of the population.
-	 */
-	Population(Network &network, size_t size,
-	           std::initializer_list<typename T::Parameters> params,
-	           const char *name = "")
 	    : Population(network, size, params, typename T::Signals(), name)
 	{
 	}
@@ -209,7 +170,8 @@ template <typename T>
 class PopulationView
     : public IterableMixin<PopulationView<T>, Neuron<T>, Accessor>,
       public ViewableMixin<PopulationView<T>, PopulationView<T>, Accessor>,
-      public ParametersMixin<Population<T>, Accessor, typename T::Parameters>,
+      public DataMixin<PopulationView<T>, Accessor, typename T::Parameters,
+                       typename T::Signals>,
       public ConnectableMixin<PopulationView<T>, Accessor> {
 private:
 	using IterableMixin_ =
@@ -289,17 +251,15 @@ public:
  * prefer the usage of Neuron<T>.
  */
 template <typename T>
-class Neuron
-    : public IterableMixin<Neuron<T>, Neuron<T>, Accessor>,
-      public ViewableMixin<Neuron<T>, PopulationViewBase, Accessor>,
-      public ParametersMixin<Neuron<T>, Accessor, typename T::Parameters>,
-      public NeuronMixin<Neuron<T>, Accessor, typename T::Parameters>,
-      public ConnectableMixin<Neuron<T>, Accessor> {
+class Neuron : public NeuronMixin<Neuron<T>>,
+               public IterableMixin<Neuron<T>, Neuron<T>, Accessor>,
+               public ViewableMixin<Neuron<T>, PopulationViewBase, Accessor>,
+               public DataMixin<Neuron<T>, Accessor, typename T::Parameters,
+                                typename T::Signals>,
+               public ConnectableMixin<Neuron<T>, Accessor> {
 private:
-	using NeuronMixin_ =
-	    NeuronMixin<Neuron<T>, Accessor, typename T::Parameters>;
-	using ParametersMixin_ =
-	    ParametersMixin<Neuron<T>, Accessor, typename T::Parameters>;
+	using DataMixin_ = DataMixin<Neuron<T>, Accessor, typename T::Parameters,
+	                             typename T::Signals>;
 	using IterableMixin_ = IterableMixin<Neuron<T>, Neuron<T>, Accessor>;
 	using ViewableMixin_ =
 	    ViewableMixin<Neuron<T>, PopulationViewBase, Accessor>;
@@ -307,8 +267,6 @@ private:
 	NeuronBase m_neuron;
 
 public:
-	using NeuronMixin_::parameters;
-	using ParametersMixin_::parameters;
 	using IterableMixin_::operator();
 	using ViewableMixin_::operator();
 
@@ -382,15 +340,13 @@ private:
 	friend class Population;
 
 	template <typename T>
-	size_t create_population_index(
-	    size_t size, const std::vector<typename T::Parameters> &params,
-	    const typename T::Signals &signals,
-	    const std::string &name = std::string())
+	size_t create_population_index(size_t size,
+	                               const typename T::Parameters &params,
+	                               const typename T::Signals &signals,
+	                               const std::string &name = std::string())
 	{
-		return NetworkBase::create_population_index(
-		    size, T::inst(),
-		    std::vector<NeuronParametersBase>(params.begin(), params.end()),
-		    signals, name);
+		return NetworkBase::create_population_index(size, T::inst(), params,
+		                                            signals, name);
 	}
 
 public:
@@ -480,35 +436,6 @@ public:
 		return pops.back();
 	}
 
-	/**
-	 * Creates a new neuron population with the given size and name.
-	 *
-	 * @param size is the number of neurons in the population.
-	 * @param name is the (optional) name of the population. A C-style string
-	 * is used here to prevent iterpretation of an initializer list as string.
-	 */
-	template <typename T>
-	Population<T> create_population(size_t size, const char *name = "")
-	{
-		return Population<T>(*this, size, {}, name);
-	}
-
-	template <typename T>
-	Population<T> create_population(size_t size,
-	                                const typename T::Parameters &params,
-	                                const char *name = "")
-	{
-		return Population<T>(*this, size, params, name);
-	}
-
-	template <typename T>
-	Population<T> create_population(
-	    size_t size, std::initializer_list<typename T::Parameters> params,
-	    const char *name = "")
-	{
-		return Population<T>(*this, size, params, name);
-	}
-
 	template <typename T>
 	Population<T> create_population(size_t size,
 	                                const typename T::Parameters &params,
@@ -520,10 +447,11 @@ public:
 
 	template <typename T>
 	Population<T> create_population(
-	    size_t size, std::initializer_list<typename T::Parameters> params,
-	    const typename T::Signals &signals, const char *name = "")
+	    size_t size,
+	    const typename T::Parameters &params = typename T::Parameters(),
+	    const char *name = "")
 	{
-		return Population<T>(*this, size, params, signals, name);
+		return Population<T>(*this, size, params, name);
 	}
 
 	/*
@@ -531,26 +459,7 @@ public:
 	 */
 
 	template <typename T>
-	Network &population(
-	    const char *name, size_t size,
-	    const typename T::Signals &signals = typename T::Signals())
-	{
-		create_population<T>(size, signals, name);
-		return *this;
-	}
-
-	template <typename T>
-	Network &population(
-	    const char *name, size_t size,
-	    std::initializer_list<typename T::Parameters> params,
-	    const typename T::Signals &signals = typename T::Signals())
-	{
-		create_population<T>(size, params, signals, name);
-		return *this;
-	}
-
-	template <typename T>
-	Network &population(
+	Network &add_population(
 	    const char *name, size_t size, const typename T::Parameters &params,
 	    const typename T::Signals &signals = typename T::Signals())
 	{
@@ -559,8 +468,8 @@ public:
 	}
 
 	template <typename Source, typename Target>
-	Network &connect(const Source &source, const Target &target,
-	                 std::unique_ptr<Connector> connector)
+	Network &add_connection(const Source &source, const Target &target,
+	                        std::unique_ptr<Connector> connector)
 	{
 		internal::resolve_population(*this, source)
 		    .connect_to(internal::resolve_population(*this, target),
@@ -584,16 +493,6 @@ inline Population<T>::Population(Network &network, size_t size,
                                  const typename T::Parameters &params,
                                  const typename T::Signals &signals,
                                  const char *name)
-    : Population(network, network.create_population_index<T>(size, {params},
-                                                             signals, name))
-{
-}
-
-template <typename T>
-inline Population<T>::Population(
-    Network &network, size_t size,
-    std::initializer_list<typename T::Parameters> params,
-    const typename T::Signals &signals, const char *name)
     : Population(network, network.create_population_index<T>(size, params,
                                                              signals, name))
 {

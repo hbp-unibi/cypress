@@ -38,283 +38,78 @@
 #ifndef CYPRESS_CORE_NEURONS_HPP
 #define CYPRESS_CORE_NEURONS_HPP
 
-#include <cstdint>
-#include <memory>
-#include <string>
-#include <vector>
+#include <cypress/core/neurons_base.hpp>
 
-#include <cypress/util/matrix.hpp>
+/**
+ * Macro used for defining the getters and setters associated with a neuron
+ * parameter value.
+ */
+#define NAMED_PARAMETER(NAME, IDX)            \
+	static constexpr size_t idx_##NAME = IDX; \
+	auto &NAME(float x)                       \
+	{                                         \
+		for (auto &p : write_parameters()) {  \
+			p[IDX] = x;                       \
+		}                                     \
+		return *this;                         \
+	}                                         \
+	float NAME() const { return read_parameters()[IDX]; }
+
+/**
+ * Macro used for defining a named signal associated with a named signal.
+ */
+#define NAMED_SIGNAL(NAME, IDX)                              \
+	static constexpr size_t idx_##NAME = IDX;                \
+	auto &record_##NAME(bool x = true)                       \
+	{                                                        \
+		record(IDX, x);                                      \
+		return *this;                                        \
+	}                                                        \
+	bool is_recording_##NAME() { return is_recording(IDX); } \
+	auto get_##NAME() { return data(IDX); }
 
 namespace cypress {
-/**
- * Base class for the storage of neuron parameters. Basically this class just
- * contains a vector of floats, where each float in the vector corresponds to
- * a single parameter.
+/*
+ * Forward declarations
  */
-class NeuronParametersBase {
+class SpikeSourceArray;
+class SpikeSourceArrayParameters;
+class SpikeSourceArraySignals;
+class IfCondExp;
+class IfCondExpParameters;
+class IfCondExpSignals;
+class EifCondExpIsfaIsta;
+class EifCondExpIsfaIstaParameters;
+class EifCondExpIsfaIstaSignals;
+
+/*
+ * SpikeSourceArray
+ */
+
+/**
+ * Neuron type representing a spike source array.
+ */
+class SpikeSourceArray final : public NeuronTypeBase<SpikeSourceArrayParameters,
+                                                     SpikeSourceArraySignals> {
 private:
-	/**
-	 * Vector containing the parameters.
-	 */
-	std::vector<float> m_parameters;
-
-protected:
-	/**
-	 * Getter function which allows direct access at the underlying parameter
-	 * vector.
-	 */
-	std::vector<float> &parameters() { return m_parameters; }
-	const std::vector<float> &parameters() const { return m_parameters; }
+	SpikeSourceArray();
 
 public:
-	/**
-	 * Default constructor.
-	 */
-	NeuronParametersBase() {}
-
-	/**
-	 * Constructor allowing to set the neuron parameters to the given values.
-	 */
-	NeuronParametersBase(std::initializer_list<float> parameters)
-	    : m_parameters(parameters)
-	{
-	}
-
-	/**
-	 * Constructor allowing to set the neuron parameters to the given values.
-	 */
-	NeuronParametersBase(const std::vector<float> &parameters)
-	    : m_parameters(parameters)
-	{
-	}
-
-	/**
-	 * Operator allowing to access the i-th parameter.
-	 */
-	float &operator[](size_t i) { return m_parameters[i]; }
-
-	/**
-	 * Operator allowing to access the i-th parameter.
-	 */
-	float operator[](size_t i) const { return m_parameters[i]; }
-
-	/**
-	 * Method returning a read-only pointer at the first parameter.
-	 */
-	const float *begin() const { return &m_parameters[0]; }
-
-	/**
-	 * Method returning a read-only pointer at the last parameter.
-	 */
-	const float *end() const { return &m_parameters[0] + size(); }
-
-	/**
-	 * Number of parameters.
-	 */
-	size_t size() const { return m_parameters.size(); }
-};
-
-/**
- * The NeuronSignalsBase class is both responsible for flagging which signals
- * should be recorded in a simulation and for actually storing the data traces
- * which are recorded during a simulation.
- */
-class NeuronSignalsBase {
-private:
-	/**
-	 * Vector signaling which signals are being recorded and which are not.
-	 */
-	std::vector<uint8_t> m_record;
-
-	/**
-	 * Vector signaling which signals are being recorded and which are not.
-	 */
-	mutable std::vector<std::shared_ptr<Matrix<float>>> m_data;
-
-	/**
-	 * Internally used to create the data matrices upon access.
-	 */
-	Matrix<float> &get_data(size_t i) const
-	{
-		if (!m_data[i]) {
-			m_data[i] = std::make_shared<Matrix<float>>();
-		}
-		return *m_data[i];
-	}
-
-protected:
-	/**
-	 * Constructor accepting the number of signals in the signal vector.
-	 *
-	 * @param signal_count number of signals available in the neuron.
-	 */
-	NeuronSignalsBase(size_t signal_count)
-	    : m_record(signal_count), m_data(signal_count)
-	{
-	}
-
-public:
-	/**
-	 * Default constructor.
-	 */
-	NeuronSignalsBase() {}
-
-	/**
-	 * Setter for the record flag of the i-th signal.
-	 *
-	 * @param i is the index of the signal for which the record flag should
-	 * be set.
-	 * @param record specifies whether the signal should be recorded (true) or
-	 * not recorded (false).
-	 */
-	void record(size_t i, bool record = true) { m_record[i] = record; }
-
-	/**
-	 * Getter for the record flag of the i-th signal.
-	 */
-	bool is_recording(size_t i) const { return m_record[i]; }
-
-	/**
-	 * Returns a mutable reference at the data stored for the given signal.
-	 * Create a new, empty matrix if no data has been stored yet for this
-	 * signal.
-	 *
-	 * @param i is the index of the signal for which the data should be
-	 * returned.
-	 * @return a reference at the data stored for the signal with the given
-	 * name.
-	 */
-	Matrix<float> &data(size_t i) { return get_data(i); }
-
-	/**
-	 * Returns a const-reference at the data stored for the given signal.
-	 * Create a new, empty matrix if no data has been stored yet for this
-	 * signal.
-	 *
-	 * @param i is the index of the signal for which the data should be
-	 * returned.
-	 * @return a reference at the data stored for the signal with the given
-	 * name.
-	 */
-	const Matrix<float> &data(size_t i) const { return get_data(i); }
-
-	/**
-	 * Retruns true if data exists for the given signal.
-	 *
-	 * @return true if data has been stored for this signal and the data matrix
-	 * is not empty.
-	 */
-	bool has_data(size_t i) const { return m_data[i] && !m_data[i]->empty(); }
-
-	/**
-	 * Number of parameters.
-	 */
-	size_t size() const { return m_record.size(); }
-};
-
-/**
- * The NeuronType class contains data describing an individual neuron
- * type and its parameters.
- */
-class NeuronType {
-protected:
-	/**
-	 * Constructor of the NeuronTypeDescriptor structure.
-	 */
-	NeuronType(int type_id, const std::string &name,
-	           const std::vector<std::string> &parameter_names,
-	           const std::vector<std::string> &parameter_units,
-	           const std::vector<float> &parameter_defaults,
-	           const std::vector<std::string> &signal_names,
-	           const std::vector<std::string> &signal_units,
-	           bool conductance_based, bool spike_source)
-	    : type_id(type_id),
-	      name(name),
-	      parameter_names(parameter_names),
-	      parameter_units(parameter_units),
-	      parameter_defaults(parameter_defaults),
-	      signal_names(signal_names),
-	      signal_units(signal_units),
-	      conductance_based(conductance_based),
-	      spike_source(spike_source)
-	{
-	}
-
-public:
-	/**
-	 * Type id as understood by the Python part of Cypress.
-	 */
-	const int type_id;
-
-	/**
-	 * Name of the neuron type.
-	 */
-	const std::string name;
-
-	/**
-	 * Name of all neuron parameters.
-	 */
-	const std::vector<std::string> parameter_names;
-
-	/**
-	 * Units of all neuron parameters.
-	 */
-	const std::vector<std::string> parameter_units;
-
-	/**
-	 * Contains default values for the neuron parameters.
-	 */
-	const NeuronParametersBase parameter_defaults;
-
-	/**
-	 * Names of the signals that can be recorded from this neuron.
-	 */
-	const std::vector<std::string> signal_names;
-
-	/**
-	 * Units of the signals listed in the signal_names vector.
-	 */
-	const std::vector<std::string> signal_units;
-
-	/**
-	 * True if this is a conductance based neuron.
-	 */
-	const bool conductance_based;
-
-	/**
-	 * True if this neuron type represents a spike source.
-	 */
-	const bool spike_source;
-
-	/**
-	 * Resolves the given parameter name into a parameter index.
-	 */
-	size_t parameter_index(const std::string &name) const;
-
-	/**
-	 * Resolves the given signal name into a signel index.
-	 */
-	size_t signal_index(const std::string &name) const;
-};
-
-/**
- * Internally used parameter type with no parameters.
- */
-class NullNeuronParameters final : public NeuronParametersBase {
-public:
-	NullNeuronParameters() : NeuronParametersBase(std::vector<float>{}) {}
+	static const SpikeSourceArray &inst();
 };
 
 /**
  * The SpikeSourceArray missuses the parameter storage as storage for the
  * individual spike times.
  */
-class SpikeSourceArrayParameters final : public NeuronParametersBase {
+class SpikeSourceArrayParameters final
+    : public NeuronParametersBase<SpikeSourceArrayParameters,
+                                  SpikeSourceArray> {
 public:
-	/**
-	 * Default constructor of SpikeSourceArrayParameters.
-	 */
-	SpikeSourceArrayParameters() {}
+	using NeuronParametersBase<SpikeSourceArrayParameters,
+	                           SpikeSourceArray>::NeuronParametersBase;
+
+	SpikeSourceArrayParameters() : NeuronParametersBase() {}
 
 	/**
 	 * Constructor allowing to specify an arbitrary number of spike times.
@@ -324,149 +119,139 @@ public:
 	{
 	}
 
-	std::vector<float> &spike_times() { return parameters(); }
-	const std::vector<float> &spike_times() const { return parameters(); }
+	const std::vector<float> &spike_times() const { return read_parameters(); }
+
+	SpikeSourceArrayParameters &spike_times(
+	    const std::vector<float> &spike_times)
+	{
+		for (auto &p : write_parameters()) {
+			p = spike_times;
+		}
+		return *this;
+	}
 };
 
-#define NAMED_VECTOR_ELEMENT(NAME, IDX)       \
-	static constexpr size_t idx_##NAME = IDX; \
-	auto &NAME(float x)                       \
-	{                                         \
-		(*this)[IDX] = x;                     \
-		return *this;                         \
-	}                                         \
-	float &NAME() { return (*this)[IDX]; }    \
-	float NAME() const { return (*this)[IDX]; }
-
-class IfCondExpParameters final : public NeuronParametersBase {
+class SpikeSourceArraySignals final
+    : public NeuronSignalsBase<SpikeSourceArraySignals, SpikeSourceArray, 1> {
 public:
-	IfCondExpParameters();
-
-	NAMED_VECTOR_ELEMENT(cm, 0);
-	NAMED_VECTOR_ELEMENT(tau_m, 1);
-	NAMED_VECTOR_ELEMENT(tau_syn_E, 2);
-	NAMED_VECTOR_ELEMENT(tau_syn_I, 3);
-	NAMED_VECTOR_ELEMENT(tau_refrac, 4);
-	NAMED_VECTOR_ELEMENT(v_rest, 5)
-	NAMED_VECTOR_ELEMENT(v_thresh, 6)
-	NAMED_VECTOR_ELEMENT(v_reset, 7)
-	NAMED_VECTOR_ELEMENT(e_rev_E, 8)
-	NAMED_VECTOR_ELEMENT(e_rev_I, 9)
-	NAMED_VECTOR_ELEMENT(i_offset, 10)
-};
-
-class EifCondExpIsfaIstaParameters final : public NeuronParametersBase {
-public:
-	EifCondExpIsfaIstaParameters();
-
-	NAMED_VECTOR_ELEMENT(cm, 0);
-	NAMED_VECTOR_ELEMENT(tau_m, 1);
-	NAMED_VECTOR_ELEMENT(tau_syn_E, 2);
-	NAMED_VECTOR_ELEMENT(tau_syn_I, 3);
-	NAMED_VECTOR_ELEMENT(tau_refrac, 4);
-	NAMED_VECTOR_ELEMENT(tau_w, 5)
-	NAMED_VECTOR_ELEMENT(v_rest, 6)
-	NAMED_VECTOR_ELEMENT(v_thresh, 7)
-	NAMED_VECTOR_ELEMENT(v_reset, 8)
-	NAMED_VECTOR_ELEMENT(e_rev_E, 9)
-	NAMED_VECTOR_ELEMENT(e_rev_I, 10)
-	NAMED_VECTOR_ELEMENT(i_offset, 11)
-	NAMED_VECTOR_ELEMENT(a, 12)
-	NAMED_VECTOR_ELEMENT(b, 13)
-	NAMED_VECTOR_ELEMENT(delta_T, 14)
-};
-
-#undef NAMED_VECTOR_ELEMENT
-
-#define NAMED_SIGNAL(NAME, IDX)               \
-	static constexpr size_t idx_##NAME = IDX; \
-	auto &record_##NAME(bool x = true)        \
-	{                                         \
-		record(IDX, x);                       \
-		return *this;                         \
-	}                                         \
-	bool is_recording_##NAME() { return is_recording(IDX); }
-
-class NullNeuronSignals final : public NeuronSignalsBase {
-public:
-	NullNeuronSignals() : NeuronSignalsBase(0) {}
-};
-
-class SpikeSourceArraySignals final : public NeuronSignalsBase {
-public:
-	SpikeSourceArraySignals() : NeuronSignalsBase(1) {}
+	using NeuronSignalsBase<SpikeSourceArraySignals, SpikeSourceArray,
+	                        1>::NeuronSignalsBase;
 
 	NAMED_SIGNAL(spikes, 0);
 };
 
-class IfCondExpSignals final : public NeuronSignalsBase {
-public:
-	IfCondExpSignals() : NeuronSignalsBase(4) {}
-
-	NAMED_SIGNAL(spikes, 0);
-	NAMED_SIGNAL(v, 1);
-	NAMED_SIGNAL(gsyn_exc, 2);
-	NAMED_SIGNAL(gsyn_inh, 3);
-};
-
-class EifCondExpIsfaIstaSignals final : public NeuronSignalsBase {
-public:
-	EifCondExpIsfaIstaSignals() : NeuronSignalsBase(4) {}
-
-	NAMED_SIGNAL(spikes, 0);
-	NAMED_SIGNAL(v, 1);
-	NAMED_SIGNAL(gsyn_exc, 2);
-	NAMED_SIGNAL(gsyn_inh, 3);
-};
-
-#undef NAMED_SIGNAL
+/*
+ * IfCondExp
+ */
 
 /**
- * Internally used neuron type representing no neuron type.
+ * Neuron type representing an integrate and fire neuron with conductance based
+ * synapses with expontential decay.
  */
-class NullNeuronType final : public NeuronType {
-private:
-	NullNeuronType();
-
-public:
-	using Parameters = NullNeuronParameters;
-	using Signals = NullNeuronSignals;
-
-	static const NullNeuronType &inst();
-};
-
-class SpikeSourceArray final : public NeuronType {
-private:
-	SpikeSourceArray();
-
-public:
-	using Parameters = SpikeSourceArrayParameters;
-	using Signals = SpikeSourceArraySignals;
-
-	static const SpikeSourceArray &inst();
-};
-
-class IfCondExp final : public NeuronType {
+class IfCondExp final
+    : public NeuronTypeBase<IfCondExpParameters, IfCondExpSignals> {
 private:
 	IfCondExp();
 
 public:
-	using Parameters = IfCondExpParameters;
-	using Signals = IfCondExpSignals;
-
 	static const IfCondExp &inst();
 };
 
-class EifCondExpIsfaIsta final : public NeuronType {
+class IfCondExpParameters final
+    : public ConstantSizeNeuronParametersBase<IfCondExpParameters, IfCondExp,
+                                              11> {
+public:
+	using ConstantSizeNeuronParametersBase<
+	    IfCondExpParameters, IfCondExp, 11>::ConstantSizeNeuronParametersBase;
+
+	NAMED_PARAMETER(cm, 0);
+	NAMED_PARAMETER(tau_m, 1);
+	NAMED_PARAMETER(tau_syn_E, 2);
+	NAMED_PARAMETER(tau_syn_I, 3);
+	NAMED_PARAMETER(tau_refrac, 4);
+	NAMED_PARAMETER(v_rest, 5)
+	NAMED_PARAMETER(v_thresh, 6)
+	NAMED_PARAMETER(v_reset, 7)
+	NAMED_PARAMETER(e_rev_E, 8)
+	NAMED_PARAMETER(e_rev_I, 9)
+	NAMED_PARAMETER(i_offset, 10)
+};
+
+class IfCondExpSignals final
+    : public NeuronSignalsBase<IfCondExpSignals, IfCondExp, 4> {
+public:
+	using NeuronSignalsBase<IfCondExpSignals, IfCondExp, 4>::NeuronSignalsBase;
+
+	IfCondExpSignals() : NeuronSignalsBase(4) {}
+
+	IfCondExpSignals(std::initializer_list<IfCondExpSignals> list)
+	    : NeuronSignalsBase(PopulationDataView::from_sequence(list))
+	{
+	}
+
+	NAMED_SIGNAL(spikes, 0);
+	NAMED_SIGNAL(v, 1);
+	NAMED_SIGNAL(gsyn_exc, 2);
+	NAMED_SIGNAL(gsyn_inh, 3);
+};
+
+/*
+ * EifCondExpIsfaIsta
+ */
+
+/**
+ * Exponential integrate and fire neuron model also known as AdEx.
+ */
+class EifCondExpIsfaIsta final
+    : public NeuronTypeBase<EifCondExpIsfaIstaParameters,
+                            EifCondExpIsfaIstaSignals> {
 private:
 	EifCondExpIsfaIsta();
 
 public:
-	using Parameters = EifCondExpIsfaIstaParameters;
-	using Signals = EifCondExpIsfaIstaSignals;
-
 	static const EifCondExpIsfaIsta &inst();
 };
+
+class EifCondExpIsfaIstaParameters final
+    : public ConstantSizeNeuronParametersBase<EifCondExpIsfaIstaParameters,
+                                              EifCondExpIsfaIsta, 15> {
+public:
+	using ConstantSizeNeuronParametersBase<
+	    EifCondExpIsfaIstaParameters, EifCondExpIsfaIsta,
+	    15>::ConstantSizeNeuronParametersBase;
+
+	NAMED_PARAMETER(cm, 0);
+	NAMED_PARAMETER(tau_m, 1);
+	NAMED_PARAMETER(tau_syn_E, 2);
+	NAMED_PARAMETER(tau_syn_I, 3);
+	NAMED_PARAMETER(tau_refrac, 4);
+	NAMED_PARAMETER(tau_w, 5)
+	NAMED_PARAMETER(v_rest, 6)
+	NAMED_PARAMETER(v_thresh, 7)
+	NAMED_PARAMETER(v_reset, 8)
+	NAMED_PARAMETER(e_rev_E, 9)
+	NAMED_PARAMETER(e_rev_I, 10)
+	NAMED_PARAMETER(i_offset, 11)
+	NAMED_PARAMETER(a, 12)
+	NAMED_PARAMETER(b, 13)
+	NAMED_PARAMETER(delta_T, 14)
+};
+
+class EifCondExpIsfaIstaSignals final
+    : public NeuronSignalsBase<EifCondExpIsfaIstaSignals, EifCondExpIsfaIsta,
+                               4> {
+public:
+	using NeuronSignalsBase<EifCondExpIsfaIstaSignals, EifCondExpIsfaIsta,
+	                        4>::NeuronSignalsBase;
+
+	NAMED_SIGNAL(spikes, 0);
+	NAMED_SIGNAL(v, 1);
+	NAMED_SIGNAL(gsyn_exc, 2);
+	NAMED_SIGNAL(gsyn_inh, 3);
+};
 }
+
+#undef NAMED_SIGNAL
+#undef NAMED_PARAMETER
 
 #endif /* CYPRESS_CORE_NEURONS_HPP */

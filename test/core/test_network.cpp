@@ -36,7 +36,7 @@ TEST(network, create_population)
 	}
 
 	{
-		auto pop = network.create_population<IfCondExp>(20, "foo");
+		auto pop = network.create_population<IfCondExp>(20, {}, "foo");
 		EXPECT_EQ(20U, pop.size());
 		EXPECT_EQ(&IfCondExp::inst(), &pop.type());
 		EXPECT_EQ("foo", pop.name());
@@ -469,7 +469,7 @@ TEST(network, population_view_iterator)
 	Population<IfCondExp> pop = network.create_population<IfCondExp>(10);
 
 	PopulationView<IfCondExp> view = pop.range(3, 8);
-
+	EXPECT_EQ(5U, view.size());
 	EXPECT_EQ(3, view.begin()->nid());
 	EXPECT_EQ(7, view.rbegin()->nid());
 	EXPECT_EQ(3, view.cbegin()->nid());
@@ -484,6 +484,7 @@ TEST(network, population_view_iterator)
 	}
 
 	PopulationView<IfCondExp> view2 = view.range(1, 2);
+	EXPECT_EQ(1U, view2.size());
 	EXPECT_EQ(4, view2.begin()->nid());
 	EXPECT_EQ(4, view2.rbegin()->nid());
 	EXPECT_EQ(4, view2.cbegin()->nid());
@@ -510,7 +511,7 @@ TEST(network, duration)
 	Network network;
 
 	network.create_population<SpikeSourceArray>(10, {100.0, 200.0, 300.0});
-	network.create_population<SpikeSourceArray>(20, {});
+	network.create_population<SpikeSourceArray>(20);
 	network.create_population<SpikeSourceArray>(30, {100.0, 400.0});
 
 	EXPECT_EQ(400.0, network.duration());
@@ -523,7 +524,7 @@ TEST(network, clone)
 	{
 		Network n1;
 		n1.create_population<SpikeSourceArray>(10, {100.0, 200.0, 300.0});
-		n1.create_population<SpikeSourceArray>(20, {});
+		n1.create_population<SpikeSourceArray>(20);
 		auto pop = n1.create_population<SpikeSourceArray>(30, {100.0, 400.0});
 
 		EXPECT_EQ(400.0, n1.duration());
@@ -531,7 +532,7 @@ TEST(network, clone)
 		n2 = n1.clone();
 		n3 = n1;
 
-		pop.parameters({{100.0, 200.0}});
+		pop.parameters().spike_times({100.0, 200.0});
 		EXPECT_EQ(300.0, n1.duration());
 	}
 
@@ -614,32 +615,18 @@ TEST(network, record)
 	}
 
 	{
-		auto pop = n.create_population<IfCondExp>(10);
-		pop.record("spikes");
-		EXPECT_TRUE(pop.signals().is_recording_spikes());
-		EXPECT_FALSE(pop.signals().is_recording_v());
-		EXPECT_FALSE(pop.signals().is_recording_gsyn_exc());
-		EXPECT_FALSE(pop.signals().is_recording_gsyn_inh());
-		EXPECT_FALSE(pop.is_recording("foo"));
-		EXPECT_FALSE(pop.is_recording("gsyn_exc"));
-		EXPECT_FALSE(pop.is_recording("v"));
-		EXPECT_TRUE(pop.is_recording("spikes"));
-	}
-
-	{
-		auto pop = n.create_population<IfCondExp>(10);
-		pop.record({"v", "spikes"});
-		EXPECT_TRUE(pop.signals().is_recording_spikes());
-		EXPECT_TRUE(pop.signals().is_recording_v());
-		EXPECT_FALSE(pop.signals().is_recording_gsyn_exc());
-		EXPECT_FALSE(pop.signals().is_recording_gsyn_inh());
-	}
-
-	{
 		auto pop = n.create_population<IfCondExp>(
 		    10, {}, IfCondExp::Signals().record_spikes());
 		EXPECT_TRUE(pop.signals().is_recording_spikes());
 		EXPECT_FALSE(pop.signals().is_recording_v());
+		EXPECT_FALSE(pop.signals().is_recording_gsyn_exc());
+		EXPECT_FALSE(pop.signals().is_recording_gsyn_inh());
+	}
+
+	{
+		auto pop = n.create_population<IfCondExp>(10, {}, {"spikes", "v"});
+		EXPECT_TRUE(pop.signals().is_recording_spikes());
+		EXPECT_TRUE(pop.signals().is_recording_v());
 		EXPECT_FALSE(pop.signals().is_recording_gsyn_exc());
 		EXPECT_FALSE(pop.signals().is_recording_gsyn_inh());
 	}
@@ -654,8 +641,7 @@ TEST(network, record)
 	}
 
 	{
-		auto pop = n.create_population<IfCondExp>(
-		    10, {});
+		auto pop = n.create_population<IfCondExp>(10, {});
 		pop.signals().record_v();
 		EXPECT_FALSE(pop.signals().is_recording_spikes());
 		EXPECT_TRUE(pop.signals().is_recording_v());
@@ -663,4 +649,228 @@ TEST(network, record)
 		EXPECT_FALSE(pop.signals().is_recording_gsyn_inh());
 	}
 }
+
+TEST(network, parameters_from_list_initialisation)
+{
+	Network n;
+
+	auto pop = n.create_population<IfCondExp>(
+	    3, {
+	           IfCondExpParameters().v_rest(-55.0),
+	           IfCondExpParameters().v_rest(-50.0),
+	           IfCondExpParameters().v_rest(-45.0),
+	       });
+
+	EXPECT_EQ(-55.0, pop[0].parameters().v_rest());
+	EXPECT_EQ(-50.0, pop[1].parameters().v_rest());
+	EXPECT_EQ(-45.0, pop[2].parameters().v_rest());
+
+	ASSERT_THROW(
+	    n.create_population<IfCondExp>(3,
+	                                   {
+	                                       IfCondExpParameters().v_rest(-55.0),
+	                                       IfCondExpParameters().v_rest(-50.0),
+	                                   }),
+	    InvalidParameterArraySize);
+
+	auto pop2 = n.create_population<IfCondExp>(
+	    3, {
+	           IfCondExpParameters().v_rest(-55.0),
+	       });
+	EXPECT_EQ(-55.0, pop2[0].parameters().v_rest());
+	EXPECT_EQ(-55.0, pop2[1].parameters().v_rest());
+	EXPECT_EQ(-55.0, pop2[2].parameters().v_rest());
+
+	auto pop3 = n.create_population<IfCondExp>(3, {});
+	EXPECT_EQ(-65.0, pop3[0].parameters().v_rest());
+	EXPECT_EQ(-65.0, pop3[1].parameters().v_rest());
+	EXPECT_EQ(-65.0, pop3[2].parameters().v_rest());
+}
+
+TEST(network, signals_from_list_initialisation)
+{
+	Network n;
+
+	auto pop = n.create_population<IfCondExp>(
+	    4, {}, {
+	               IfCondExpSignals().record_spikes(),
+	               IfCondExpSignals().record_spikes().record_v(),
+	               IfCondExpSignals().record_gsyn_exc(),
+	               IfCondExpSignals().record_gsyn_inh(),
+	           });
+}
+
+TEST(network, copy_parameters)
+{
+	Network n;
+
+	auto pop = n.create_population<IfCondExp>(
+	    10, {
+	            IfCondExpParameters().v_rest(-100.0),
+	            IfCondExpParameters().v_rest(-95.0),
+	            IfCondExpParameters().v_rest(-90.0),
+	            IfCondExpParameters().v_rest(-85.0),
+	            IfCondExpParameters().v_rest(-80.0),
+	            IfCondExpParameters().v_rest(-75.0),
+	            IfCondExpParameters().v_rest(-70.0),
+	            IfCondExpParameters().v_rest(-65.0),
+	            IfCondExpParameters().v_rest(-60.0),
+	            IfCondExpParameters().v_rest(-55.0),
+	        });
+
+	{
+		auto pop2 = n.create_population<IfCondExp>(10);
+		pop2.parameters() = pop.parameters();
+		for (size_t i = 0; i < pop2.size(); i++) {
+			pop2[i].parameters().v_rest(pop2[i].parameters().v_rest() + 10.0);
+		}
+
+		for (size_t i = 0; i < pop2.size(); i++) {
+			EXPECT_EQ(10.0, pop2[i].parameters().v_rest() -
+			                    pop[i].parameters().v_rest());
+		}
+	}
+
+	{
+		for (size_t i = 0; i < 10; i++) {
+			auto pop2 = n.create_population<IfCondExp>(1, pop[i].parameters());
+			pop2.parameters().v_rest(pop2.parameters().v_rest() + 10.0);
+			EXPECT_EQ(10.0, pop2.parameters().v_rest() -
+			                    pop[i].parameters().v_rest());
+		}
+	}
+
+	{
+		auto pop2 = n.create_population<IfCondExp>(1);
+
+		// Assigning the parameters of the first population to the second one
+		// should fail
+		ASSERT_THROW(pop2.parameters() = pop.parameters(),
+		             InvalidParameterArraySize);
+	};
+}
+
+TEST(network, homogeneous_parameters)
+{
+	Network n;
+
+	auto pop = n.create_population<IfCondExp>(10);
+
+	// Set the reseting potential
+	pop.parameters().v_rest(-62.0);
+
+	// Make sure the resting potential is set to the correct value
+	EXPECT_EQ(-62.0, pop.parameters().v_rest());
+	for (size_t i = 0; i < 10; i++) {
+		EXPECT_EQ(-62.0, pop[i].parameters().v_rest());
+	}
+
+	// Set the reseting potential of neurons 5-8 to another value
+	pop(5, 9).parameters().v_rest(-55.0);
+	for (size_t i = 0; i < 10; i++) {
+		if (i >= 5 && i < 9) {
+			EXPECT_EQ(-55.0, pop[i].parameters().v_rest());
+		}
+		else {
+			EXPECT_EQ(-62.0, pop[i].parameters().v_rest());
+		}
+	}
+	EXPECT_EQ(-62.0, pop(0, 5).parameters().v_rest());
+	EXPECT_EQ(-55.0, pop(5, 9).parameters().v_rest());
+	EXPECT_EQ(-62.0, pop(9, 10).parameters().v_rest());
+
+	// Trying to read a parameter from all neurons must fail...
+	ASSERT_THROW(pop.parameters().v_rest(),
+	             HomogeneousPopulationRequiredException);
+
+	// ...unless we make the parameters homogeneous again
+	pop(0, 5).parameters().v_rest(-55.0);
+	pop(9, 10).parameters().v_rest(-55.0);
+	EXPECT_EQ(-55.0, pop.parameters().v_rest());
+}
+
+TEST(network, copy_parameters_homogeneous)
+{
+	Network n;
+
+	auto pop =
+	    n.create_population<IfCondExp>(10, IfCondExpParameters().v_rest(-10));
+
+	{
+		auto pop2 = n.create_population<IfCondExp>(1);
+		pop2.parameters() =
+		    pop.parameters();  // Assignment works because source is homogeneous
+		EXPECT_EQ(-10, pop2.parameters().v_rest());
+	}
+
+	pop[5].parameters().v_rest(-20);
+	{
+		auto pop2 = n.create_population<IfCondExp>(1);
+		ASSERT_THROW(
+		    pop2.parameters() = pop.parameters(),
+		    InvalidParameterArraySize);  // Source is no longer homogeneous
+	}
+
+	// So make it homogeneous again!
+	pop[5].parameters().v_rest(-10);
+	{
+		auto pop2 = n.create_population<IfCondExp>(1);
+		pop2.parameters() =
+		    pop.parameters();  // Assignment works because source is homogeneous
+		EXPECT_EQ(-10, pop2.parameters().v_rest());
+	}
+}
+
+TEST(network, comparison_operators)
+{
+	Network n;
+
+	auto pop = n.create_population<IfCondExp>(10);
+
+	EXPECT_TRUE(pop == pop);
+	EXPECT_FALSE(pop != pop);
+	EXPECT_FALSE(pop > pop);
+	EXPECT_TRUE(pop >= pop);
+	EXPECT_FALSE(pop < pop);
+	EXPECT_TRUE(pop <= pop);
+
+	EXPECT_TRUE(pop == pop(0, 10));
+	EXPECT_FALSE(pop != pop(0, 10));
+	EXPECT_FALSE(pop > pop(0, 10));
+	EXPECT_TRUE(pop >= pop(0, 10));
+	EXPECT_FALSE(pop < pop(0, 10));
+	EXPECT_TRUE(pop <= pop(0, 10));
+
+	EXPECT_FALSE(pop == pop[0]);
+	EXPECT_TRUE(pop != pop[0]);
+	EXPECT_TRUE(pop > pop[0]);
+	EXPECT_TRUE(pop >= pop[0]);
+	EXPECT_FALSE(pop < pop[0]);
+	EXPECT_FALSE(pop <= pop[0]);
+
+	EXPECT_FALSE(pop == pop[5]);
+	EXPECT_TRUE(pop != pop[5]);
+	EXPECT_FALSE(pop > pop[5]);
+	EXPECT_FALSE(pop >= pop[5]);
+	EXPECT_TRUE(pop < pop[5]);
+	EXPECT_TRUE(pop <= pop[5]);
+}
+
+TEST(network, assignment_independence)
+{
+	Network n;
+
+	auto pop = n.create_population<IfCondExp>(10);
+	auto pop2 = n.create_population<IfCondExp>(10);
+
+	pop[5].parameters().v_rest(-10.0);
+
+	pop2[2].signals().record_v();
+
+	pop[5].signals() = pop2[2].signals();
+
+	EXPECT_TRUE(pop[5].signals().is_recording_v());
+	EXPECT_EQ(-10.0, pop[5].parameters().v_rest());
+}
+
 }
