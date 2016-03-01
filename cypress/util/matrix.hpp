@@ -136,6 +136,11 @@ public:
 	/**
 	 * Constructor of the Matrix type, creates a new matrix with the given
 	 * extent.
+	 *
+	 * @param rows is the number of rows in the matrix.
+	 * @param cols is the number of columns in the matrix.
+	 * @param flags set to MatrixFlags::ZEROS to force an initialisation of the
+	 * memory. If not given, the memory is not initialised.
 	 */
 	Matrix(size_t rows, size_t cols, MatrixFlags flags = MatrixFlags::NONE)
 	    : m_buf(new T[rows * cols]), m_rows(rows), m_cols(cols)
