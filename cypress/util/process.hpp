@@ -91,7 +91,8 @@ public:
 	 * @param args is a vector of arguments that should be passed to the
 	 * command.
 	 */
-	Process(const std::string &cmd, const std::vector<std::string> &args);
+	Process(const std::string &cmd, const std::vector<std::string> &args,
+	        bool do_redirect = true);
 
 	/**
 	 * Destroys the process instance. Waits for the child process to exit.
@@ -207,7 +208,7 @@ public:
 	 * @return the process return code.
 	 */
 	static int exec_no_redirect(const std::string &cmd,
-	                const std::vector<std::string> &args);
+	                            const std::vector<std::string> &args);
 
 	/**
 	 * Convenience method for executing a child process, sending data via stdin

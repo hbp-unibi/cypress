@@ -43,6 +43,9 @@ private:
 	using Filebuf = __gnu_cxx::stdio_filebuf<std::ifstream::char_type>;
 
 	pid_t m_pid;
+
+	bool m_do_redirect;
+
 	int m_child_stdout_pipe[2];
 	int m_child_stderr_pipe[2];
 	int m_child_stdin_pipe[2];
@@ -90,7 +93,9 @@ private:
 	}
 
 public:
-	ProcessImpl(const std::string &cmd, const std::vector<std::string> &args)
+	ProcessImpl(const std::string &cmd, const std::vector<std::string> &args,
+	            bool do_redirect = true)
+	    : m_do_redirect(do_redirect)
 	{
 		// Setup the stdin, stdout, stderr pipes
 		if (pipe(m_child_stdout_pipe) != 0 || pipe(m_child_stderr_pipe) != 0 ||
@@ -102,16 +107,19 @@ public:
 
 		m_pid = fork();  // Split the current process into two
 		if (m_pid == 0) {
-			// This is the child process -- close the corresponding ends of the
-			// pipe
-			close(m_child_stdout_pipe[0]);
-			close(m_child_stderr_pipe[0]);
-			close(m_child_stdin_pipe[1]);
+			if (m_do_redirect) {
+				// This is the child process -- close the corresponding ends of
+				// the
+				// pipe
+				close(m_child_stdout_pipe[0]);
+				close(m_child_stderr_pipe[0]);
+				close(m_child_stdin_pipe[1]);
 
-			// Connect stdout/stderr/stderr to the other end of the pipe
-			dup2(m_child_stdout_pipe[1], STDOUT_FILENO);
-			dup2(m_child_stderr_pipe[1], STDERR_FILENO);
-			dup2(m_child_stdin_pipe[0], STDIN_FILENO);
+				// Connect stdout/stderr/stderr to the other end of the pipe
+				dup2(m_child_stdout_pipe[1], STDOUT_FILENO);
+				dup2(m_child_stderr_pipe[1], STDERR_FILENO);
+				dup2(m_child_stdin_pipe[0], STDIN_FILENO);
+			}
 
 			// Assemble the arguments array
 			std::vector<char const *> argv(args.size() + 2);
@@ -130,9 +138,16 @@ public:
 		else if (m_pid > 0) {
 			// This is the parent process -- close the corresponding ends of
 			// the pipe
-			close(m_child_stdout_pipe[1]);
-			close(m_child_stderr_pipe[1]);
-			close(m_child_stdin_pipe[0]);
+			if (m_do_redirect) {
+				close(m_child_stdout_pipe[1]);
+				close(m_child_stderr_pipe[1]);
+				close(m_child_stdin_pipe[0]);
+			}
+			else {
+				m_child_stdout_pipe[0] = STDOUT_FILENO;
+				m_child_stderr_pipe[0] = STDERR_FILENO;
+				m_child_stdin_pipe[1] = STDIN_FILENO;
+			}
 
 			// Create the file buffer object
 			m_child_stdout_filebuf =
@@ -189,8 +204,9 @@ public:
  * Class Process
  */
 
-Process::Process(const std::string &cmd, const std::vector<std::string> &args)
-    : impl(std::make_unique<ProcessImpl>(cmd, args))
+Process::Process(const std::string &cmd, const std::vector<std::string> &args,
+                 bool do_redirect)
+    : impl(std::make_unique<ProcessImpl>(cmd, args, do_redirect))
 {
 }
 
@@ -244,62 +260,6 @@ void Process::generic_pipe(std::istream &source, std::ostream &output)
 		output.flush();
 	}
 }
-
-void Process::fd_input_pipe(int fd, std::ostream &output,
-                      const std::atomic<bool> &done)
-{
-	constexpr size_t BUF_SIZE = 4096;
-	char buf[BUF_SIZE];
-
-	// Fetch the old file flags
-	int old_flags = fcntl(fd, F_GETFL);
-	if (old_flags < 0) {
-		return;
-	}
-
-	// Make the file descriptor asynchronous
-	int flags = old_flags | O_ASYNC;
-	if (fcntl(fd, F_SETFL, flags) < 0) {
-		return;
-	}
-
-	// Iterate until either an error happens or the output stream is no longer
-	// writeable
-	while (output.good() && !done) {
-		// Setup a timeout of 10ms
-		struct timeval timeout;
-		timeout.tv_sec = 0L;
-		timeout.tv_usec = 1000L * 10L;
-
-		// Add the file descriptor to the filedescriptor set
-		fd_set rfds;
-		FD_ZERO(&rfds);
-		FD_SET(fd, &rfds);
-		int retval = select(1, &rfds, nullptr, nullptr, &timeout);
-		if (retval == -1) {
-			break;  // Error, abort
-		}
-		if (retval == 1) {
-			int c = read(fd, buf, BUF_SIZE);
-			if (c > 0) {
-				output.write(buf, c);
-				for (int i = 0; i < c; i++) {
-					if (buf[i] == '\n' || buf[i] == 'r') {
-						output.flush();
-					}
-				}
-			}
-			else if (c < 0) {
-				// Error while reading
-				break;
-			}
-		}
-	}
-
-	// Restore the old file flags
-	fcntl(fd, F_SETFL, old_flags);
-}
-
 int Process::exec(const std::string &cmd, const std::vector<std::string> &args,
                   std::istream &cin, std::ostream &cout, std::ostream &cerr)
 {
@@ -331,28 +291,8 @@ int Process::exec(const std::string &cmd, const std::vector<std::string> &args,
 int Process::exec_no_redirect(const std::string &cmd,
                               const std::vector<std::string> &args)
 {
-	Process proc(cmd, args);
-
-	std::atomic<bool> done(false);
-
-	std::thread t1(Process::fd_input_pipe, STDIN_FILENO,
-	               std::ref(proc.child_stdin()), std::ref(done));
-	std::thread t2(Process::generic_pipe, std::ref(proc.child_stdout()),
-	               std::ref(std::cout));
-	std::thread t3(Process::generic_pipe, std::ref(proc.child_stderr()),
-	               std::ref(std::cerr));
-
-	// Close the process output stream
-	int res = proc.wait();
-
-	done = true;
-
-	// Wait for all threads to complete
-	t1.join();
-	t2.join();
-	t3.join();
-
-	return res;
+	Process proc(cmd, args, false);
+	return proc.wait();
 }
 
 std::tuple<int, std::string, std::string> Process::exec(
