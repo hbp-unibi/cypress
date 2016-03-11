@@ -18,17 +18,31 @@ using namespace cypress;
 
 int main(int argc, const char *argv[])
 {
-    Network().population<SpikeSourceArray>("source", 1, {100.0, 200.0, 300.0})
-        .population<IfCondExp>("neuron", 4)
-        .connect("source", "neuron", Connector::all_to_all(0.016))
-        .run(NMPI("nmmc1", argc, argv));
+    // Print some usage information
+    if (argc != 2 && !NMPI::check_args(argc, argv)) {
+        std::cout << "Usage: " << argv[0] << " <SIMULATOR>" << std::endl;
+        return 1;
+    }
+
+    // Create the network description and run it
+    Network net = Network()
+        .add_population<SpikeSourceArray>("source", 1, {100.0, 200.0, 300.0})
+        .add_population<IfCondExp>("neuron", 4, {}, {"spikes"})
+        .add_connection("source", "neuron", Connector::all_to_all(0.016))
+        .run(NMPI(argv[1], argc, argv));
+
+    // Print the results
+    for (auto neuron: net.population<IfCondExp>("neuron")) {
+        std::cout << "Spike times for neuron " << neuron.nid() << std::endl;
+        std::cout << neuron.signals().get_spikes();
+    }
     return 0;
 }
 ```
 
-This one-line example creates a network consisting of one spike source array and a
-population of four linear integrate and fire neurons with conductance based synapses
-and uploads the program to the NMPI.
+This example creates a network consisting of one spike source array and a
+population of four linear integrate and fire neurons with conductance based synapses,
+uploads the program to the NMPI and prints the results on the standard output.
 
 For more examples see ? or follow the tutorial on ?.
 
@@ -49,7 +63,6 @@ Neuron<IfCondExp> n2 = pop[1];
 
 view.connect_to(pop[6], Connector::all_to_all(0.1, 0.1)); // weight, delay
 n2.connect_to(view, Connector::all_to_all(0.1, 0.1));
-
 ```
 
 ### Execute on various simulators

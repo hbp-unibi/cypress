@@ -235,6 +235,9 @@ class Cypress:
         is_source = type_name == TYPE_SOURCE
 
         # Create the population and setup recording
+        params = {}
+        if is_source and simulator == "nmmc1":
+            params = {"spike_times": []} # sPyNNaker issue #190
         res = self.sim.Population(count, type_, {})
 
         # Bug fix for old PyHMF version
