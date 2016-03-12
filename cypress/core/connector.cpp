@@ -23,22 +23,6 @@
 
 namespace cypress {
 
-/**
- * Class Connector
- */
-
-std::unique_ptr<AllToAllConnector> Connector::all_to_all(float weight,
-                                                         float delay)
-{
-	return std::move(std::make_unique<AllToAllConnector>(weight, delay));
-}
-
-std::unique_ptr<OneToOneConnector> Connector::one_to_one(float weight,
-                                                         float delay)
-{
-	return std::move(std::make_unique<OneToOneConnector>(weight, delay));
-}
-
 /*
  * Method instantiate_connections
  */
@@ -121,4 +105,76 @@ size_t OneToOneConnector::connect(const ConnectionDescriptor &descr,
 	}
 	return i;
 }
+
+/*
+ * Class FromListConnector
+ */
+
+const std::string FromListConnector::m_name = "FromListConnector";
+
+size_t FromListConnector::connect(const ConnectionDescriptor &descr,
+                                  Connection tar_mem[]) const
+{
+	size_t i = 0;
+	for (const LocalConnection &c : m_connections) {
+		if (c.src >= descr.nid_src0() && c.src < descr.nid_src1() &&
+		    c.tar >= descr.nid_tar0() && c.tar < descr.nid_tar1()) {
+			tar_mem[i++] = Connection(descr.pid_src(), descr.pid_tar(), c.src,
+			                          c.tar, c.synapse.weight, c.synapse.delay);
+		}
+	}
+	return i;
+}
+
+/*
+ * Class FunctorConnector
+ */
+
+const std::string FunctorConnector::m_name = "FunctorConnector";
+
+size_t FunctorConnector::connect(const ConnectionDescriptor &descr,
+                                 Connection tar_mem[]) const
+{
+	size_t i = 0;
+	for (NeuronIndex src = descr.nid_src0(); src < descr.nid_src1(); src++) {
+		for (NeuronIndex tar = descr.nid_tar0(); tar < descr.nid_tar1();
+		     tar++) {
+			Synapse synapse = m_cback(src, tar);
+			if (synapse.valid()) {
+				tar_mem[i++] = Connection(descr.pid_src(), descr.pid_tar(), src,
+				                          tar, synapse.weight, synapse.delay);
+			}
+		}
+	}
+	return i;
+}
+
+/*
+ * Class UniformFunctorConnector
+ */
+
+const std::string UniformFunctorConnector::m_name = "UniformFunctorConnector";
+
+size_t UniformFunctorConnector::connect(const ConnectionDescriptor &descr,
+                                        Connection tar_mem[]) const
+{
+	size_t i = 0;
+	for (NeuronIndex src = descr.nid_src0(); src < descr.nid_src1(); src++) {
+		for (NeuronIndex tar = descr.nid_tar0(); tar < descr.nid_tar1();
+		     tar++) {
+			if (m_cback(src, tar)) {
+				tar_mem[i++] = Connection(descr.pid_src(), descr.pid_tar(), src,
+				                          tar, weight(), delay());
+			}
+		}
+	}
+	return i;
+}
+
+/**
+ * Class FixedProbabilityConnectorBase
+ */
+
+const std::string FixedProbabilityConnectorBase::m_name =
+    "FixedProbabilityConnector";
 }

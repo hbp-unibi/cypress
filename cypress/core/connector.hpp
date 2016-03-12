@@ -25,6 +25,7 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <random>
 
 #include <cypress/core/types.hpp>
 #include <cypress/util/comperator.hpp>
@@ -85,12 +86,12 @@ struct LocalConnection {
 	/**
 	 * Source neuron index within the specified source population.
 	 */
-	uint32_t src;
+	NeuronIndex src;
 
 	/**
 	 * Target neuron index within the specified target population.
 	 */
-	uint32_t tar;
+	NeuronIndex tar;
 
 	/**
 	 * Synaptic properties.
@@ -196,9 +197,30 @@ class ConnectionDescriptor;
 class AllToAllConnector;
 class OneToOneConnector;
 class FromListConnector;
-class FromFunctorConnector;
+class FunctorConnector;
+class UniformFunctorConnector;
+
+template <typename RandomEngine>
 class FixedProbabilityConnector;
-class GaussNoiseConnector;
+
+class GaussianNoiseConnector;
+
+/**
+ * Function type used for creating a connection between neurons with index nsrc
+ * and ntar. If the user does not wish to create a connection between nsrc and
+ * ntar an invalid synapse should be returned (by calling the Synapse default
+ * constructor).
+ *
+ * @param nsrc is the source neuron index.
+ * @param ntar is the target neuron index.
+ * @return a Synapse specifying weight and delay of the connection that should
+ * be created. Return an invalid synapse (e.g. by returning
+ */
+using ConnectionCallback =
+    std::function<Synapse(NeuronIndex nsrc, NeuronIndex ntar)>;
+
+using UniformConnectionCallback =
+    std::function<bool(NeuronIndex nsrc, NeuronIndex ntar)>;
 
 /**
  * The abstract Connector class defines the basic interface used to construct
@@ -300,12 +322,31 @@ public:
 	 * Create a list connector which creates connections according to the given
 	 * list.
 	 *
+	 * @param connections is a list of connections that should be created.
+	 */
+	static std::unique_ptr<FromListConnector> from_list(
+	    std::initializer_list<LocalConnection> connections);
+
+	/**
+	 * Create a list connector which creates connections according to the given
+	 * list.
+	 *
 	 * @param f is a function which is called for each neuron-pair in the two
 	 * populations and which is supposed to return a synapse description. If the
 	 * returned synapse is invalid, no connection is created.
 	 */
-	static std::unique_ptr<FromListConnector> from_functor(
-	    std::function<Synapse(uint32_t nsrc, uint32_t ntar)> f);
+	static std::unique_ptr<FunctorConnector> functor(ConnectionCallback cback);
+
+	/**
+	 * Create a list connector which creates connections according to the given
+	 * list.
+	 *
+	 * @param f is a function which is called for each neuron-pair in the two
+	 * populations and which is supposed to return a synapse description. If the
+	 * returned synapse is invalid, no connection is created.
+	 */
+	static std::unique_ptr<UniformFunctorConnector> functor(
+	    UniformConnectionCallback cback, float weight, float delay = 0.0);
 
 	/**
 	 * Connector adapter which ensures connections are only produced with a
@@ -315,8 +356,52 @@ public:
 	 * connector.
 	 * @param p probability with which an connection is created.
 	 */
-	static std::unique_ptr<FixedProbabilityConnector> fixed_probability(
-	    std::unique_ptr<Connector> connector, float p = 1.0);
+	static std::unique_ptr<
+	    FixedProbabilityConnector<std::default_random_engine>>
+	fixed_probability(std::unique_ptr<Connector> connector, float p = 1.0);
+
+	/**
+	 * Connector adapter which ensures connections are only produced with a
+	 * certain probability.
+	 *
+	 * @param connector another connector that should be modified by this
+	 * connector.
+	 * @param p probability with which an connection is created.
+	 * @param seed is the seed the random number generator should be initialised
+	 * with.
+	 */
+	static std::unique_ptr<
+	    FixedProbabilityConnector<std::default_random_engine>>
+	fixed_probability(std::unique_ptr<Connector> connector, float p,
+	                  size_t seed);
+
+	/**
+	 * Connector adapter which ensures connections are only produced with a
+	 * certain probability which is uniformly sampled.
+	 *
+	 * @param connector another connector that should be modified by this
+	 * connector.
+	 * @param p probability with which an connection is created.
+	 * @param engine is a shared pointer at the random number generator that
+	 * should be used.
+	 */
+	template <typename RandomEngine>
+	static std::unique_ptr<FixedProbabilityConnector<RandomEngine>>
+	fixed_probability(std::unique_ptr<Connector> connector, float p,
+	                  std::shared_ptr<RandomEngine> engine);
+
+	/**
+	 * Connector adapter which ensures connections are only produced with a
+	 * certain probability which is uniformly sampled.
+	 *
+	 * @param connector another connector that should be modified by this
+	 * connector.
+	 * @param p probability with which an connection is created.
+	 */
+	template <typename RandomEngine>
+	static std::unique_ptr<FixedProbabilityConnector<RandomEngine>>
+	fixed_probability(std::unique_ptr<Connector> connector, float p,
+	                  size_t seed);
 
 	/**
 	 * Connector adapter which adds Gaussian noise to the synaptic parameters.
@@ -331,9 +416,9 @@ public:
 	 * @param resurrect if true, also adds noise to zero-weight synapses,
 	 * effectively generating connections where none were before.
 	 */
-	static std::unique_ptr<GaussNoiseConnector> gauss_noise(
+/*	static std::unique_ptr<GaussianNoiseConnector> gaussian_noise(
 	    std::unique_ptr<Connector> connector, float stddev_weight = 0.0,
-	    float stddev_delay = 0.0, bool resurrect = false);
+	    float stddev_delay = 0.0, bool resurrect = false);*/
 };
 
 /**
@@ -552,6 +637,220 @@ public:
 
 	const std::string &name() const override { return m_name; }
 };
+
+/**
+ * Connects neurons based on the given list. Note that invalid connections
+ * (those lying outside the neuron ranges indicated by the two population views)
+ * are silently discarded.
+ */
+class FromListConnector : public Connector {
+private:
+	static const std::string m_name;
+
+	std::vector<LocalConnection> m_connections;
+
+public:
+	FromListConnector(const std::vector<LocalConnection> &connections)
+	    : m_connections(connections)
+	{
+	}
+
+	FromListConnector(std::initializer_list<LocalConnection> connections)
+	    : m_connections(connections)
+	{
+	}
+
+	~FromListConnector() override {}
+
+	size_t connect(const ConnectionDescriptor &descr,
+	               Connection tar_mem[]) const override;
+
+	size_t size(const ConnectionDescriptor &) const override
+	{
+		return m_connections.size();
+	}
+
+	bool valid(const ConnectionDescriptor &) const override { return true; }
+
+	const std::string &name() const override { return m_name; }
+};
+
+class FunctorConnector : public Connector {
+private:
+	static const std::string m_name;
+
+	ConnectionCallback m_cback;
+
+public:
+	FunctorConnector(const ConnectionCallback &cback) : m_cback(cback) {}
+
+	~FunctorConnector() override {}
+
+	size_t connect(const ConnectionDescriptor &descr,
+	               Connection tar_mem[]) const override;
+
+	size_t size(const ConnectionDescriptor &descr) const override
+	{
+		return descr.nsrc() * descr.ntar();
+	}
+
+	bool valid(const ConnectionDescriptor &) const override { return true; }
+
+	const std::string &name() const override { return m_name; }
+};
+
+class UniformFunctorConnector : public UniformConnector {
+private:
+	static const std::string m_name;
+
+	UniformConnectionCallback m_cback;
+
+public:
+	UniformFunctorConnector(const UniformConnectionCallback &cback,
+	                        float weight = 0.0, float delay = 0.0)
+	    : UniformConnector(weight, delay), m_cback(cback)
+	{
+	}
+
+	~UniformFunctorConnector() override {}
+
+	size_t connect(const ConnectionDescriptor &descr,
+	               Connection tar_mem[]) const override;
+
+	size_t size(const ConnectionDescriptor &descr) const override
+	{
+		return descr.nsrc() * descr.ntar();
+	}
+
+	bool valid(const ConnectionDescriptor &) const override { return true; }
+
+	const std::string &name() const override { return m_name; }
+};
+
+class FixedProbabilityConnectorBase : public Connector {
+private:
+	static const std::string m_name;
+
+public:
+	const std::string &name() const override { return m_name; }
+};
+
+template <typename RandomEngine>
+class FixedProbabilityConnector : public FixedProbabilityConnectorBase {
+private:
+	std::unique_ptr<Connector> m_connector;
+	std::shared_ptr<RandomEngine> m_engine;
+	float m_p = 1.0;
+
+public:
+	FixedProbabilityConnector(std::unique_ptr<Connector> connector,
+	                          float p,
+	                          std::shared_ptr<RandomEngine> engine)
+	    : m_connector(std::move(connector)), m_engine(std::move(engine)), m_p(p)
+	{
+	}
+
+	~FixedProbabilityConnector() override {}
+
+	size_t connect(const ConnectionDescriptor &descr,
+	               Connection tar_mem[]) const override
+	{
+		std::uniform_real_distribution<float> distr(0.0, 1.0);
+		const size_t size = m_connector->connect(descr, tar_mem);
+		for (size_t i = 0; i < size; i++) {
+			if (distr(*m_engine) >= m_p) {
+				tar_mem[i].n.synapse.weight = 0.0;  // Invalidate the connection
+			}
+		}
+		return size;
+	}
+
+	size_t size(const ConnectionDescriptor &descr) const override
+	{
+		return m_connector->size(descr);
+	}
+
+	bool valid(const ConnectionDescriptor &descr) const override
+	{
+		return m_connector->valid(descr);
+	}
+};
+
+/**
+ * Inline methods
+ */
+
+inline std::unique_ptr<AllToAllConnector> Connector::all_to_all(float weight,
+                                                                float delay)
+{
+	return std::move(std::make_unique<AllToAllConnector>(weight, delay));
+}
+
+inline std::unique_ptr<OneToOneConnector> Connector::one_to_one(float weight,
+                                                                float delay)
+{
+	return std::move(std::make_unique<OneToOneConnector>(weight, delay));
+}
+
+inline std::unique_ptr<FromListConnector> Connector::from_list(
+    const std::vector<LocalConnection> &connections)
+{
+	return std::move(std::make_unique<FromListConnector>(connections));
+}
+
+inline std::unique_ptr<FromListConnector> Connector::from_list(
+    std::initializer_list<LocalConnection> connections)
+{
+	return std::move(std::make_unique<FromListConnector>(connections));
+}
+
+inline std::unique_ptr<FunctorConnector> Connector::functor(
+    ConnectionCallback cback)
+{
+	return std::move(std::make_unique<FunctorConnector>(cback));
+}
+
+inline std::unique_ptr<UniformFunctorConnector> Connector::functor(
+    UniformConnectionCallback cback, float weight, float delay)
+{
+	return std::move(
+	    std::make_unique<UniformFunctorConnector>(cback, weight, delay));
+}
+
+inline std::unique_ptr<FixedProbabilityConnector<std::default_random_engine>>
+Connector::fixed_probability(std::unique_ptr<Connector> connector,
+                             float p)
+{
+	return std::move(
+	    fixed_probability(std::move(connector), p, std::random_device()()));
+}
+
+inline std::unique_ptr<FixedProbabilityConnector<std::default_random_engine>>
+Connector::fixed_probability(std::unique_ptr<Connector> connector, float p,
+                             size_t seed)
+{
+	return std::move(fixed_probability<std::default_random_engine>(
+	    std::move(connector), p, seed));
+}
+
+template <typename RandomEngine>
+inline std::unique_ptr<FixedProbabilityConnector<RandomEngine>>
+Connector::fixed_probability(std::unique_ptr<Connector> connector,
+                             float p,
+                             std::shared_ptr<RandomEngine> engine)
+{
+	return std::move(std::make_unique<FixedProbabilityConnector<RandomEngine>>(
+	    std::move(connector), p, engine));
+}
+
+template <typename RandomEngine>
+inline std::unique_ptr<FixedProbabilityConnector<RandomEngine>>
+Connector::fixed_probability(std::unique_ptr<Connector> connector, float p,
+                             size_t seed)
+{
+	return std::move(fixed_probability<std::default_random_engine>(
+	    std::move(connector), p, std::make_shared<RandomEngine>(seed)));
+}
 }
 
 #endif /* CYPRESS_CORE_CONNECTOR_HPP */
