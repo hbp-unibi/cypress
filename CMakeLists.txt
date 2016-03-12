@@ -108,8 +108,21 @@ add_library(cypress
 
 target_link_libraries(cypress pthread)
 
-enable_testing()
+# Installation configuration
+install(TARGETS cypress ARCHIVE DESTINATION lib)
+install(
+	DIRECTORY ${CMAKE_SOURCE_DIR}/cypress
+	DESTINATION include
+	FILES_MATCHING PATTERN "*.hpp"
+)
+install(
+	DIRECTORY ${CMAKE_BINARY_DIR}/include/cypress
+	DESTINATION include
+	FILES_MATCHING PATTERN "*.hpp"
+)
 
+# Submodules
+enable_testing()
 add_subdirectory(examples)
 add_subdirectory(test)
 
