@@ -8,6 +8,27 @@ on the Human Brain Project (HBP) neuromorphic hardware systems. Cypress also all
 to transparently execute the networks remotely on the HBP Neuromorphic Compute Platform,
 significantly shortening the time required when performing experiments.
 
+Installation
+------------
+
+Cypress requires a C++14 compliant compiler such as GCC 5 and CMake in version 3.3 (or later). Furthermore Python in version 2.7 and `pip` must be installed, as well as the PyPi packages `pyNN`, `requests` and `pyminifier`. You can install the latter using
+```bash
+sudo pip install pyNN requests pyminifier
+```
+
+In order to run network simulations you also need to install a PyNN simulator backend, for example NEST. See http://www.nest-simulator.org/ for information on how to install NEST.
+
+Note that for now building is only tested on Fedora 23. Patches for other Linux distributions and other platforms are highly welcome.
+
+Once the above requirements are fulfilled, simply run
+```bash
+git clone https://github.com/hbp-sanncs/cypress
+mkdir cypress/build && cd $_
+cmake ..
+make && make test
+sudo make install
+```
+
 Example
 -------
 
@@ -19,7 +40,7 @@ using namespace cypress;
 int main(int argc, const char *argv[])
 {
     // Print some usage information
-    if (argc != 2 && !NMPI::check_args(argc, argv)) {
+    if (argc != 2) {
         std::cout << "Usage: " << argv[0] << " <SIMULATOR>" << std::endl;
         return 1;
     }
@@ -28,8 +49,8 @@ int main(int argc, const char *argv[])
     Network net = Network()
         .add_population<SpikeSourceArray>("source", 1, {100.0, 200.0, 300.0})
         .add_population<IfCondExp>("neuron", 4, {}, {"spikes"})
-        .add_connection("source", "neuron", Connector::all_to_all(0.016))
-        .run(NMPI(argv[1], argc, argv));
+        .add_connection("source", "neuron", Connector::all_to_all(0.16))
+        .run(PyNN(argv[1]));
 
     // Print the results
     for (auto neuron: net.population<IfCondExp>("neuron")) {
@@ -40,11 +61,14 @@ int main(int argc, const char *argv[])
 }
 ```
 
-This example creates a network consisting of one spike source array and a
-population of four linear integrate and fire neurons with conductance based synapses,
-uploads the program to the NMPI and prints the results on the standard output.
-
-For more examples see ? or follow the tutorial on ?.
+You can compile this code using the following command line:
+```bash
+g++ -std=c++14 cypress_test.cpp -o cypress_test -lcypress -lpthread
+```
+Then run it with the NEST backing using
+```bash
+./cypress_test nest
+```
 
 Features
 --------
