@@ -2,10 +2,10 @@
 cmake_minimum_required (VERSION 3.3)
 project (cypress)
 
-set(GTEST_INCLUDE_DIRS ${GTEST_SOURCE_DIR}/include ${GTEST_SOURCE_DIR})
-set(GTEST_LIBRARIES gtest gtest_main)
-set(GTEST ON)
-include_directories(${GTEST_INCLUDE_DIRS})
+include_directories(
+	PRIVATE
+		${GTEST_INCLUDE_DIRS}
+)
 
 add_executable(test_cypress
 	backend/binnf/test_binnf

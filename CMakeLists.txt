@@ -1,6 +1,10 @@
 # CMake version and project metadata
 cmake_minimum_required (VERSION 3.3)
 project (cypress)
+# Add the local "cmake" directory to the search path
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR}/cmake)
+include(gtest_external)
+include(json_external)
 
 # Enable C++14 support
 set(CMAKE_CXX_STANDARD 14)
@@ -29,22 +33,11 @@ SET(BUILD_SHARED_LIBRARIES OFF)
 SET(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static")
 SET(CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE} -s")
 
-# Include external dependencies from the lib folder
-add_subdirectory(lib/googletest)
-
 include_directories(
 	${CMAKE_SOURCE_DIR}
 	${CMAKE_BINARY_DIR}/include
 	PRIVATE
 		${CMAKE_BINARY_DIR}
-)
-
-# Download the JSON library
-message(STATUS "Downloading https://raw.githubusercontent.com/nlohmann/json/49dc2dff68abb4bbf1f3ee8b0327de7d0a673d16/src/json.hpp")
-file(DOWNLOAD
-	https://raw.githubusercontent.com/nlohmann/json/49dc2dff68abb4bbf1f3ee8b0327de7d0a673d16/src/json.hpp
-	${CMAKE_BINARY_DIR}/include/cypress/json.hpp
-	EXPECTED_HASH SHA512=5d3b15d5465dfb67e317d88aa4ecbc0a121e8e23b71c28ae7e362355796f22a2d87d8c4da841adc4375850b3152a6f8af658e7fa333a22e8cf5c3d3d3f7bcc89
 )
 
 # Compile the Python code into a C++ header
