@@ -39,7 +39,7 @@ std::unique_ptr<OneToOneConnector> Connector::one_to_one(float weight,
 	return std::move(std::make_unique<OneToOneConnector>(weight, delay));
 }
 
-/**
+/*
  * Method instantiate_connections
  */
 
@@ -83,7 +83,7 @@ std::vector<Connection> instantiate_connections(
 	return res;
 }
 
-/**
+/*
  * Class AllToAllConnector
  */
 
@@ -103,7 +103,7 @@ size_t AllToAllConnector::connect(const ConnectionDescriptor &descr,
 	return i;
 }
 
-/**
+/*
  * Class OneToOneConnector
  */
 
