@@ -353,6 +353,14 @@ public:
 		}
 	}
 
+	/**
+	 * Returns a reference at the matrix containing the data for the i-th
+	 * signal. Throws an SignalNotRecordedException if the signal with the
+	 * given index is currently not being recorded.
+	 *
+	 * @param i is the signal index for which the data should be returned.
+	 * @return a reference at the data matrix.
+	 */
 	const Matrix<float>& data(size_t i)
 	{
 		static Matrix<float> empty;
