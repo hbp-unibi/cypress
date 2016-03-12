@@ -34,9 +34,17 @@ add_subdirectory(lib/googletest)
 
 include_directories(
 	${CMAKE_SOURCE_DIR}
+	${CMAKE_BINARY_DIR}/include
 	PRIVATE
 		${CMAKE_BINARY_DIR}
-		lib/json/src
+)
+
+# Download the JSON library
+message(STATUS "Downloading https://raw.githubusercontent.com/nlohmann/json/49dc2dff68abb4bbf1f3ee8b0327de7d0a673d16/src/json.hpp")
+file(DOWNLOAD
+	https://raw.githubusercontent.com/nlohmann/json/49dc2dff68abb4bbf1f3ee8b0327de7d0a673d16/src/json.hpp
+	${CMAKE_BINARY_DIR}/include/cypress/json.hpp
+	EXPECTED_HASH SHA512=5d3b15d5465dfb67e317d88aa4ecbc0a121e8e23b71c28ae7e362355796f22a2d87d8c4da841adc4375850b3152a6f8af658e7fa333a22e8cf5c3d3d3f7bcc89
 )
 
 # Compile the Python code into a C++ header

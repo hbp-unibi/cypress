@@ -21,7 +21,7 @@
 #ifndef CYPRESS_UTIL_JSON_HPP
 #define CYPRESS_UTIL_JSON_HPP
 
-#include "../../lib/json/src/json.hpp"
+#include <cypress/json.hpp>
 
 namespace cypress {
 using Json = nlohmann::json;
