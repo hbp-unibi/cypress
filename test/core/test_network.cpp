@@ -873,4 +873,17 @@ TEST(network, assignment_independence)
 	EXPECT_EQ(-10.0, pop[5].parameters().v_rest());
 }
 
+TEST(network, non_recorded_data)
+{
+	Network n;
+
+	auto pop = n.create_population<IfCondExp>(10);
+
+	ASSERT_THROW(pop.signals().get_spikes(), SignalNotRecordedException);
+
+	pop.signals().record_spikes();
+
+	EXPECT_TRUE(pop.signals().get_spikes().empty());
+}
+
 }

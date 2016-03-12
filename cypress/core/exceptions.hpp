@@ -123,6 +123,18 @@ public:
 	{
 	}
 };
+
+/**
+ * Exception thrown if the given signal is not being recorded.
+ */
+class SignalNotRecordedException : public CypressException {
+public:
+	SignalNotRecordedException()
+	    : CypressException(
+	          "Cannot retrieve data for signal which is not being recorded.")
+	{
+	}
+};
 }
 
 #endif /* CYPRESS_CORE_EXCEPTIONS_HPP */

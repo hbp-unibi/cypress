@@ -358,6 +358,9 @@ public:
 		static Matrix<float> empty;
 		auto res = read_data()[i];
 		if (!res) {
+			if (!is_recording(i)) {
+				throw SignalNotRecordedException();
+			}
 			return empty;
 		}
 		return *res;
