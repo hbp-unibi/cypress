@@ -23,22 +23,48 @@ include_directories(
 		${GTEST_INCLUDE_DIRS}
 )
 
-add_executable(test_cypress
-	backend/binnf/test_binnf
-	backend/pynn/test_pynn
+#
+# Core library test
+#
+
+add_executable(test_cypress_core
 	core/test_network
 	core/test_connector
+)
+target_link_libraries(test_cypress_core
+	cypress
+	${GTEST_LIBRARIES}
+)
+add_test(test_cypress_core test_cypress_core)
+
+#
+# Utility library tests
+#
+
+add_executable(test_cypress_util
 	util/test_comperator
 	util/test_filesystem
 	util/test_json
 	util/test_process
 	util/test_resource
 )
-
-target_link_libraries(test_cypress
+target_link_libraries(test_cypress_util
 	cypress
 	${GTEST_LIBRARIES}
 )
+add_test(test_cypress_util test_cypress_util)
 
-add_test(test_cypress test_cypress)
+#
+# Backend tests
+#
+
+add_executable(test_cypress_backend
+	backend/binnf/test_binnf
+	backend/pynn/test_pynn
+)
+target_link_libraries(test_cypress_backend
+	cypress
+	${GTEST_LIBRARIES}
+)
+add_test(test_cypress_backend test_cypress_backend)
 
