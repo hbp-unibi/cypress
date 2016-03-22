@@ -38,6 +38,19 @@ target_link_libraries(test_cypress_core
 add_test(test_cypress_core test_cypress_core)
 
 #
+# NEF tests
+#
+
+add_executable(test_cypress_nef
+	nef/test_spike_train
+)
+target_link_libraries(test_cypress_nef
+	cypress
+	${GTEST_LIBRARIES}
+)
+add_test(test_cypress_nef test_cypress_nef)
+
+#
 # Utility library tests
 #
 
