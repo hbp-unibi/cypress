@@ -1,18 +1,37 @@
+#!/usr/bin/env octave
+
+#  Cypress -- C++ Spiking Neural Network Simulation Framework
+#  Copyright (C) 2016  Andreas Stöckel
+#
+#  This program is free software: you can redistribute it and/or modify
+#  it under the terms of the GNU General Public License as published by
+#  the Free Software Foundation, either version 3 of the License, or
+#  (at your option) any later version.
+#
+#  This program is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
+#
+#  You should have received a copy of the GNU General Public License
+#  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 close all;
 clear all;
 more off;
 
-alpha = 0.334335;
-sigma = 0.0016875;
+alpha = 0.334335
+sigma = 0.0016875
+resolution = 1e-4
+min_spike_interval = 1e-3
+
 window_fun_exp = @(x, mu) alpha * (x >= mu) .* exp(-(x - mu) / sigma);
 window_fun_gauss = @(x, mu) alpha * exp(-(x - mu).^2 / sigma.^2);
 window_fun = window_fun_gauss;
 
-integral = sum(window_fun(-1:1e-4:1, 0)) * 1e-4
-integral0 = sum(window_fun(-1:1e-4:0, 0)) * 1e-4
+integral = sum(window_fun(-1:resolution:1, 0)) * resolution
+integral0 = sum(window_fun(-1:resolution:0, 0)) * resolution
 
-resolution = 1e-4
-min_spike_interval = 1e-3
 xs = 0:resolution:2;
 signal = (-cos(xs * 10 * 2 * pi) + 1) * 0.25 + 0.5;
 
