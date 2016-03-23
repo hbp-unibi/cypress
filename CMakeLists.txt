@@ -99,7 +99,7 @@ add_library(cypress
 	cypress/core/network_base_objects
 	cypress/core/network_mixins
 	cypress/core/types
-	cypress/nef/spike_train
+	cypress/nef/delta_sigma
 	cypress/util/comperator
 	cypress/util/filesystem
 	cypress/util/json

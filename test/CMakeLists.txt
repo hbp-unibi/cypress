@@ -42,7 +42,7 @@ add_test(test_cypress_core test_cypress_core)
 #
 
 add_executable(test_cypress_nef
-	nef/test_spike_train
+	nef/test_delta_sigma
 )
 target_link_libraries(test_cypress_nef
 	cypress
