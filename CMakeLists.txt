@@ -20,6 +20,8 @@ project(cypress)
 
 # Add the local "cmake" directory to the search path
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR}/cmake)
+
+# Automatically download and compile Google-Test and the JSON library
 include(gtest_external)
 include(json_external)
 
