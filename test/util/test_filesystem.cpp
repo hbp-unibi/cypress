@@ -41,8 +41,8 @@ TEST(filesystem, longest_common_path)
 
 TEST(filesystem, canonicalise)
 {
-	EXPECT_TRUE(!canonicalise("test_cypress").empty());
-	EXPECT_EQ('/', canonicalise("test_cypress")[0]);
+	EXPECT_TRUE(!canonicalise("test_cypress_util").empty());
+	EXPECT_EQ('/', canonicalise("test_cypress_util")[0]);
 }
 }
 }
