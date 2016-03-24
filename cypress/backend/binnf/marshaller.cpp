@@ -155,8 +155,8 @@ static void write_uniform_parameters(const PopulationBase &population,
 	const size_t mat_size = homogeneous ? 1 : population.size();
 	Matrix<Number> mat(mat_size, header.size());
 	for (size_t i = 0; i < mat_size; i++) {
-		mat(0, 0) = int32_t(population.pid());
-		mat(0, 1) = int32_t(homogeneous ? ALL_NEURONS : i);
+		mat(i, 0) = int32_t(population.pid());
+		mat(i, 1) = int32_t(homogeneous ? ALL_NEURONS : i);
 
 		const auto &params = population[i].parameters();
 		std::copy(params.begin(), params.end(), mat.begin(i) + 2);
