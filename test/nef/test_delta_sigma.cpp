@@ -94,12 +94,12 @@ TEST(delta_sigma, encode)
 	}
 }
 
-template <typename Fun>
+template <typename Window, typename Fun>
 static void test_fun(const Fun &f, float t0, float t1, float min_val,
                      float max_val)
 {
 	const DeltaSigma::DiscreteWindow wnd =
-	    DeltaSigma::DiscreteWindow::create<DeltaSigma::GaussWindow>();
+	    DeltaSigma::DiscreteWindow::create<Window>();
 	const std::vector<float> spikes =
 	    DeltaSigma::encode(f, wnd, t0, t1, min_val, max_val);
 	const std::vector<float> values =
@@ -117,33 +117,52 @@ static void test_fun(const Fun &f, float t0, float t1, float min_val,
 
 TEST(delta_sigma, encode_decode_sine)
 {
-	test_fun([](float x) { return sin(x); }, 0.0, 10.0, -1.0, 1.0);
+	test_fun<DeltaSigma::GaussWindow>([](float x) { return sin(x); }, 0.0, 10.0,
+	                                  -1.0, 1.0);
+	test_fun<DeltaSigma::ExponentialWindow>([](float x) { return sin(x); }, 0.0,
+	                                        10.0, -1.0, 1.0);
 }
 
 TEST(delta_sigma, encode_decode_fast_sine)
 {
-	test_fun([](float x) { return sin(10.0 * x); }, 0.0, 10.0, -1.0, 1.0);
+	test_fun<DeltaSigma::GaussWindow>([](float x) { return sin(10.0 * x); },
+	                                  0.0, 10.0, -1.0, 1.0);
+	test_fun<DeltaSigma::ExponentialWindow>(
+	    [](float x) { return sin(10.0 * x); }, 0.0, 10.0, -1.0, 1.0);
 }
 
 TEST(delta_sigma, encode_decode_very_fast_sine)
 {
-	test_fun([](float x) { return sin(64.0 * x); }, 0.0, 10.0, -1.0, 1.0);
+	test_fun<DeltaSigma::GaussWindow>([](float x) { return sin(64.0 * x); },
+	                                  0.0, 10.0, -1.0, 1.0);
+	test_fun<DeltaSigma::ExponentialWindow>(
+	    [](float x) { return sin(64.0 * x); }, 0.0, 10.0, -1.0, 1.0);
 }
 
 TEST(delta_sigma, encode_decode_cosine)
 {
-	test_fun([](float x) { return cos(x); }, 0.0, 10.0, -1.0, 1.0);
+	test_fun<DeltaSigma::GaussWindow>([](float x) { return cos(x); }, 0.0, 10.0,
+	                                  -1.0, 1.0);
+	test_fun<DeltaSigma::ExponentialWindow>([](float x) { return cos(x); }, 0.0,
+	                                        10.0, -1.0, 1.0);
 }
 
 TEST(delta_sigma, encode_decode_step)
 {
-	test_fun([](float x) { return (x > 0.25 && x <= 0.75) ? 1.0 : 1.0; }, 0.0,
-	         1.0, 0.0, 1.0);
+	test_fun<DeltaSigma::GaussWindow>([](float x) {
+		return (x > 0.25 && x <= 0.75) ? 1.0 : 1.0;
+	}, 0.0, 1.0, 0.0, 1.0);
+	test_fun<DeltaSigma::ExponentialWindow>([](float x) {
+		return (x > 0.25 && x <= 0.75) ? 1.0 : 1.0;
+	}, 0.0, 1.0, 0.0, 1.0);
 }
 
 TEST(delta_sigma, encode_decode_linear)
 {
-	test_fun([](float x) { return 30.0 * x - 10.0; }, 0.0, 1.0, -10.0, 20.0);
+	test_fun<DeltaSigma::GaussWindow>([](float x) { return 30.0 * x - 10.0; },
+	                                  0.0, 1.0, -10.0, 20.0);
+	test_fun<DeltaSigma::ExponentialWindow>(
+	    [](float x) { return 30.0 * x - 10.0; }, 0.0, 1.0, -10.0, 20.0);
 }
 }
 }

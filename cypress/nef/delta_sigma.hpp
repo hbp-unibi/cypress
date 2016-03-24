@@ -41,6 +41,11 @@ namespace nef {
  */
 class DeltaSigma {
 public:
+	static constexpr float DEFAULT_RESPONSE_TIME = 50e-3;
+	static constexpr float DEFAULT_STEP = 1e-4;
+	static constexpr float DEFAULT_EPS = 1e-6;
+	static constexpr float DEFAULT_MIN_SPIKE_INTERVAL = 1e-3;
+
 	/**
 	 * Function representing a Gaussian window normalised to a range from zero
 	 * to one with a standard-deviation of one. Convoluting a spike train with
@@ -131,8 +136,9 @@ public:
 		 */
 		template <typename Window>
 		static std::pair<float, float> choose_params(
-		    float min_spike_interval = 1e-3, float response_time = 10e-3,
-		    float step = 1e-4f, float eps = 1e-6f);
+		    float min_spike_interval = DEFAULT_MIN_SPIKE_INTERVAL,
+		    float response_time = DEFAULT_RESPONSE_TIME,
+		    float step = DEFAULT_STEP, float eps = DEFAULT_EPS);
 
 	public:
 		/**
@@ -148,8 +154,8 @@ public:
 		 */
 		template <typename Window>
 		static DiscreteWindow create_manual(float alpha, float sigma,
-		                                    float step = 1e-4f,
-		                                    float eps = 1e-6f);
+		                                    float step = DEFAULT_STEP,
+		                                    float eps = DEFAULT_EPS);
 
 		/**
 		 * Creates a DiscreteWindow with automatically chosen parameters
@@ -166,9 +172,10 @@ public:
 		 * discretised window.
 		 */
 		template <typename Window>
-		static DiscreteWindow create(float min_spike_interval = 1e-3,
-		                             float response_time = 50e-3,
-		                             float step = 1e-4f, float eps = 1e-6f);
+		static DiscreteWindow create(
+		    float min_spike_interval = DEFAULT_MIN_SPIKE_INTERVAL,
+		    float response_time = DEFAULT_RESPONSE_TIME,
+		    float step = DEFAULT_STEP, float eps = DEFAULT_EPS);
 
 		/**
 		 * Returns the used scaling factor.
@@ -205,7 +212,7 @@ public:
 		 * reaches "epsilon". Multiply the result with the standard deviation to
 		 * get values for standard-deviations other than one.
 		 */
-		float limit(float eps = 1e-6f) const
+		float limit(float eps = DEFAULT_EPS) const
 		{
 			return std::sqrt(-std::log(eps));
 		}
@@ -248,10 +255,10 @@ public:
 	 * @param min_val is the minimum value occuring in the list of values.
 	 * @param max_val is the maximum value occuring in the list of values.
 	 */
-	static std::vector<float> encode(const std::vector<float> &values,
-	                                 const DiscreteWindow &window, float t0,
-	                                 float min_val = -1.0, float max_val = 1.0,
-	                                 float min_spike_interval = 1e-3);
+	static std::vector<float> encode(
+	    const std::vector<float> &values, const DiscreteWindow &window,
+	    float t0, float min_val = -1.0, float max_val = 1.0,
+	    float min_spike_interval = DEFAULT_MIN_SPIKE_INTERVAL);
 
 	/**
 	 * Encodes a time-series of continuous-valued function as a time-series of
@@ -270,10 +277,10 @@ public:
 	 * @param max_val is the maximum value occuring in the list of values.
 	 */
 	template <typename Fun>
-	static std::vector<float> encode(const Fun &f, const DiscreteWindow &window,
-	                                 float t0, float t1, float min_val = -1.0,
-	                                 float max_val = 1.0,
-	                                 float min_spike_interval = 1e-3)
+	static std::vector<float> encode(
+	    const Fun &f, const DiscreteWindow &window, float t0, float t1,
+	    float min_val = -1.0, float max_val = 1.0,
+	    float min_spike_interval = DEFAULT_MIN_SPIKE_INTERVAL)
 	{
 		const size_t n_samples = std::ceil(t1 - t0) / window.step();
 		std::vector<float> values(n_samples);

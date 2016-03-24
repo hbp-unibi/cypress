@@ -68,15 +68,15 @@ std::pair<float, float> DeltaSigma::DiscreteWindow::choose_params(
 	float min_sigma = 0.0;
 	float max_sigma = sigma;
 
-	while (true) {
-		auto res = calculate_alpha_and_response_time<Window>(min_spike_interval,
-		                                                     sigma, step, eps);
-		const float alpha = res.first;
-		const float cur_response_time = res.second;
+	while (max_sigma - min_sigma > eps) {
+		const float cur_response_time =
+		    calculate_alpha_and_response_time<Window>(min_spike_interval, sigma,
+		                                              step, eps)
+		        .second;
 
 		// Abort if the response time is reached with enough precision
-		if (std::fabs(response_time - cur_response_time) <= 2.0f * step) {
-			return std::make_pair(alpha, sigma);
+		if (std::fabs(response_time - cur_response_time) <= step) {
+			break;
 		}
 
 		if (cur_response_time > response_time) {
@@ -96,6 +96,11 @@ std::pair<float, float> DeltaSigma::DiscreteWindow::choose_params(
 			}
 		}
 	}
+
+	const float alpha = calculate_alpha_and_response_time<Window>(
+	                        min_spike_interval, sigma, step, eps)
+	                        .first;
+	return std::make_pair(alpha, sigma);
 }
 
 template <typename Window>
@@ -174,7 +179,8 @@ std::vector<float> DeltaSigma::encode(const std::vector<float> &values,
 		// If the error surpasses the window integral, and the minimum interval
 		// has passed, issue a new spike
 		const float cur_t = t0 + i * window.step();
-		if (err > integral && cur_t - last_spike_t + eps >= min_spike_interval) {
+		if (err > integral &&
+		    cur_t - last_spike_t + eps >= min_spike_interval) {
 			spikes.emplace_back(cur_t);  // Emit the spike
 			last_spike_t = cur_t;        // Update the last spike time
 			err -= integral_to_zero;     // Update the error
@@ -220,8 +226,7 @@ std::vector<float> DeltaSigma::decode(const std::vector<float> &spikes,
 		}
 	}
 
-	// Rescale the output -- assume the result values are scaled between zero
-	// and one
+	// Rescale the output
 	const float scale = max_val - min_val;
 	for (size_t i = 0; i < res.size(); i++) {
 		res[i] = res[i] * scale + min_val;
