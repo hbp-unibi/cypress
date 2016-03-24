@@ -78,6 +78,9 @@ class SpikeSourceArraySignals;
 class IfCondExp;
 class IfCondExpParameters;
 class IfCondExpSignals;
+class IfFacetsHardware1;
+class IfFacetsHardware1Parameters;
+class IfFacetsHardware1Signals;
 class EifCondExpIsfaIsta;
 class EifCondExpIsfaIstaParameters;
 class EifCondExpIsfaIstaSignals;
@@ -110,6 +113,15 @@ public:
 	                           SpikeSourceArray>::NeuronParametersBase;
 
 	SpikeSourceArrayParameters() : NeuronParametersBase() {}
+
+	/**
+	 * Constructor allowing to specify an arbitrary number of spike times from
+	 * a vector.
+	 */
+	SpikeSourceArrayParameters(const std::vector<float> &spike_times)
+	    : NeuronParametersBase(spike_times)
+	{
+	}
 
 	/**
 	 * Constructor allowing to specify an arbitrary number of spike times.
@@ -169,12 +181,12 @@ public:
 	NAMED_PARAMETER(tau_syn_E, 2);
 	NAMED_PARAMETER(tau_syn_I, 3);
 	NAMED_PARAMETER(tau_refrac, 4);
-	NAMED_PARAMETER(v_rest, 5)
-	NAMED_PARAMETER(v_thresh, 6)
-	NAMED_PARAMETER(v_reset, 7)
-	NAMED_PARAMETER(e_rev_E, 8)
-	NAMED_PARAMETER(e_rev_I, 9)
-	NAMED_PARAMETER(i_offset, 10)
+	NAMED_PARAMETER(v_rest, 5);
+	NAMED_PARAMETER(v_thresh, 6);
+	NAMED_PARAMETER(v_reset, 7);
+	NAMED_PARAMETER(e_rev_E, 8);
+	NAMED_PARAMETER(e_rev_I, 9);
+	NAMED_PARAMETER(i_offset, 10);
 };
 
 class IfCondExpSignals final
@@ -193,6 +205,56 @@ public:
 	NAMED_SIGNAL(v, 1);
 	NAMED_SIGNAL(gsyn_exc, 2);
 	NAMED_SIGNAL(gsyn_inh, 3);
+};
+
+/*
+ * IfFacetsHardware1
+ */
+
+/**
+ * Neuron type used on the Spikey hardware.
+ */
+class IfFacetsHardware1 final
+    : public NeuronTypeBase<IfFacetsHardware1Parameters,
+                            IfFacetsHardware1Signals> {
+private:
+	IfFacetsHardware1();
+
+public:
+	static const IfFacetsHardware1 &inst();
+};
+
+class IfFacetsHardware1Parameters final
+    : public ConstantSizeNeuronParametersBase<IfFacetsHardware1Parameters,
+                                              IfFacetsHardware1, 6> {
+public:
+	using ConstantSizeNeuronParametersBase<IfFacetsHardware1Parameters,
+	                                       IfFacetsHardware1,
+	                                       6>::ConstantSizeNeuronParametersBase;
+
+	NAMED_PARAMETER(g_leak, 0);
+	NAMED_PARAMETER(tau_refrac, 1);
+	NAMED_PARAMETER(v_rest, 2);
+	NAMED_PARAMETER(v_thresh, 3);
+	NAMED_PARAMETER(v_reset, 4);
+	NAMED_PARAMETER(e_rev_I, 5);
+};
+
+class IfFacetsHardware1Signals final
+    : public NeuronSignalsBase<IfFacetsHardware1Signals, IfFacetsHardware1, 4> {
+public:
+	using NeuronSignalsBase<IfFacetsHardware1Signals, IfFacetsHardware1,
+	                        4>::NeuronSignalsBase;
+
+	IfFacetsHardware1Signals() : NeuronSignalsBase(4) {}
+
+	IfFacetsHardware1Signals(std::initializer_list<IfFacetsHardware1Signals> list)
+	    : NeuronSignalsBase(PopulationDataView::from_sequence(list))
+	{
+	}
+
+	NAMED_SIGNAL(spikes, 0);
+	NAMED_SIGNAL(v, 1);
 };
 
 /*
@@ -225,16 +287,16 @@ public:
 	NAMED_PARAMETER(tau_syn_E, 2);
 	NAMED_PARAMETER(tau_syn_I, 3);
 	NAMED_PARAMETER(tau_refrac, 4);
-	NAMED_PARAMETER(tau_w, 5)
-	NAMED_PARAMETER(v_rest, 6)
-	NAMED_PARAMETER(v_thresh, 7)
-	NAMED_PARAMETER(v_reset, 8)
-	NAMED_PARAMETER(e_rev_E, 9)
-	NAMED_PARAMETER(e_rev_I, 10)
-	NAMED_PARAMETER(i_offset, 11)
-	NAMED_PARAMETER(a, 12)
-	NAMED_PARAMETER(b, 13)
-	NAMED_PARAMETER(delta_T, 14)
+	NAMED_PARAMETER(tau_w, 5);
+	NAMED_PARAMETER(v_rest, 6);
+	NAMED_PARAMETER(v_thresh, 7);
+	NAMED_PARAMETER(v_reset, 8);
+	NAMED_PARAMETER(e_rev_E, 9);
+	NAMED_PARAMETER(e_rev_I, 10);
+	NAMED_PARAMETER(i_offset, 11);
+	NAMED_PARAMETER(a, 12);
+	NAMED_PARAMETER(b, 13);
+	NAMED_PARAMETER(delta_T, 14);
 };
 
 class EifCondExpIsfaIstaSignals final
