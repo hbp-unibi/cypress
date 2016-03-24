@@ -24,7 +24,7 @@ ExternalProject_Add(
 	URL https://github.com/google/googletest/archive/release-1.7.0.tar.gz
 	URL_HASH SHA512=c623d5720c4ed574e95158529872815ecff478c03bdcee8b79c9b042a603533f93fe55f939bcfe2cd745ce340fd626ad6d9a95981596f1a4d05053d874cd1dfc
 	INSTALL_COMMAND ""
-	PATCH_COMMAND echo \#define GTEST_CAN_STREAM_RESULTS_ 0 >> include/gtest/internal/gtest-port.h
+	PATCH_COMMAND echo -e \#undef GTEST_CAN_STREAM_RESULTS_\\n\#define GTEST_CAN_STREAM_RESULTS_ 0 >> include/gtest/internal/gtest-port.h
 )
 ExternalProject_Get_Property(googletest SOURCE_DIR BINARY_DIR)
 set(GTEST_INCLUDE_DIRS ${SOURCE_DIR}/include)
