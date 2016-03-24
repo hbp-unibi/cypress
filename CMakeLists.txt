@@ -100,6 +100,7 @@ add_library(cypress
 	cypress/core/network_mixins
 	cypress/core/types
 	cypress/nef/delta_sigma
+	cypress/nef/tuning_curve
 	cypress/util/comperator
 	cypress/util/filesystem
 	cypress/util/json

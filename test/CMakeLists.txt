@@ -43,6 +43,7 @@ add_test(test_cypress_core test_cypress_core)
 
 add_executable(test_cypress_nef
 	nef/test_delta_sigma
+	nef/test_tuning_curve
 )
 target_link_libraries(test_cypress_nef
 	cypress
