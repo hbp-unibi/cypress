@@ -205,6 +205,14 @@ public:
 	~Matrix() { delete[] m_buf; }
 
 	/**
+	 * Conversion to a std::vector
+	 */
+	operator std::vector<T>() const
+	{
+		return std::vector<T>(begin(), end());
+	}
+
+	/**
 	 * Tests equality between two matrices.
 	 *
 	 * @param o is the matrix to which this matrix should be compared.
