@@ -24,3 +24,6 @@ target_link_libraries(raw_binnf cypress)
 add_executable(simple simple)
 target_link_libraries(simple cypress)
 
+add_executable(measure_tuning_curves measure_tuning_curves)
+target_link_libraries(measure_tuning_curves cypress)
+
