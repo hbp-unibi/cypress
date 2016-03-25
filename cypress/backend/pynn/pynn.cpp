@@ -37,6 +37,9 @@
 #include <cypress/util/process.hpp>
 #include <cypress/util/filesystem.hpp>
 
+// Enable to get a textual dump of the BiNNF instead of running the simulation
+//#define CYPRESS_DEBUG_BINNF
+
 using namespace cypress::pynn;
 
 namespace cypress {
@@ -326,17 +329,28 @@ void PyNN::do_run(NetworkBase &source, float duration) const
 	{
 		Transformation trafo(0.1);
 
+#ifndef CYPRESS_DEBUG_BINNF
 		std::vector<std::string> params(
 		    {Resources::PYNN_INTERFACE.open(), "run", "--simulator",
 		     m_normalised_simulator, "--library", import, "--setup",
 		     m_setup.dump(), "--duration", std::to_string(duration)});
+#else
+		std::vector<std::string> params(
+		    {Resources::PYNN_INTERFACE.open(), "dump"});
+#endif
 		Process proc("python", params);
 
-		// Attach the error log
+// Attach the error log
+#ifndef CYPRESS_DEBUG_BINNF
 		std::ofstream log_stream = filesystem::tmpfile(log_path);
 		std::thread log_thread(Process::generic_pipe,
 		                       std::ref(proc.child_stderr()),
 		                       std::ref(log_stream));
+#else
+		std::thread log_thread(Process::generic_pipe,
+		                       std::ref(proc.child_stdout()),
+		                       std::ref(std::cout));
+#endif
 
 		// Send the network description to the simulator, inject the connection
 		// transformation to rewrite the connections
@@ -347,7 +361,8 @@ void PyNN::do_run(NetworkBase &source, float duration) const
 			});
 		proc.close_child_stdin();
 
-		// Wait for the process to be done
+// Wait for the process to be done
+#ifndef CYPRESS_DEBUG_BINNF
 		if ((!binnf::marshall_response(source, proc.child_stdout())) |
 		    (proc.wait() != 0)) {
 			std::ifstream log_stream_in(log_path);
@@ -356,6 +371,7 @@ void PyNN::do_run(NetworkBase &source, float duration) const
 			    std::string("Error while executing the simulator, see ") +
 			    log_path + " for the above information.");
 		}
+#endif
 
 		// Make sure the logging thread has finished
 		log_thread.join();
