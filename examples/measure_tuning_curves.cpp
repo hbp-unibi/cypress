@@ -16,8 +16,6 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <random>
-
 #include <cypress/cypress.hpp>
 #include <cypress/nef.hpp>
 
@@ -26,36 +24,66 @@ using namespace cypress::nef;
 
 int main(int, char **)
 {
+	// Some aliases to save keystrokes...
+	using Neuron = IfFacetsHardware1;
+	using Parameters = Neuron::Parameters;
+	using Signals = Neuron::Signals;
+
+	// General parameters for the experiment
+	const size_t n_samples = 100;          // Sample points on the tuning curve
+	const size_t n_repeat = 10;            // Repetitions for each sample
+	const size_t n_population = 32;        // Number of neurons
+	const float min_spike_interval = 5.0;  // ms
+	const float exc_synaptic_weight = 0.004;       // uS
+	const float exc_bias_synaptic_weight = 0.015;  // uS
+	const float inh_synaptic_weight = -0.015;      // uS
+
+	// Neuron parameters
+	Parameters params = Parameters()
+	                        .v_thresh(-55.0)                  // mV
+	                        .v_rest(-75.0)                    // mV
+	                        .v_reset(-80.0)                   // mV
+	                        .e_rev_I(-80.0)                   // mV
+	                        .g_leak(10.0)                     // uS
+	                        .tau_refrac(min_spike_interval);  // ms
+
 	// Setup the tuning curve generator/evaluator
-	const size_t n_samples = 100;
-	const size_t n_repeat = 10;
-	const float min_spike_interval = 5e-3;
-	TuningCurveEvaluator evaluator(n_samples, n_repeat, min_spike_interval);
+	TuningCurveEvaluator evaluator(n_samples, n_repeat,
+	                               min_spike_interval * 1e-3);
 
 	// Setup a simple network which gets the spikes from the tuning curve
 	// generator as input
-	const size_t n_population = 196;
-	const float synaptic_weight = 0.015;
 	Network net;
-	auto pop_src = net.create_population<SpikeSourceArray>(
-	    1, evaluator.input_spike_train());
-	auto pop_tar = net.create_population<IfFacetsHardware1>(
-	    n_population,
-	    IfFacetsHardware1Parameters().v_thresh(-65.0).g_leak(1.0),
-	    IfFacetsHardware1Signals().record_spikes());
-	pop_src.connect_to(pop_tar, Connector::all_to_all(synaptic_weight));
 
-	// Randomly select g_leak and tau_refrac on each neuron
-	/*	std::random_device rd;
-	    std::default_random_engine re(rd());
-	    std::uniform_real_distribution<float> gleak_distr(0.02, 20.0);
-	    std::uniform_real_distribution<float> tau_refrac_distr(1.0, 100.0);
-	    for (size_t i = 0; i < pop_tar.size(); i++) {
-	        pop_tar[i]
-	            .parameters()
-	            .g_leak(gleak_distr(re))
-	            .tau_refrac(tau_refrac_distr(re));
-	    }*/
+	// Source Population
+	Population<SpikeSourceArray> pop_src(net, 2, evaluator.input_spike_train());
+
+	// Bias source population
+	const float len = evaluator.input_spike_train_len();
+	std::vector<float> bias_spikes =
+	    SpikeSourceArray::constant_interval(0.0, len, min_spike_interval);
+	Population<SpikeSourceArray> pop_src_bias(net, 1, bias_spikes);
+
+	// Target population
+	Population<Neuron> pop_tar(net, n_population, params,
+	                           Signals().record_spikes());
+
+	// Connect the source population to the target neurons, choose inhibitory
+	// connections for every second neuron
+	pop_src[0].connect_to(
+	    pop_tar, Connector::functor([](NeuronIndex, NeuronIndex tar) {
+		    return (tar % 2) == 0;
+		}, exc_synaptic_weight));
+	pop_src[1].connect_to(
+	    pop_tar, Connector::functor([](NeuronIndex, NeuronIndex tar) {
+		    return (tar % 2) == 1;
+		}, inh_synaptic_weight));
+
+	// Connect the bias spike source to every second target neuron
+	pop_src_bias.connect_to(
+	    pop_tar, Connector::functor([](NeuronIndex, NeuronIndex tar) {
+		    return (tar % 2) == 1;
+		}, exc_bias_synaptic_weight));
 
 	// Run the network on spikey
 	net.run(PyNN("spikey"));
