@@ -100,8 +100,10 @@ private:
 public:
 	static const SpikeSourceArray &inst();
 
-	static std::vector<float> constant_interval(float t_start, float t_end, float interval);
-	static std::vector<float> constant_frequency(float t_start, float t_end, float frequency);
+	static std::vector<float> constant_interval(float t_start, float t_end,
+	                                            float interval);
+	static std::vector<float> constant_frequency(float t_start, float t_end,
+	                                             float frequency);
 };
 
 /**
@@ -269,7 +271,8 @@ public:
 
 	IfFacetsHardware1Signals() : NeuronSignalsBase(4) {}
 
-	IfFacetsHardware1Signals(std::initializer_list<IfFacetsHardware1Signals> list)
+	IfFacetsHardware1Signals(
+	    std::initializer_list<IfFacetsHardware1Signals> list)
 	    : NeuronSignalsBase(PopulationDataView::from_sequence(list))
 	{
 	}
