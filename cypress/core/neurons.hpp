@@ -245,6 +245,18 @@ public:
 	NAMED_PARAMETER(v_reset, 4);
 	NAMED_PARAMETER(e_rev_I, 5);
 
+	float cm() const { return 0.2; }
+	float e_rev_E() const { return 0.0; }
+	float tau_syn_E() const
+	{
+		return 2.0;  // This is just a guess
+	}
+	float tau_syn_I() const
+	{
+		return 2.0;  // This is just a guess
+	}
+	float i_offset() const { return 0.0; }
+
 	auto &tau_m(float x) { return g_leak(cm() / x); }
 	float tau_m() const { return cm() / g_leak(); }
 };
