@@ -152,9 +152,9 @@ static void write_uniform_parameters(const PopulationBase &population,
 	// the parameters matrix -- otherwise send an entry for each neuron in each
 	// population
 	const bool homogeneous = population.homogeneous_parameters();
-	const size_t mat_size = homogeneous ? 1 : population.size();
-	Matrix<Number> mat(mat_size, header.size());
-	for (size_t i = 0; i < mat_size; i++) {
+	const size_t n_rows = homogeneous ? 1 : population.size();
+	Matrix<Number> mat(n_rows, header.size());
+	for (size_t i = 0; i < n_rows; i++) {
 		mat(i, 0) = int32_t(population.pid());
 		mat(i, 1) = int32_t(homogeneous ? ALL_NEURONS : i);
 
