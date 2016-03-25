@@ -99,6 +99,9 @@ private:
 
 public:
 	static const SpikeSourceArray &inst();
+
+	static std::vector<float> constant_interval(float t_start, float t_end, float interval);
+	static std::vector<float> constant_frequency(float t_start, float t_end, float frequency);
 };
 
 /**
