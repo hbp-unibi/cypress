@@ -234,7 +234,7 @@ class Cypress:
         type_ = getattr(self.sim, type_name)
         is_source = type_name == TYPE_SOURCE
 
-        # Create the population and setup recording
+        # Create the population
         params = {}
         if is_source and self.simulator == "nmmc1":
             params = {"spike_times": []} # sPyNNaker issue #190
@@ -247,12 +247,12 @@ class Cypress:
         # Increment the neuron counter needed to work around a bug in spikey,
         # store the neuron index in the created population
         if not is_source:
-            if self.simulator == "spikey":
+            if self.version <= 6:
                 setattr(res, "__offs", self.neuron_count)
             self.neuron_count += count
 
         # Setup recording
-        if (self.version <= 7):
+        if self.version <= 7:
             # Setup recording
             if (SIG_SPIKES in record):
                 res.record()
