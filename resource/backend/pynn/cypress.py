@@ -406,13 +406,30 @@ class Cypress:
         # Build the actual connections, iterate over blocks which share pid_src
         # and pid_tar
         def create_projection(elem, begin, end):
+            # Separate the synaptic connections into inhibitory and excitatory
+            # synapses if not on NEST -- use the absolute weight value
+            separate_synapses = self.simulator != "nest" # This is a bug in NEST
+            if separate_synapses:
+                csv[begin:end]["weight"] = np.abs(csv[begin:end]["weight"])
+
+            # Create the connector
             connector = self.sim.FromListConnector(csv[begin:end].tolist())
+
+            # Fetch source and target population objects
             source = populations[elem[0]]["obj"]
             target = populations[elem[1]]["obj"]
-            for _ in xrange(self.repeat_projections):
-                self.sim.Projection(source, target, connector)
 
-        self._iterate_blocks(cs, lambda x: (x[0], x[1]), create_projection)
+            if not separate_synapses:
+                for _ in xrange(self.repeat_projections):
+                    self.sim.Projection(source, target, connector)
+            else:
+                is_excitatory = elem[2]
+                mechanism = "excitatory" if is_excitatory else "inhibitory"
+                for _ in xrange(self.repeat_projections):
+                    self.sim.Projection(source, target, connector,
+                        target=mechanism)
+
+        self._iterate_blocks(cs, lambda x: (x[0], x[1], x[4] >= 0.0), create_projection)
 
     @staticmethod
     def _convert_pyNN7_spikes(spikes, n, idx_offs=0, t_scale=1.0):
