@@ -190,6 +190,9 @@ public:
 	NAMED_PARAMETER(e_rev_E, 8);
 	NAMED_PARAMETER(e_rev_I, 9);
 	NAMED_PARAMETER(i_offset, 10);
+
+	auto &g_leak(float x) { return tau_m(cm() / x); }
+	float g_leak() const { return cm() / tau_m(); }
 };
 
 class IfCondExpSignals final
@@ -241,6 +244,9 @@ public:
 	NAMED_PARAMETER(v_thresh, 3);
 	NAMED_PARAMETER(v_reset, 4);
 	NAMED_PARAMETER(e_rev_I, 5);
+
+	auto &tau_m(float x) { return g_leak(cm() / x); }
+	float tau_m() const { return cm() / g_leak(); }
 };
 
 class IfFacetsHardware1Signals final
