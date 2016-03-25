@@ -98,10 +98,9 @@ int main(int, char **)
 		        neuron.signals().get_spikes());
 
 		// Write the results to the result matrix
-		for (const auto &r : res) {
-			const size_t row = std::round(r.first * n_samples);
-			result(row, 0) = r.first;
-			result(row, neuron.nid() + 1) = r.second;
+		for (size_t i = 0; i < res.size(); i++) {
+			result(i, 0) = res[i].first;
+			result(i, neuron.nid() + 1) = res[i].second;
 		}
 	}
 	std::cout << result << std::endl;
