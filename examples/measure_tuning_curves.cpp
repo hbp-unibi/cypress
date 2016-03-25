@@ -56,7 +56,7 @@ int main(int, char **)
 	Network net;
 
 	// Source Population
-	Population<SpikeSourceArray> pop_src(net, 2, evaluator.input_spike_train());
+	Population<SpikeSourceArray> pop_src(net, 8, evaluator.input_spike_train());
 
 	// Bias source population
 	const float len = evaluator.input_spike_train_len();
@@ -70,11 +70,11 @@ int main(int, char **)
 
 	// Connect the source population to the target neurons, choose inhibitory
 	// connections for every second neuron
-	pop_src[0].connect_to(
+	pop_src(0, 4).connect_to(
 	    pop_tar, Connector::functor([](NeuronIndex, NeuronIndex tar) {
 		    return (tar % 2) == 0;
 		}, exc_synaptic_weight));
-	pop_src[1].connect_to(
+	pop_src(4, 8).connect_to(
 	    pop_tar, Connector::functor([](NeuronIndex, NeuronIndex tar) {
 		    return (tar % 2) == 1;
 		}, inh_synaptic_weight));
