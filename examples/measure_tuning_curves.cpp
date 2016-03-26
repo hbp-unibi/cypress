@@ -31,7 +31,7 @@ int main(int, char **)
 
 	// General parameters for the experiment
 	const size_t n_samples = 100;          // Sample points on the tuning curve
-	const size_t n_repeat = 10;            // Repetitions for each sample
+	const size_t n_repeat = 100;           // Repetitions for each sample
 	const size_t n_population = 32;        // Number of neurons
 	const float min_spike_interval = 5.0;  // ms
 	const float exc_synaptic_weight = 0.004;       // uS
@@ -44,7 +44,7 @@ int main(int, char **)
 	                        .v_rest(-75.0)                    // mV
 	                        .v_reset(-80.0)                   // mV
 	                        .e_rev_I(-80.0)                   // mV
-	                        .g_leak(10.0)                     // uS
+	                        .g_leak(40.0)                     // uS
 	                        .tau_refrac(min_spike_interval);  // ms
 
 	// Setup the tuning curve generator/evaluator
