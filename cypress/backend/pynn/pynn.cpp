@@ -335,7 +335,7 @@ void PyNN::do_run(NetworkBase &source, float duration) const
 
 // Attach the error log
 #ifndef CYPRESS_DEBUG_BINNF
-		std::ofstream log_stream = filesystem::tmpfile(log_path);
+		std::ofstream log_stream(filesystem::tmpfile(log_path));
 		std::thread log_thread(Process::generic_pipe,
 		                       std::ref(proc.child_stderr()),
 		                       std::ref(log_stream));
