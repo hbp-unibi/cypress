@@ -15,7 +15,7 @@
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 # CMake version and project metadata
-cmake_minimum_required(VERSION 3.3)
+cmake_minimum_required(VERSION 3.0)
 project(cypress)
 
 # Add the local "cmake" directory to the search path
@@ -26,7 +26,7 @@ include(gtest_external)
 include(json_external)
 
 # Enable C++14 support
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=gnu++14")
 
 # Enable all warnings on MSVC and GCC/Clang/Intel
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
