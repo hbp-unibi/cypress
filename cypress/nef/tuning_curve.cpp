@@ -27,7 +27,8 @@ namespace nef {
 static std::vector<float> generate_test_values(size_t n_samples,
                                                size_t n_repeat)
 {
-	// Fill the list
+	// Fill the list of test values with values in the range from 0.0 to 1.0 in
+	// n_samples steps. Repeat each value n_repeat times.
 	std::vector<float> res(n_samples * n_repeat);
 	const float f = 1.0f / float(n_samples);
 	for (size_t i = 0; i < n_samples; i++) {
@@ -72,16 +73,11 @@ TuningCurveEvaluator::TuningCurveEvaluator(size_t n_samples, size_t n_repeat,
       m_n_repeat(n_repeat),
       m_wnd(DeltaSigma::DiscreteWindow::create<Window>(min_spike_interval,
                                                        response_time, step)),
-      m_t_wnd(1.0f * response_time),
+      m_t_wnd(4.0f * response_time),
       m_test_values(generate_test_values(m_n_samples, m_n_repeat)),
       m_test_spike_train(generate_test_spike_train(m_wnd, m_test_values,
                                                    min_spike_interval, m_t_wnd))
 {
-}
-
-const std::vector<float> &TuningCurveEvaluator::input_spike_train()
-{
-	return m_test_spike_train;
 }
 
 std::vector<std::pair<float, float>>
@@ -98,7 +94,7 @@ std::vector<std::pair<float, float>>
 
 	// Read the output values for the given test values
 	const float i_step = 1.0f / m_wnd.step();
-	const size_t response_offs = m_t_wnd * 0.25f;
+	const size_t response_offs = m_t_wnd * 0.5f;
 	const size_t response_len = std::floor((0.5f * m_t_wnd) * i_step) + 1;
 	const float i_response_len = 1.0f / float(response_len);
 	std::vector<std::pair<float, float>> res(m_n_samples);

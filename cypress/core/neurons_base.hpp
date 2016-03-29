@@ -214,7 +214,7 @@ public:
 	/**
 	 * Returns an iterator allowing to iterate over the parameter vector.
 	 */
-	const float *end() const { return &read_parameters().back(); }
+	const float *end() const { return &read_parameters().back() + 1; }
 
 	/**
 	 * Returns the size of the parameter vector. Aborts if the population is

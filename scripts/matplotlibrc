@@ -1,0 +1,11 @@
+font.family: serif
+font.serif: Palatino
+font.size: 9.0
+legend.fontsize: 9.0
+legend.frameon: False
+text.usetex: True
+text.latex.unicode: True
+axes.linewidth: 0.25
+axes.color_cycle: cc0000, 75507b, 3465a4, edd400, 73d216, f57900
+axes.titlesize: 9.0
+

@@ -11,7 +11,12 @@ significantly shortening the time required when performing experiments.
 Installation
 ------------
 
-Cypress requires a C++14 compliant compiler such as GCC 5 and CMake in version 3.3 (or later). Furthermore Python in version 2.7 and `pip` must be installed, as well as the PyPi packages `pyNN`, `requests` and `pyminifier`. You can install the latter using
+Cypress requires a C++14 compliant compiler such as GCC 5 and CMake in version 3.3 (or later). In order to run Cypress applications on the Neuromorphic Compute Platform, they must be statically linked. To this end you should install the `glibc-static` and `libstdc++-static` libraries provided by your distribution. On Fedora you can install these using
+```bash
+sudo dnf install glibc-static libstdc++-static
+```
+
+Furthermore Python in version 2.7 and `pip` must be installed, as well as the PyPi packages `pyNN`, `requests` and `pyminifier`. You can install the latter using
 ```bash
 sudo pip install pyNN requests pyminifier
 ```
@@ -23,7 +28,7 @@ Note that for now building is only tested on Fedora 23. Patches for other Linux 
 Once the above requirements are fulfilled, simply run
 ```bash
 git clone https://github.com/hbp-sanncs/cypress
-mkdir cypress/build && cd $_
+mkdir cypress/build && cd cypress/build
 cmake ..
 make && make test
 sudo make install

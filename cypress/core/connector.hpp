@@ -172,7 +172,8 @@ struct Connection {
 	{
 		return Comperator<uint32_t>::equals(
 		    1 - uint32_t(valid()), 1 - uint32_t(s.valid()))(psrc, s.psrc)(
-		    ptar, s.ptar)(n.src, s.n.src)(n.tar, s.n.tar)();
+		    ptar, s.ptar)(n.synapse.weight < 0.0, s.n.synapse.weight < 0.0)(
+		    n.src, s.n.src)(n.tar, s.n.tar)();
 	}
 
 	/**
@@ -185,7 +186,8 @@ struct Connection {
 	{
 		return Comperator<uint32_t>::smaller(
 		    1 - uint32_t(valid()), 1 - uint32_t(s.valid()))(psrc, s.psrc)(
-		    ptar, s.ptar)(n.src, s.n.src)(n.tar, s.n.tar)();
+		    ptar, s.ptar)(n.synapse.weight < 0.0, s.n.synapse.weight < 0.0)(
+		    n.src, s.n.src)(n.tar, s.n.tar)();
 	}
 };
 #pragma pack(pop)
@@ -416,9 +418,9 @@ public:
 	 * @param resurrect if true, also adds noise to zero-weight synapses,
 	 * effectively generating connections where none were before.
 	 */
-/*	static std::unique_ptr<GaussianNoiseConnector> gaussian_noise(
-	    std::unique_ptr<Connector> connector, float stddev_weight = 0.0,
-	    float stddev_delay = 0.0, bool resurrect = false);*/
+	/*	static std::unique_ptr<GaussianNoiseConnector> gaussian_noise(
+	        std::unique_ptr<Connector> connector, float stddev_weight = 0.0,
+	        float stddev_delay = 0.0, bool resurrect = false);*/
 };
 
 /**
@@ -743,8 +745,7 @@ private:
 	float m_p = 1.0;
 
 public:
-	FixedProbabilityConnector(std::unique_ptr<Connector> connector,
-	                          float p,
+	FixedProbabilityConnector(std::unique_ptr<Connector> connector, float p,
 	                          std::shared_ptr<RandomEngine> engine)
 	    : m_connector(std::move(connector)), m_engine(std::move(engine)), m_p(p)
 	{
@@ -818,8 +819,7 @@ inline std::unique_ptr<UniformFunctorConnector> Connector::functor(
 }
 
 inline std::unique_ptr<FixedProbabilityConnector<std::default_random_engine>>
-Connector::fixed_probability(std::unique_ptr<Connector> connector,
-                             float p)
+Connector::fixed_probability(std::unique_ptr<Connector> connector, float p)
 {
 	return std::move(
 	    fixed_probability(std::move(connector), p, std::random_device()()));
@@ -835,8 +835,7 @@ Connector::fixed_probability(std::unique_ptr<Connector> connector, float p,
 
 template <typename RandomEngine>
 inline std::unique_ptr<FixedProbabilityConnector<RandomEngine>>
-Connector::fixed_probability(std::unique_ptr<Connector> connector,
-                             float p,
+Connector::fixed_probability(std::unique_ptr<Connector> connector, float p,
                              std::shared_ptr<RandomEngine> engine)
 {
 	return std::move(std::make_unique<FixedProbabilityConnector<RandomEngine>>(

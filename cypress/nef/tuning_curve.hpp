@@ -59,10 +59,18 @@ public:
 	    float response_time = DeltaSigma::DEFAULT_RESPONSE_TIME,
 	    float step = DeltaSigma::DEFAULT_STEP);
 
-	const std::vector<float> &input_spike_train();
+	const std::vector<float> &input_spike_train() const
+	{
+		return m_test_spike_train;
+	}
 
 	std::vector<std::pair<float, float>> evaluate_output_spike_train(
 	    std::vector<float> output_spikes);
+
+	float input_spike_train_len() const
+	{
+		return m_t_wnd * m_test_values.size() * 1e3;
+	}
 };
 }
 }

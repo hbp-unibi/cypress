@@ -99,6 +99,11 @@ private:
 
 public:
 	static const SpikeSourceArray &inst();
+
+	static std::vector<float> constant_interval(float t_start, float t_end,
+	                                            float interval);
+	static std::vector<float> constant_frequency(float t_start, float t_end,
+	                                             float frequency);
 };
 
 /**
@@ -187,6 +192,9 @@ public:
 	NAMED_PARAMETER(e_rev_E, 8);
 	NAMED_PARAMETER(e_rev_I, 9);
 	NAMED_PARAMETER(i_offset, 10);
+
+	auto &g_leak(float x) { return tau_m(cm() / x); }
+	float g_leak() const { return cm() / tau_m(); }
 };
 
 class IfCondExpSignals final
@@ -238,6 +246,21 @@ public:
 	NAMED_PARAMETER(v_thresh, 3);
 	NAMED_PARAMETER(v_reset, 4);
 	NAMED_PARAMETER(e_rev_I, 5);
+
+	float cm() const { return 0.2; }
+	float e_rev_E() const { return 0.0; }
+	float tau_syn_E() const
+	{
+		return 2.0;  // This is just a guess
+	}
+	float tau_syn_I() const
+	{
+		return 2.0;  // This is just a guess
+	}
+	float i_offset() const { return 0.0; }
+
+	auto &tau_m(float x) { return g_leak(cm() / x); }
+	float tau_m() const { return cm() / g_leak(); }
 };
 
 class IfFacetsHardware1Signals final
@@ -248,7 +271,8 @@ public:
 
 	IfFacetsHardware1Signals() : NeuronSignalsBase(4) {}
 
-	IfFacetsHardware1Signals(std::initializer_list<IfFacetsHardware1Signals> list)
+	IfFacetsHardware1Signals(
+	    std::initializer_list<IfFacetsHardware1Signals> list)
 	    : NeuronSignalsBase(PopulationDataView::from_sequence(list))
 	{
 	}

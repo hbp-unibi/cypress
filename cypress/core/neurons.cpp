@@ -35,6 +35,25 @@ const SpikeSourceArray &SpikeSourceArray::inst()
 	return inst;
 }
 
+std::vector<float> SpikeSourceArray::constant_interval(float t_start,
+                                                       float t_end,
+                                                       float interval)
+{
+	const size_t n_samples = (t_end - t_start) / interval;
+	std::vector<float> result(n_samples);
+	for (size_t i = 0; i < n_samples; i++) {
+		result[i] = t_start + interval * (i + 1);
+	}
+	return result;
+}
+
+std::vector<float> SpikeSourceArray::constant_frequency(float t_start,
+                                                        float t_end,
+                                                        float frequency)
+{
+	return constant_interval(t_start, t_end, 1000.0 / frequency);
+}
+
 /*
  * Class IfCondExp
  */
