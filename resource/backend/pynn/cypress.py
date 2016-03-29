@@ -142,7 +142,7 @@ class Cypress:
         return res
 
     @staticmethod
-    def _setup_nmpm1(sim, setup):
+    def _setup_nmpm1(setup, sim, simulator):
         """
         Performs additional setup necessary for NMPM1. Creates a new Marocco
         (MApping ROuting Calibration and COnfiguration for HICANN Wafers)
@@ -168,9 +168,13 @@ class Cypress:
         marocco.placement.setDefaultNeuronSize(neuron_size)
         marocco.placement.use_output_buffer7_for_dnc_input_and_bg_hack = True
         marocco.placement.minSPL1 = False
-        marocco.backend = PyMarocco.Hardware
-        marocco.calib_backend = PyMarocco.XML
-        marocco.calib_path = "/wang/data/calibration/wafer_0"
+        if simulator == "ess":
+            marocco.backend = PyMarocco.ESS
+            marocco.calib_backend = PyMarocco.Default
+        else:
+            marocco.backend = PyMarocco.Hardware
+            marocco.calib_backend = PyMarocco.XML
+            marocco.calib_path = "/wang/data/calibration/wafer_0"
 
         hicann = HICANNGlobal(Enum(hicann_number))
 
@@ -184,6 +188,7 @@ class Cypress:
             "hicann": hicann,
             "neuron_size": neuron_size
         }
+
 
     def _setup_simulator(self, setup, sim, simulator, version):
         """
@@ -210,8 +215,8 @@ class Cypress:
 
         # Try to setup the simulator, do not output the clutter from the
         # simulators
-        if (simulator == "nmpm1"):
-            self.backend_data = self._setup_nmpm1(sim, setup)
+        if (simulator == "nmpm1" or simulator == "ess"):
+            self.backend_data = self._setup_nmpm1(setup, sim, simulator)
             self.repeat_projections = self.backend_data["neuron_size"]
         else:
             sim.setup(**setup)
