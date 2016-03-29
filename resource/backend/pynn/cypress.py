@@ -367,7 +367,7 @@ class Cypress:
                 if ps[begin]["nid"] == ALL_NEURONS:
                     for key in keys:
                         if self.version <= 7:
-                            pop.set({key: ps[begin][key]})
+                            pop.set({key: float(ps[begin][key])})
                         else:
                             pop.set(**{key: ps[begin][key]})
                 else:
