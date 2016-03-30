@@ -245,10 +245,6 @@ class Cypress:
             params = {"spike_times": []} # sPyNNaker issue #190
         res = self.sim.Population(count, type_, params)
 
-        # Bug fix for old PyHMF version
-        if not hasattr(res, "size"):
-            setattr(res, "size", count)
-
         # Increment the neuron counter needed to work around a bug in spikey,
         # store the neuron index in the created population
         if not is_source:
