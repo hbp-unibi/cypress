@@ -77,9 +77,9 @@ std::string longest_common_path(const T &dirs, char sep = '/')
  *
  * @param path is the path where the file should be placed, the last charachters
  * of path equaling "X" are replaced with random alphanumeric characters.
- * @return an ofstream which allows to write to the temporary file.
+ * @return a string pointing at the file that should be created.
  */
-std::ofstream tmpfile(std::string &path);
+std::string tmpfile(std::string &path);
 
 }
 }

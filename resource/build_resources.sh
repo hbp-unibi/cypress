@@ -55,7 +55,7 @@ function build_resource {
 	echo
 	echo "namespace cypress {"
 	echo "const Resource Resources::${RESOURCE_NAME}(std::vector<uint8_t>({"
-	cat $* | minify | tee $PY_OUT_FILE | ./hexdump.py
+	cat $* | minify | tee $PY_OUT_FILE | $DIR/hexdump.py
 	echo -n "}));"
 	echo "}"
 	echo

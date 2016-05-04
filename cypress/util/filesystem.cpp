@@ -62,7 +62,7 @@ std::unordered_set<std::string> dirs(const std::vector<std::string> &files)
 	return res;
 }
 
-std::ofstream tmpfile(std::string &path)
+std::string tmpfile(std::string &path)
 {
 	static const char ALPHANUM[] =
 		"0123456789"
@@ -77,8 +77,7 @@ std::ofstream tmpfile(std::string &path)
 			path[i] = ALPHANUM[dist(rng)];
 		}
 	}
-
-	return std::move(std::ofstream(path));
+	return path;
 }
 
 }

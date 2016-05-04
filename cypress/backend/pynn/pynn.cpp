@@ -80,7 +80,7 @@ static const std::vector<std::string> SUPPORTED_SIMULATORS = {
  * includes but the names that "feel more correct".
  */
 static const std::unordered_map<std::string, std::string>
-    NORMALISED_SIMULATOR_NAMES = {{"hardware.brainscales", "ess"},
+    NORMALISED_SIMULATOR_NAMES = {{"pyhmf", "ess"},
                                   {"spinnaker", "nmmc1"},
                                   {"pyhmf", "nmpm1"},
                                   {"hardware.spikey", "spikey"},
@@ -96,7 +96,7 @@ static const std::unordered_map<std::string, std::string>
  */
 static const std::unordered_map<std::string, std::string> SIMULATOR_IMPORT_MAP =
     {{"nest", "pyNN.nest"},
-     {"ess", "pyNN.hardware.brainscales"},
+     {"ess", "pyhmf"},
      {"nmmc1", "pyNN.spiNNaker"},
      {"nmpm1", "pyhmf"},
      {"spikey", "pyNN.hardware.spikey"}};
@@ -125,14 +125,7 @@ static const std::unordered_map<std::string, SystemProperties>
  */
 static const std::unordered_map<std::string, Json> DEFAULT_SETUPS = {
     {"nest", Json::object()},
-    {"ess",
-     {{"ess_params",
-       {
-           {"perfectSynapseTrafo", true},
-       }},
-      {"hardware", "$sim.hardwareSetup[\"one-hicann\"]"},
-      {"ignoreHWParameterRanges", true},
-      {"useSystemSim", true}}},
+    {"ess", {{"neuron_size", 4}, {"hicann", 276}}},
     {"nmmc1", {{"timestep", 1.0}}},
     {"nmpm1", {{"neuron_size", 4}, {"hicann", 276}}},
     {"spikey", Json::object()}};
@@ -342,7 +335,7 @@ void PyNN::do_run(NetworkBase &source, float duration) const
 
 // Attach the error log
 #ifndef CYPRESS_DEBUG_BINNF
-		std::ofstream log_stream = filesystem::tmpfile(log_path);
+		std::ofstream log_stream(filesystem::tmpfile(log_path));
 		std::thread log_thread(Process::generic_pipe,
 		                       std::ref(proc.child_stderr()),
 		                       std::ref(log_stream));
