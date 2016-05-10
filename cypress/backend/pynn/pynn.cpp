@@ -80,15 +80,12 @@ static const std::vector<std::string> SUPPORTED_SIMULATORS = {
  * includes but the names that "feel more correct".
  */
 static const std::unordered_map<std::string, std::string>
-    NORMALISED_SIMULATOR_NAMES = {{"pyhmf", "ess"},
-                                  {"spinnaker", "nmmc1"},
-                                  {"pyhmf", "nmpm1"},
-                                  {"hardware.spikey", "spikey"},
-                                  {"spikey", "spikey"},
-                                  {"nest", "nest"},
-                                  {"nm-mc1", "nmmc1"},
-                                  {"nm-pm1", "nmpm1"},
-                                  {"ess", "ess"}};
+    NORMALISED_SIMULATOR_NAMES = {
+        {"pyhmf", "ess"},     {"spinnaker", "nmmc1"},
+        {"pyhmf", "nmpm1"},   {"hardware.spikey", "spikey"},
+        {"spikey", "spikey"}, {"nest", "nest"},
+        {"nm-mc1", "nmmc1"},  {"nm-pm1", "nmpm1"},
+        {"ess", "ess"}};
 
 /**
  * Maps certain simulator names to the correct PyNN module names. If multiple
@@ -105,10 +102,11 @@ static const std::unordered_map<std::string, std::string> SIMULATOR_IMPORT_MAP =
  * Map between the canonical simulator name and the NMPI platform name.
  */
 static const std::unordered_map<std::string, std::string> SIMULATOR_NMPI_MAP = {
-    {"ess", "ESS"},
-    {"nmmc1", "NM-MC1"},
-    {"nmpm1", "NM-PM1"},
-    {"spikey", "Spikey"}};
+    {"nmmc1", "SpiNNaker"},
+    {"nmpm1", "BrainScaleS"},
+    {"ess", "BrainScaleS-ESS"},
+    {"spikey", "Spikey"},
+};
 
 /**
  * Map between the canonical system names and the

@@ -203,8 +203,8 @@ else:
         "~/.nmpi_config not found. Starting with empty configuration!")
 
 # Prompt the project name
-if not "project" in config:
-    config["project"] = raw_input("Project: ")
+if not "collab_id" in config:
+    config["collab_id"] = raw_input("Collab ID: ")
 
 # Prompt the username
 if not "username" in config:
@@ -234,7 +234,7 @@ while True:
         job_id = client.submit_job(
             source=script,
             platform=args.platform,
-            project=config["project"])
+            collab_id=config["collab_id"])
         logger.info(
             "Created job with ID " +
             str(job_id) +
