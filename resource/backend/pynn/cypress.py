@@ -53,7 +53,7 @@ class Cypress:
 
     # List of simulators that need a call to "end" before the results are
     # retrieved
-    PREMATURE_END_SIMULATORS = ["nmpm1"]
+    PREMATURE_END_SIMULATORS = ["nmpm1", "ess"]
 
     # List of simulators which are hardware systems without an explicit
     # timestep
@@ -159,10 +159,8 @@ class Cypress:
                 pylogging.get(domain), pylogging.LogLevel.ERROR)
 
         # Copy and delete non-standard setup parameters
-        neuron_size = setup["neuron_size"]
-        hicann_number = setup["hicann"]
+        neuron_size = setup["neuron_size"] if "neuron_size" in setup else 1
         del setup["neuron_size"]
-        del setup["hicann"]
 
         marocco = PyMarocco()
         marocco.placement.setDefaultNeuronSize(neuron_size)
@@ -176,16 +174,12 @@ class Cypress:
             marocco.calib_backend = PyMarocco.XML
             marocco.calib_path = "/wang/data/calibration/wafer_0"
 
-        hicann = HICANNGlobal(Enum(hicann_number))
-
         # Pass the marocco object and the actual setup to the simulation setup
         # method
         sim.setup(marocco=marocco, **setup)
 
-        # Return the marocco object and a list containing all HICANN
+        # Return used neuron size
         return {
-            "marocco": marocco,
-            "hicann": hicann,
             "neuron_size": neuron_size
         }
 
@@ -245,8 +239,8 @@ class Cypress:
             params = {"spike_times": []} # sPyNNaker issue #190
         res = self.sim.Population(count, type_, params)
 
-        # Increment the neuron counter needed to work around a bug in spikey,
-        # store the neuron index in the created population
+        # Increment the neuron counter needed to work around absolute neuron ids
+        # in PyNN 0.6, store the neuron index in the created population
         if not is_source:
             if self.version <= 6:
                 setattr(res, "__offs", self.neuron_count)
@@ -273,11 +267,6 @@ class Cypress:
         elif (self.version == 8):
             # Setup recording
             res.record(record)
-
-        # For NMPM1: register the population in the marocco instance
-        if self.simulator == "nmpm1" and not is_source:
-            self.backend_data["marocco"].placement.add(res,
-                                                       self.backend_data["hicann"])
 
         return res
 
@@ -498,12 +487,8 @@ class Cypress:
             # instead of per-neuron
             idx_offs = (getattr(population, "__offs")
                         if hasattr(population, "__offs") else 0)
-            if self.simulator == "nmpm1":
-                return self._convert_pyNN7_spikes(population.getSpikes(),
-                                                  population.size, idx_offs=idx_offs + 1, t_scale=1000.0)
-            else:
-                return self._convert_pyNN7_spikes(population.getSpikes(),
-                                                  population.size, idx_offs=idx_offs)
+            return self._convert_pyNN7_spikes(population.getSpikes(),
+                                              population.size, idx_offs=idx_offs)
         elif (self.version == 8):
             return self._convert_pyNN8_spikes(
                 population.get_data().segments[0].spiketrains)
@@ -598,7 +583,7 @@ class Cypress:
         setup.
 
         :param simulator: canonical name of the PyNN backend that should be
-        used. Should be one of ["nest", "spinnaker", "hicann", "spikey"].
+        used. Should be one of ["nest", "nmmc1", "nmpm1", "ess", "spikey"].
         :param library: the library that should be imported for code execution.
         :param setup: structure containing parameters to be passed to the
         "setup" method of the simulator
