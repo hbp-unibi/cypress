@@ -123,9 +123,9 @@ static const std::unordered_map<std::string, SystemProperties>
  */
 static const std::unordered_map<std::string, Json> DEFAULT_SETUPS = {
     {"nest", Json::object()},
-    {"ess", {{"neuron_size", 4}, {"hicann", 276}}},
+    {"ess", {{"neuron_size", 4}}},
     {"nmmc1", {{"timestep", 1.0}}},
-    {"nmpm1", {{"neuron_size", 4}, {"hicann", 276}}},
+    {"nmpm1", {{"neuron_size", 4}}},
     {"spikey", Json::object()}};
 
 /**
