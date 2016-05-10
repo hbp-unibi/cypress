@@ -11,7 +11,7 @@ significantly shortening the time required when performing experiments.
 Installation
 ------------
 
-Cypress requires a C++14 compliant compiler such as GCC 5 and CMake in version 3.3 (or later). In order to run Cypress applications on the Neuromorphic Compute Platform, they must be statically linked. To this end you should install the `glibc-static` and `libstdc++-static` libraries provided by your distribution. On Fedora you can install these using
+Cypress requires a C++14 compliant compiler such as GCC 4.9 and CMake in version 3.0 (or later). In order to run Cypress applications on the Neuromorphic Compute Platform, they must be statically linked. To this end you should install the `glibc-static` and `libstdc++-static` libraries provided by your distribution. On Fedora you can install these using
 ```bash
 sudo dnf install glibc-static libstdc++-static
 ```
@@ -23,7 +23,7 @@ sudo pip install pyNN requests pyminifier
 
 In order to run network simulations you also need to install a PyNN simulator backend, for example NEST. See http://www.nest-simulator.org/ for information on how to install NEST.
 
-Note that for now building is only tested on Fedora 23. Patches for other Linux distributions and other platforms are highly welcome.
+Note that for now building is only tested on Fedora 23 and Debian 8. Patches for other Linux distributions and other platforms are highly welcome.
 
 Once the above requirements are fulfilled, simply run
 ```bash
