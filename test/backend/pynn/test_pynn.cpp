@@ -41,13 +41,13 @@ TEST(pynn, normalisation)
 	EXPECT_EQ("nmmc1", PyNN("spinnaker").normalised_simulator());
 	EXPECT_EQ(std::vector<std::string>({"pyNN.spinnaker", "pyNN.spiNNaker"}),
 	          PyNN("spinnaker").imports());
-	EXPECT_EQ("NM-MC1", PyNN("spinnaker").nmpi_platform());
+	EXPECT_EQ("SpiNNaker", PyNN("spinnaker").nmpi_platform());
 
 	EXPECT_EQ("spiNNaker", PyNN("spiNNaker").simulator());
 	EXPECT_EQ("nmmc1", PyNN("spiNNaker").normalised_simulator());
 	EXPECT_EQ(std::vector<std::string>({"pyNN.spiNNaker"}),
 	          PyNN("spiNNaker").imports());
-	EXPECT_EQ("NM-MC1", PyNN("spiNNaker").nmpi_platform());
+	EXPECT_EQ("SpiNNaker", PyNN("spiNNaker").nmpi_platform());
 
 	EXPECT_EQ("pyhmf", PyNN("pyhmf").simulator());
 	EXPECT_EQ(std::vector<std::string>({"pyNN.pyhmf", "pyhmf"}),
@@ -62,7 +62,7 @@ TEST(pynn, normalisation)
 	EXPECT_EQ("ess", PyNN("ess").normalised_simulator());
 	EXPECT_EQ(std::vector<std::string>({"pyNN.ess", "pyhmf"}),
 	          PyNN("ess").imports());
-	EXPECT_EQ("ESS", PyNN("ess").nmpi_platform());
+	EXPECT_EQ("BrainScaleS-ESS", PyNN("ess").nmpi_platform());
 }
 
 TEST(pynn, timestep)
