@@ -150,7 +150,9 @@ def run(filename, args):
     old_cwd = os.getcwd()
     try:
         os.chdir(dir)
-        res = subprocess.call([os.path.join(dir, filename)] + args)
+        with open(os.path.join(dir, '"""  + tmpdir + """.stdout'), 'wb') as out, open(os.path.join(dir, '"""  + tmpdir + """.stderr'), 'wb') as err:
+            res = subprocess.Popen([os.path.join(dir, filename)] + args,
+                stdout = out, stderr = err)
     finally:
         os.chdir(old_cwd)
 
@@ -260,12 +262,8 @@ while True:
         break
     time.sleep(1)
 
-# Print the log
-job = client.get_job(job_id)
-sys.stdout.write(str(job["log"]))
-sys.stdout.flush()
-
 # Download the result archive
+job = client.get_job(job_id)
 datalist = job["output_data"]
 for dataitem in datalist:
     url = dataitem["url"]
