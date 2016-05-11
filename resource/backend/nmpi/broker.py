@@ -151,8 +151,10 @@ def run(filename, args):
     try:
         os.chdir(dir)
         with open(os.path.join(dir, '"""  + tmpdir + """.stdout'), 'wb') as out, open(os.path.join(dir, '"""  + tmpdir + """.stderr'), 'wb') as err:
-            res = subprocess.Popen([os.path.join(dir, filename)] + args,
+            p = subprocess.Popen([os.path.join(dir, filename)] + args,
                 stdout = out, stderr = err)
+            p.communicate()
+            res = p.returncode
     finally:
         os.chdir(old_cwd)
 
