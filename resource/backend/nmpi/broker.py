@@ -183,9 +183,16 @@ for filename in files:
                                   tar_filename,
                                   filename == args.executable)
 
+arguments = []
+for arg in args.args:
+    if os.path.exists(arg):
+        arguments.append(os.path.relpath(arg, args.base))
+    else:
+        arguments.append(arg)
+
 script = script + "setup()\n"
 script = script + ("res = run('" + os.path.relpath(filename, args.base)
-                   + "', " + str(args.args) + ")\n")
+                   + "', " + str(arguments) + ")\n")
 script = script + "cleanup()\n"
 script = script + "sys.exit(res)\n"
 
