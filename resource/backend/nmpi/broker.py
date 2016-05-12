@@ -253,11 +253,11 @@ while True:
             str(job_id) +
             " to retrieve the job results")
     except:
-        if token is not None:
-            token = None
-            continue
-        else:
-            raise
+#        if token is not None:
+#            token = None
+#            continue
+#        else:
+        raise
     break
 
 # Wait until the job has switched to either the "error" or the "finished" state
