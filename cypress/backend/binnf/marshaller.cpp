@@ -123,16 +123,14 @@ static void write_spike_source_array(const PopulationBase &population,
 
 	for (size_t i = 0; i < population.size(); i++) {
 		const auto &params = population[i].parameters();
-		if (params.size() > 0) {
-			Matrix<Number> mat(1, 2);
-			mat(0, 0) = int32_t(population.pid());
-			mat(0, 1) = int32_t(i);
+		Matrix<Number> mat(1, 2);
+		mat(0, 0) = int32_t(population.pid());
+		mat(0, 1) = int32_t(i);
 
-			serialise(os, "target", TARGET_HEADER, mat);
-			serialise(os, "spike_times", SPIKE_TIMES_HEADER,
-			          reinterpret_cast<const Number *>(params.begin()),
-			          params.size());
-		}
+		serialise(os, "target", TARGET_HEADER, mat);
+		serialise(os, "spike_times", SPIKE_TIMES_HEADER,
+		          reinterpret_cast<const Number *>(params.begin()),
+		          params.size());
 	}
 }
 
