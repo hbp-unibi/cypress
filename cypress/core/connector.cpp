@@ -63,7 +63,8 @@ const std::string AllToAllConnector::m_name = "AllToAllConnector";
 void AllToAllConnector::connect(const ConnectionDescriptor &descr,
                                 std::vector<Connection> &tar) const
 {
-	for (NeuronIndex n_src = descr.nid_src0(); n_src < descr.nid_src1(); n_src++) {
+	for (NeuronIndex n_src = descr.nid_src0(); n_src < descr.nid_src1();
+	     n_src++) {
 		for (NeuronIndex n_tar = descr.nid_tar0(); n_tar < descr.nid_tar1();
 		     n_tar++) {
 			tar.emplace_back(descr.pid_src(), descr.pid_tar(), n_src, n_tar,
@@ -106,46 +107,17 @@ void FromListConnector::connect(const ConnectionDescriptor &descr,
 }
 
 /*
- * Class FunctorConnector
+ * Class FunctorConnectorBase
  */
 
-const std::string FunctorConnector::m_name = "FunctorConnector";
-
-void FunctorConnector::connect(const ConnectionDescriptor &descr,
-                               std::vector<Connection> &tar) const
-{
-	for (NeuronIndex n_src = descr.nid_src0(); n_src < descr.nid_src1(); n_src++) {
-		for (NeuronIndex n_tar = descr.nid_tar0(); n_tar < descr.nid_tar1();
-		     n_tar++) {
-			Synapse synapse = m_cback(n_src, n_tar);
-			if (synapse.valid()) {
-				tar.emplace_back(descr.pid_src(), descr.pid_tar(), n_src, n_tar,
-				                 synapse.weight, synapse.delay);
-			}
-		}
-	}
-}
+const std::string FunctorConnectorBase::m_name = "FunctorConnector";
 
 /*
- * Class UniformFunctorConnector
+ * Class UniformFunctorConnectorBase
  */
 
-const std::string UniformFunctorConnector::m_name = "UniformFunctorConnector";
-
-void UniformFunctorConnector::connect(const ConnectionDescriptor &descr,
-                                      std::vector<Connection> &tar) const
-{
-	for (NeuronIndex n_src = descr.nid_src0(); n_src < descr.nid_src1();
-	     n_src++) {
-		for (NeuronIndex n_tar = descr.nid_tar0(); n_tar < descr.nid_tar1();
-		     n_tar++) {
-			if (m_cback(n_src, n_tar)) {
-				tar.emplace_back(descr.pid_src(), descr.pid_tar(), n_src, n_tar,
-				                 weight(), delay());
-			}
-		}
-	}
-}
+const std::string UniformFunctorConnectorBase::m_name =
+    "UniformFunctorConnector";
 
 /**
  * Class FixedProbabilityConnectorBase

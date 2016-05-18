@@ -163,6 +163,26 @@ TEST(connector, uniform_functor)
 	          connections);
 }
 
+TEST(connector, uniform_functor_huge_matrix)
+{
+	std::vector<Connection> connections = instantiate_connections({
+	    {0, 0, 10000, 1, 0, 10000, std::move(Connector::functor(
+	                                   [](NeuronIndex src, NeuronIndex tar) {
+		                                   return src == tar && src < 4 &&
+		                                          tar < 4;
+		                               },
+	                                   0.16, 0.1))},
+	});
+
+	EXPECT_EQ(std::vector<Connection>({
+	              {0, 1, 0, 0, 0.16, 0.1},
+	              {0, 1, 1, 1, 0.16, 0.1},
+	              {0, 1, 2, 2, 0.16, 0.1},
+	              {0, 1, 3, 3, 0.16, 0.1},
+	          }),
+	          connections);
+}
+
 TEST(connector, fixed_probability)
 {
 	std::vector<Connection> connections1 = instantiate_connections({

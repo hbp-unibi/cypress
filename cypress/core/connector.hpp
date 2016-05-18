@@ -21,7 +21,6 @@
 #ifndef CYPRESS_CORE_CONNECTOR_HPP
 #define CYPRESS_CORE_CONNECTOR_HPP
 
-#include <functional>
 #include <memory>
 #include <string>
 #include <vector>
@@ -199,30 +198,17 @@ class ConnectionDescriptor;
 class AllToAllConnector;
 class OneToOneConnector;
 class FromListConnector;
+
+template <typename Callback>
 class FunctorConnector;
+
+template <typename Callback>
 class UniformFunctorConnector;
 
 template <typename RandomEngine>
 class FixedProbabilityConnector;
 
 class GaussianNoiseConnector;
-
-/**
- * Function type used for creating a connection between neurons with index nsrc
- * and ntar. If the user does not wish to create a connection between nsrc and
- * ntar an invalid synapse should be returned (by calling the Synapse default
- * constructor).
- *
- * @param nsrc is the source neuron index.
- * @param ntar is the target neuron index.
- * @return a Synapse specifying weight and delay of the connection that should
- * be created. Return an invalid synapse (e.g. by returning
- */
-using ConnectionCallback =
-    std::function<Synapse(NeuronIndex nsrc, NeuronIndex ntar)>;
-
-using UniformConnectionCallback =
-    std::function<bool(NeuronIndex nsrc, NeuronIndex ntar)>;
 
 /**
  * The abstract Connector class defines the basic interface used to construct
@@ -258,7 +244,7 @@ public:
 	 * @param tar is the vector the connections should be appended to.
 	 */
 	virtual void connect(const ConnectionDescriptor &descr,
-	                       std::vector<Connection> &tar) const = 0;
+	                     std::vector<Connection> &tar) const = 0;
 
 	/**
 	 * Returns true if the connector can create the connections for the given
@@ -319,22 +305,24 @@ public:
 	 * Create a list connector which creates connections according to the given
 	 * list.
 	 *
-	 * @param f is a function which is called for each neuron-pair in the two
-	 * populations and which is supposed to return a synapse description. If the
-	 * returned synapse is invalid, no connection is created.
+	 * @param cback is a function which is called for each neuron-pair in the
+	 * two populations and which is supposed to return a synapse description. If
+	 * the returned synapse is invalid, no connection is created.
 	 */
-	static std::unique_ptr<FunctorConnector> functor(ConnectionCallback cback);
+	template <typename F>
+	static std::unique_ptr<FunctorConnector<F>> functor(const F &cback);
 
 	/**
 	 * Create a list connector which creates connections according to the given
 	 * list.
 	 *
-	 * @param f is a function which is called for each neuron-pair in the two
-	 * populations and which is supposed to return a synapse description. If the
-	 * returned synapse is invalid, no connection is created.
+	 * @param cback is a function which is called for each neuron-pair in the
+	 * two populations and which is supposed to return a synapse description. If
+	 * the returned synapse is invalid, no connection is created.
 	 */
-	static std::unique_ptr<UniformFunctorConnector> functor(
-	    UniformConnectionCallback cback, float weight, float delay = 0.0);
+	template <typename F>
+	static std::unique_ptr<UniformFunctorConnector<F>> functor(
+	    const F &cback, float weight, float delay = 0.0);
 
 	/**
 	 * Connector adapter which ensures connections are only produced with a
@@ -575,7 +563,7 @@ public:
 	~AllToAllConnector() override {}
 
 	void connect(const ConnectionDescriptor &descr,
-	               std::vector<Connection> &tar) const override;
+	             std::vector<Connection> &tar) const override;
 
 	bool valid(const ConnectionDescriptor &) const override { return true; }
 
@@ -638,46 +626,85 @@ public:
 	const std::string &name() const override { return m_name; }
 };
 
-class FunctorConnector : public Connector {
+class FunctorConnectorBase : public Connector {
 private:
 	static const std::string m_name;
 
-	ConnectionCallback m_cback;
+public:
+	const std::string &name() const override { return m_name; }
+};
+
+template <typename Callback>
+class FunctorConnector : public FunctorConnectorBase {
+private:
+	static const std::string m_name;
+
+	Callback m_cback;
 
 public:
-	FunctorConnector(const ConnectionCallback &cback) : m_cback(cback) {}
+	FunctorConnector(const Callback &cback) : m_cback(cback) {}
 
 	~FunctorConnector() override {}
 
 	void connect(const ConnectionDescriptor &descr,
-	             std::vector<Connection> &tar) const override;
+	             std::vector<Connection> &tar) const override
+	{
+		for (NeuronIndex n_src = descr.nid_src0(); n_src < descr.nid_src1();
+		     n_src++) {
+			for (NeuronIndex n_tar = descr.nid_tar0(); n_tar < descr.nid_tar1();
+			     n_tar++) {
+				Synapse synapse = m_cback(n_src, n_tar);
+				if (synapse.valid()) {
+					tar.emplace_back(descr.pid_src(), descr.pid_tar(), n_src,
+					                 n_tar, synapse.weight, synapse.delay);
+				}
+			}
+		}
+	}
 
 	bool valid(const ConnectionDescriptor &) const override { return true; }
+};
+
+class UniformFunctorConnectorBase : public UniformConnector {
+private:
+	static const std::string m_name;
+
+public:
+	using UniformConnector::UniformConnector;
 
 	const std::string &name() const override { return m_name; }
 };
 
-class UniformFunctorConnector : public UniformConnector {
+template <typename Callback>
+class UniformFunctorConnector : public UniformFunctorConnectorBase {
 private:
-	static const std::string m_name;
-
-	UniformConnectionCallback m_cback;
+	Callback m_cback;
 
 public:
-	UniformFunctorConnector(const UniformConnectionCallback &cback,
-	                        float weight = 0.0, float delay = 0.0)
-	    : UniformConnector(weight, delay), m_cback(cback)
+	UniformFunctorConnector(const Callback &cback, float weight = 0.0,
+	                        float delay = 0.0)
+	    : UniformFunctorConnectorBase(weight, delay), m_cback(cback)
 	{
 	}
 
 	~UniformFunctorConnector() override {}
 
 	void connect(const ConnectionDescriptor &descr,
-	             std::vector<Connection> &tar) const override;
+	             std::vector<Connection> &tar) const override
+	{
+		for (NeuronIndex n_src = descr.nid_src0(); n_src < descr.nid_src1();
+		     n_src++) {
+			for (NeuronIndex n_tar = descr.nid_tar0(); n_tar < descr.nid_tar1();
+			     n_tar++) {
+				if (m_cback(n_src, n_tar)) {
+					tar.emplace_back(descr.pid_src(), descr.pid_tar(), n_src,
+					                 n_tar, weight(), delay());
+				}
+			}
+		}
+	}
 
 	bool valid(const ConnectionDescriptor &) const override { return true; }
-
-	const std::string &name() const override { return m_name; }
 };
 
 class FixedProbabilityConnectorBase : public Connector {
@@ -751,17 +778,18 @@ inline std::unique_ptr<FromListConnector> Connector::from_list(
 	return std::move(std::make_unique<FromListConnector>(connections));
 }
 
-inline std::unique_ptr<FunctorConnector> Connector::functor(
-    ConnectionCallback cback)
+template <typename F>
+inline std::unique_ptr<FunctorConnector<F>> Connector::functor(const F &cback)
 {
-	return std::move(std::make_unique<FunctorConnector>(cback));
+	return std::move(std::make_unique<FunctorConnector<F>>(cback));
 }
 
-inline std::unique_ptr<UniformFunctorConnector> Connector::functor(
-    UniformConnectionCallback cback, float weight, float delay)
+template <typename F>
+inline std::unique_ptr<UniformFunctorConnector<F>> Connector::functor(
+    const F &cback, float weight, float delay)
 {
 	return std::move(
-	    std::make_unique<UniformFunctorConnector>(cback, weight, delay));
+	    std::make_unique<UniformFunctorConnector<F>>(cback, weight, delay));
 }
 
 inline std::unique_ptr<FixedProbabilityConnector<std::default_random_engine>>
