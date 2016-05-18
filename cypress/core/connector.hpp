@@ -255,24 +255,10 @@ public:
 	 *
 	 * @param descr is the connection descriptor containing the data detailing
 	 * the connection.
-	 * @param tar_mem is the start address of the memory region to which the
-	 * connections should be written.
-	 * @return the actual number of connections written. May be smaller or equal
-	 * to the number estimated by connection_size().
+	 * @param tar is the vector the connections should be appended to.
 	 */
-	virtual size_t connect(const ConnectionDescriptor &descr,
-	                       Connection tar_mem[]) const = 0;
-
-	/**
-	 * Predicts an upper-bound of the number of connections. The caller of the
-	 * connect function ensures that memory for at least as many elements
-	 *
-	 * @param descr is the descriptor describing the connection for which the
-	 * number of neuron-to-neuron connections should be calculated.
-	 * @return an upper bound of the number of neuron-to-neuron connections
-	 * that will be created by the connector.
-	 */
-	virtual size_t size(const ConnectionDescriptor &descr) const = 0;
+	virtual void connect(const ConnectionDescriptor &descr,
+	                       std::vector<Connection> &tar) const = 0;
 
 	/**
 	 * Returns true if the connector can create the connections for the given
@@ -498,23 +484,13 @@ public:
 	 * Tells the Connector to actually create the neuron-to-neuron connections
 	 * between certain neurons.
 	 *
-	 * @param descr is the connection descriptor containing the data detailing
-	 * the connection.
-	 * @param tar_mem is the start address of the memory region to which the
-	 * connections should be written.
-	 * @return the actual number of connections written. May be smaller or equal
-	 * to the number estimated by connection_size().
+	 * @param tar is the target vector to which the connections should be
+	 * written.
 	 */
-	size_t connect(Connection tar_mem[]) const
+	void connect(std::vector<Connection> &tar) const
 	{
-		return connector().connect(*this, tar_mem);
+		connector().connect(*this, tar);
 	}
-
-	/**
-	 * Returns an upper bound of the number of neuron-to-neuron connections
-	 * that will be created by the connector.
-	 */
-	size_t size() const { return connector().size(*this); }
 
 	/**
 	 * Returns true if the connector is valid.
@@ -598,13 +574,8 @@ public:
 
 	~AllToAllConnector() override {}
 
-	size_t connect(const ConnectionDescriptor &descr,
-	               Connection tar_mem[]) const override;
-
-	size_t size(const ConnectionDescriptor &descr) const override
-	{
-		return descr.nsrc() * descr.ntar();
-	}
+	void connect(const ConnectionDescriptor &descr,
+	               std::vector<Connection> &tar) const override;
 
 	bool valid(const ConnectionDescriptor &) const override { return true; }
 
@@ -624,13 +595,8 @@ public:
 
 	~OneToOneConnector() override {}
 
-	size_t connect(const ConnectionDescriptor &descr,
-	               Connection tar_mem[]) const override;
-
-	size_t size(const ConnectionDescriptor &descr) const override
-	{
-		return descr.nsrc();
-	}
+	void connect(const ConnectionDescriptor &descr,
+	             std::vector<Connection> &tar) const override;
 
 	bool valid(const ConnectionDescriptor &descr) const override
 	{
@@ -664,13 +630,8 @@ public:
 
 	~FromListConnector() override {}
 
-	size_t connect(const ConnectionDescriptor &descr,
-	               Connection tar_mem[]) const override;
-
-	size_t size(const ConnectionDescriptor &) const override
-	{
-		return m_connections.size();
-	}
+	void connect(const ConnectionDescriptor &descr,
+	             std::vector<Connection> &tar) const override;
 
 	bool valid(const ConnectionDescriptor &) const override { return true; }
 
@@ -688,13 +649,8 @@ public:
 
 	~FunctorConnector() override {}
 
-	size_t connect(const ConnectionDescriptor &descr,
-	               Connection tar_mem[]) const override;
-
-	size_t size(const ConnectionDescriptor &descr) const override
-	{
-		return descr.nsrc() * descr.ntar();
-	}
+	void connect(const ConnectionDescriptor &descr,
+	             std::vector<Connection> &tar) const override;
 
 	bool valid(const ConnectionDescriptor &) const override { return true; }
 
@@ -716,13 +672,8 @@ public:
 
 	~UniformFunctorConnector() override {}
 
-	size_t connect(const ConnectionDescriptor &descr,
-	               Connection tar_mem[]) const override;
-
-	size_t size(const ConnectionDescriptor &descr) const override
-	{
-		return descr.nsrc() * descr.ntar();
-	}
+	void connect(const ConnectionDescriptor &descr,
+	             std::vector<Connection> &tar) const override;
 
 	bool valid(const ConnectionDescriptor &) const override { return true; }
 
@@ -753,22 +704,17 @@ public:
 
 	~FixedProbabilityConnector() override {}
 
-	size_t connect(const ConnectionDescriptor &descr,
-	               Connection tar_mem[]) const override
+	void connect(const ConnectionDescriptor &descr,
+	             std::vector<Connection> &tar) const override
 	{
+		const size_t first = tar.size();
+		m_connector->connect(descr, tar);
 		std::uniform_real_distribution<float> distr(0.0, 1.0);
-		const size_t size = m_connector->connect(descr, tar_mem);
-		for (size_t i = 0; i < size; i++) {
+		for (size_t i = first; i < tar.size(); i++) {
 			if (distr(*m_engine) >= m_p) {
-				tar_mem[i].n.synapse.weight = 0.0;  // Invalidate the connection
+				tar[i].n.synapse.weight = 0.0;  // Invalidate the connection
 			}
 		}
-		return size;
-	}
-
-	size_t size(const ConnectionDescriptor &descr) const override
-	{
-		return m_connector->size(descr);
 	}
 
 	bool valid(const ConnectionDescriptor &descr) const override
