@@ -148,6 +148,7 @@ def extract(filename, mode, data):
 
 def run(filename, args):
     old_cwd = os.getcwd()
+    res = 1
     try:
         os.chdir(dir)
         with open(os.path.join(dir, '"""  + tmpdir + """.stdout'), 'wb') as out, open(os.path.join(dir, '"""  + tmpdir + """.stderr'), 'wb') as err:
@@ -157,6 +158,7 @@ def run(filename, args):
             res = p.returncode
     finally:
         os.chdir(old_cwd)
+    return res
 
 def cleanup():
     # Remove extracted files -- we're only interested in newly created files
