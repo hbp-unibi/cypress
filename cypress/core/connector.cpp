@@ -30,6 +30,15 @@ namespace cypress {
 std::vector<Connection> instantiate_connections(
     const std::vector<ConnectionDescriptor> &descrs)
 {
+	// Iterate over the connection descriptors and instantiate them
+	std::vector<Connection> res;
+	for (const auto &descr : descrs) {
+		descr.connect(res);
+	}
+
+	// Sort the generated connections
+	std::sort(res.begin(), res.end());
+
 	// Connection which is greater than all other possible valid connections,
 	// but smaller than the smallest invalid connection
 	static const Connection LAST_VALID(
@@ -38,32 +47,10 @@ std::vector<Connection> instantiate_connections(
 	    std::numeric_limits<NeuronIndex>::max(),
 	    std::numeric_limits<NeuronIndex>::max(), 1.0, 0.0);
 
-	// Iterate over the connection descriptors and instantiate them
-	// TODO: Parallelise
-	std::vector<Connection> res;
-	ssize_t cursor = 0;
-	for (const auto &descr : descrs) {
-		// Make sure there is enough memory in the result vector
-		const size_t size = descr.size();
-		if ((res.size() - cursor) < size) {
-			res.resize(cursor + size);
-		}
+	// Resize the connection list to end at the first invalid connection
+	auto it = std::upper_bound(res.begin(), res.end(), LAST_VALID);
+	res.resize(it - res.begin());
 
-		// Instantiate the connections
-		const size_t written = descr.connect(&res[cursor]);
-
-		// Sort the generated connections, search the first invalid connection
-		const auto it_begin = res.begin() + cursor;
-		const auto it_end = res.begin() + (cursor + written);
-		std::sort(it_begin, it_end);
-		auto it = std::upper_bound(it_begin, it_end, LAST_VALID);
-
-		// Place the cursor after the first invalid connection
-		cursor = it - res.begin();
-	}
-
-	// Resize the result to the cursor position
-	res.resize(cursor);
 	return res;
 }
 
@@ -73,18 +60,17 @@ std::vector<Connection> instantiate_connections(
 
 const std::string AllToAllConnector::m_name = "AllToAllConnector";
 
-size_t AllToAllConnector::connect(const ConnectionDescriptor &descr,
-                                  Connection tar_mem[]) const
+void AllToAllConnector::connect(const ConnectionDescriptor &descr,
+                                std::vector<Connection> &tar) const
 {
-	size_t i = 0;
-	for (NeuronIndex src = descr.nid_src0(); src < descr.nid_src1(); src++) {
-		for (NeuronIndex tar = descr.nid_tar0(); tar < descr.nid_tar1();
-		     tar++) {
-			tar_mem[i++] = Connection(descr.pid_src(), descr.pid_tar(), src,
-			                          tar, weight(), delay());
+	for (NeuronIndex n_src = descr.nid_src0(); n_src < descr.nid_src1();
+	     n_src++) {
+		for (NeuronIndex n_tar = descr.nid_tar0(); n_tar < descr.nid_tar1();
+		     n_tar++) {
+			tar.emplace_back(descr.pid_src(), descr.pid_tar(), n_src, n_tar,
+			                 weight(), delay());
 		}
 	}
-	return i;
 }
 
 /*
@@ -93,17 +79,13 @@ size_t AllToAllConnector::connect(const ConnectionDescriptor &descr,
 
 const std::string OneToOneConnector::m_name = "OneToOneConnector";
 
-size_t OneToOneConnector::connect(const ConnectionDescriptor &descr,
-                                  Connection tar_mem[]) const
+void OneToOneConnector::connect(const ConnectionDescriptor &descr,
+                                std::vector<Connection> &tar) const
 {
-	size_t i = 0;
-	size_t n = descr.nsrc();  // == descr.ntar()
-	for (; i < n; i++) {
-		tar_mem[i] =
-		    Connection(descr.pid_src(), descr.pid_tar(), descr.nid_src0() + i,
-		               descr.nid_tar0() + i, weight(), delay());
+	for (size_t i = 0; i < descr.nsrc(); i++) {
+		tar.emplace_back(descr.pid_src(), descr.pid_tar(), descr.nid_src0() + i,
+		                 descr.nid_tar0() + i, weight(), delay());
 	}
-	return i;
 }
 
 /*
@@ -112,64 +94,30 @@ size_t OneToOneConnector::connect(const ConnectionDescriptor &descr,
 
 const std::string FromListConnector::m_name = "FromListConnector";
 
-size_t FromListConnector::connect(const ConnectionDescriptor &descr,
-                                  Connection tar_mem[]) const
+void FromListConnector::connect(const ConnectionDescriptor &descr,
+                                std::vector<Connection> &tar) const
 {
-	size_t i = 0;
 	for (const LocalConnection &c : m_connections) {
 		if (c.src >= descr.nid_src0() && c.src < descr.nid_src1() &&
 		    c.tar >= descr.nid_tar0() && c.tar < descr.nid_tar1()) {
-			tar_mem[i++] = Connection(descr.pid_src(), descr.pid_tar(), c.src,
-			                          c.tar, c.synapse.weight, c.synapse.delay);
+			tar.emplace_back(descr.pid_src(), descr.pid_tar(), c.src, c.tar,
+			                 c.synapse.weight, c.synapse.delay);
 		}
 	}
-	return i;
 }
 
 /*
- * Class FunctorConnector
+ * Class FunctorConnectorBase
  */
 
-const std::string FunctorConnector::m_name = "FunctorConnector";
-
-size_t FunctorConnector::connect(const ConnectionDescriptor &descr,
-                                 Connection tar_mem[]) const
-{
-	size_t i = 0;
-	for (NeuronIndex src = descr.nid_src0(); src < descr.nid_src1(); src++) {
-		for (NeuronIndex tar = descr.nid_tar0(); tar < descr.nid_tar1();
-		     tar++) {
-			Synapse synapse = m_cback(src, tar);
-			if (synapse.valid()) {
-				tar_mem[i++] = Connection(descr.pid_src(), descr.pid_tar(), src,
-				                          tar, synapse.weight, synapse.delay);
-			}
-		}
-	}
-	return i;
-}
+const std::string FunctorConnectorBase::m_name = "FunctorConnector";
 
 /*
- * Class UniformFunctorConnector
+ * Class UniformFunctorConnectorBase
  */
 
-const std::string UniformFunctorConnector::m_name = "UniformFunctorConnector";
-
-size_t UniformFunctorConnector::connect(const ConnectionDescriptor &descr,
-                                        Connection tar_mem[]) const
-{
-	size_t i = 0;
-	for (NeuronIndex src = descr.nid_src0(); src < descr.nid_src1(); src++) {
-		for (NeuronIndex tar = descr.nid_tar0(); tar < descr.nid_tar1();
-		     tar++) {
-			if (m_cback(src, tar)) {
-				tar_mem[i++] = Connection(descr.pid_src(), descr.pid_tar(), src,
-				                          tar, weight(), delay());
-			}
-		}
-	}
-	return i;
-}
+const std::string UniformFunctorConnectorBase::m_name =
+    "UniformFunctorConnector";
 
 /**
  * Class FixedProbabilityConnectorBase
