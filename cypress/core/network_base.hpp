@@ -183,6 +183,11 @@ public:
 	size_t population_count() const;
 
 	/**
+	 * Returns the total number of neurons in the network.
+	 */
+	size_t neuron_count() const;
+
+	/**
 	 * Returns a PopulationBase instance pointing at the population with the
 	 * given index.
 	 */
