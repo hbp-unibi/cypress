@@ -27,6 +27,8 @@ import pyNN
 import pyNN.common
 import numpy as np
 
+import time
+
 if __name__ != "__main__":
     from constants import *
 
@@ -622,6 +624,9 @@ class Cypress:
         neuron
         """
 
+        # First time measurement point
+        t1 = time.time()
+
         # Reset some state variables
         self.record_v_count = 0
         self.neuron_count = 0
@@ -640,7 +645,9 @@ class Cypress:
         duration = int((duration + timestep) / timestep) * timestep
 
         # Run the simulation
+        t2 = time.time()
         self.sim.run(duration)
+        t3 = time.time()
 
         # End the simulation to fetch the results on nmpm1
         if (self.simulator in self.PREMATURE_END_SIMULATORS):
@@ -660,5 +667,14 @@ class Cypress:
         if (not (self.simulator in self.PREMATURE_END_SIMULATORS)):
             self.sim.end()
 
-        return res
+        # Store the time measurements
+        t4 = time.time()
+        runtimes = {
+            "total": t4 - t1,
+            "sim": t3 - t2,
+            "initialize": t2 - t1,
+            "finalize": t4 - t3
+        }
+
+        return res, runtimes
 

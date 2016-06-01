@@ -33,6 +33,13 @@ namespace internal {
  */
 class NetworkData {
 private:
+	friend NetworkBase;
+
+	/**
+	 * Contains information about the runtime.
+	 */
+	NetworkRuntime m_runtime;
+
 	/**
 	 * Vector containing the PopulationData instances.
 	 */
@@ -52,7 +59,7 @@ public:
 	/**
 	 * Default constructor of the NetworkData class.
 	 */
-	NetworkData() : m_connections_sorted(true){};
+	NetworkData() : m_runtime({}), m_connections_sorted(true){};
 
 	/**
 	 * Creates an independent NetworkData instance.
@@ -261,5 +268,15 @@ float NetworkBase::duration() const
 		}
 	}
 	return res;
+}
+
+NetworkRuntime NetworkBase::runtime() const
+{
+	return m_impl->m_runtime;
+}
+
+void NetworkBase::runtime(const NetworkRuntime &runtime)
+{
+	m_impl->m_runtime = runtime;
 }
 }

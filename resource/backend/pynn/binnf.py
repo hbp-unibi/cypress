@@ -363,6 +363,12 @@ HEADER_TRACE = [{"name": "times", "type": TYPE_FLOAT},
                 {"name": "values", "type": TYPE_FLOAT}]
 HEADER_TRACE_DTYPE = header_to_dtype(HEADER_TRACE)
 
+HEADER_RUNTIMES = [{"name": "total", "type": TYPE_FLOAT},
+                   {"name": "sim", "type": TYPE_FLOAT},
+                   {"name": "initialize", "type": TYPE_FLOAT},
+                   {"name": "finalize", "type": TYPE_FLOAT}]
+HEADER_RUNTIMES_DTYPE = header_to_dtype(HEADER_RUNTIMES)
+
 
 def write_result(fd, res):
     """
@@ -383,6 +389,21 @@ def write_result(fd, res):
                     serialise(fd, "spike_times", HEADER_SPIKE_TIMES, matrix)
                 else:
                     serialise(fd, "trace_" + signal, HEADER_TRACE, matrix)
+
+
+def write_runtimes(fd, times):
+    """
+    Serialises the simulation runtimes to binnf.
+
+    :param fd: target file descriptor.
+    :param times: object containing "total", "sim", "initialize" and "finalize"
+    keys with the runtimes in seconds.
+    """
+    serialise(fd, "runtimes", HEADER_RUNTIMES, np.array(
+        [(times["total"],
+          times["sim"],
+          times["initialize"],
+          times["finalize"])], dtype=HEADER_RUNTIMES_DTYPE))
 
 # Export definitions
 

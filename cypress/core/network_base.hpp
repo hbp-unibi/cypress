@@ -67,6 +67,33 @@ template <typename Impl, typename Accessor>
 class ConnectableMixin;
 
 /**
+ * Structure storing information about the network runtime.
+ */
+struct NetworkRuntime {
+	/**
+	 * Total runtime -- sum of the three other times.
+	 */
+	float total;
+
+	/**
+	 * Raw simulation time. This may include setup and finalization time
+	 * required by the hardware timer.
+	 */
+	float sim;
+
+	/**
+	 * Initialization time. Time required to construct the network.
+	 */
+	float initialize;
+
+	/**
+	 * Finalization time. Time required to retrieve the results from the
+	 * driver.
+	 */
+	float finalize;
+};
+
+/**
  * The NetworkBase class represents an entire spiking neural network. Note that
  * this class only represents a lightweight handle at the actual network,
  * copying this handle does not create a new network instance. Use the clone()
@@ -262,6 +289,17 @@ public:
 	 * @return the duration of the network in milliseconds.
 	 */
 	float duration() const;
+
+	/**
+	 * Returns information about the network runtime. Behaviour is undefined if
+	 * the network has not yet been executed.
+	 */
+	NetworkRuntime runtime() const;
+
+	/**
+	 * Allows to set the runtime information to the given values.
+	 */
+	void runtime(const NetworkRuntime &runtime);
 };
 }
 

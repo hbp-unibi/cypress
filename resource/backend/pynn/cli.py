@@ -59,7 +59,7 @@ def do_run(args):
     network = read_network(in_fd)
 
     # Open the simulator and run the network
-    res = Cypress(
+    res, runtimes = Cypress(
         args.simulator,
         args.library, setup=json.loads(args.setup)).run(
         network,
@@ -67,6 +67,7 @@ def do_run(args):
 
     # Write the recorded data back to binnf
     write_result(out_fd, res)
+    write_runtimes(out_fd, runtimes)
 
 
 def do_dump(args):

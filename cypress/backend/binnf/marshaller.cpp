@@ -251,6 +251,21 @@ bool marshall_response(NetworkBase &net, std::istream &is)
 			}
 			has_target = false;
 		}
+		else if (block.name == "runtimes") {
+			const size_t total_col = block.colidx("total");
+			const size_t sim_col = block.colidx("sim");
+			const size_t initialize_col = block.colidx("initialize");
+			const size_t finalize_col = block.colidx("finalize");
+
+			net.runtime({
+				block.matrix(0, total_col).f,
+				block.matrix(0, sim_col).f,
+				block.matrix(0, initialize_col).f,
+				block.matrix(0, finalize_col).f
+			});
+
+			has_target = false;
+		}
 	}
 	return had_block;
 }

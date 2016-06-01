@@ -44,6 +44,13 @@ int main(int argc, const char *argv[])
 	        .add_connection("source", "neuron", Connector::one_to_one(0.16))
 	        .run(PyNN(argv[1]));
 
+	// Print the runtimes
+	std::cout << "Runtime statistic: total " << net.runtime().total
+	          << "s, simulation " << net.runtime().sim
+	          << "s, initialization " << net.runtime().initialize
+	          << "s, finalization " << net.runtime().finalize << "s"
+	          << std::endl;
+
 	// Print the spike times for each neuron
 	for (auto neuron : net.population<IfCondExp>("neuron")) {
 		std::cout << "Spike times for neuron " << neuron.nid() << std::endl;
