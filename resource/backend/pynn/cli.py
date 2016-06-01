@@ -150,7 +150,7 @@ sp_run.add_argument(
     "--out",
     type=str,
     default="-",
-    help="Output binnf filename, use \"-\" for stdin")
+    help="Output binnf filename, use \"-\" for stdout")
 sp_run.set_defaults(func=do_run)
 
 # Options for the "dump" subcommand
