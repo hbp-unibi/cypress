@@ -357,11 +357,18 @@ class Cypress:
 
             def block_set_params(pop, begin, end):
                 if ps[begin]["nid"] == ALL_NEURONS:
-                    values = dict(map(lambda key: (key, ps[begin][key]), keys))
-                    if self.version <= 7:
-                        pop.set(values)
+                    if self.simulator == "nmpm1" or self.simulator == "ess":
+                        for key in keys:
+                            if self.version <= 7:
+                                pop.set({key: float(ps[begin][key])})
+                            else:
+                                pop.set(**{key: ps[begin][key]})
                     else:
-                        pop.set(**values)
+                        values = dict(map(lambda key: (key, ps[begin][key]), keys))
+                        if self.version <= 7:
+                            pop.set(values)
+                        else:
+                            pop.set(**values)
                 else:
                     for key in keys:
                         pop.tset(key, ps[begin:end][key].tolist())
