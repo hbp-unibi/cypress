@@ -124,6 +124,11 @@ install(
 	DESTINATION include
 	FILES_MATCHING PATTERN "*.hpp"
 )
+install(
+	FILES ${CMAKE_SOURCE_DIR}/cmake/FindCypress.cmake
+	DESTINATION share/cmake/Cypress/
+	RENAME CypressConfig.cmake
+)
 
 # Submodules
 enable_testing()
