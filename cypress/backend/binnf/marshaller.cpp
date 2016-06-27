@@ -34,6 +34,14 @@ namespace binnf {
 static const auto INT = NumberType::INT;
 static const auto FLOAT = NumberType::FLOAT;
 
+static const Header TARGET_HEADER = {{"pid", "nid"}, {INT, INT}};
+static const Header SPIKE_TIMES_HEADER = {{"times"}, {FLOAT}};
+static const Header CONNECTIONS_HEADER = {
+    {"pid_src", "pid_tar", "nid_src", "nid_tar", "weight", "delay"},
+    {INT, INT, INT, INT, FLOAT, FLOAT}};
+static const int32_t ALL_NEURONS = std::numeric_limits<int32_t>::max();
+
+
 /**
  * Constructs and sends the matrix containing the populations to the simulator.
  *
@@ -101,26 +109,19 @@ static void write_connections(
     std::function<size_t(Connection connections[], size_t count)>
         connection_trafo)
 {
-	static const Header HEADER = {
-	    {"pid_src", "pid_tar", "nid_src", "nid_tar", "weight", "delay"},
-	    {INT, INT, INT, INT, FLOAT, FLOAT}};
-
 	// Vector containing all connection objects
 	std::vector<Connection> connections = instantiate_connections(descrs);
 
 	// Transform the connections
 	connections.resize(connection_trafo(&connections[0], connections.size()));
 
-	serialise(os, "connections", HEADER,
+	serialise(os, "connections", CONNECTIONS_HEADER,
 	          reinterpret_cast<Number *>(&connections[0]), connections.size());
 }
 
 static void write_spike_source_array(const PopulationBase &population,
                                      std::ostream &os)
 {
-	static const Header TARGET_HEADER = {{"pid", "nid"}, {INT, INT}};
-	static const Header SPIKE_TIMES_HEADER = {{"times"}, {FLOAT}};
-
 	for (size_t i = 0; i < population.size(); i++) {
 		const auto &params = population[i].parameters();
 		Matrix<Number> mat(1, 2);
@@ -137,8 +138,6 @@ static void write_spike_source_array(const PopulationBase &population,
 static void write_uniform_parameters(const PopulationBase &population,
                                      std::ostream &os)
 {
-	static const int32_t ALL_NEURONS = std::numeric_limits<int32_t>::max();
-
 	// Assemble the parameter header
 	Header header = {{"pid", "nid"}, {INT, INT}};
 	for (const auto &name : population.type().parameter_names) {

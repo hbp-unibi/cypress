@@ -27,6 +27,15 @@ namespace cypress {
  * Method instantiate_connections
  */
 
+
+// Connection which is greater than all other possible valid connections,
+// but smaller than the smallest invalid connection
+static const Connection LAST_VALID(
+    std::numeric_limits<PopulationIndex>::max(),
+    std::numeric_limits<PopulationIndex>::max(),
+    std::numeric_limits<NeuronIndex>::max(),
+    std::numeric_limits<NeuronIndex>::max(), 1.0, 0.0);
+
 std::vector<Connection> instantiate_connections(
     const std::vector<ConnectionDescriptor> &descrs)
 {
@@ -38,14 +47,6 @@ std::vector<Connection> instantiate_connections(
 
 	// Sort the generated connections
 	std::sort(res.begin(), res.end());
-
-	// Connection which is greater than all other possible valid connections,
-	// but smaller than the smallest invalid connection
-	static const Connection LAST_VALID(
-	    std::numeric_limits<PopulationIndex>::max(),
-	    std::numeric_limits<PopulationIndex>::max(),
-	    std::numeric_limits<NeuronIndex>::max(),
-	    std::numeric_limits<NeuronIndex>::max(), 1.0, 0.0);
 
 	// Resize the connection list to end at the first invalid connection
 	auto it = std::upper_bound(res.begin(), res.end(), LAST_VALID);

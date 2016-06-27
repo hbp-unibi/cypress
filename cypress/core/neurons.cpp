@@ -31,7 +31,7 @@ SpikeSourceArray::SpikeSourceArray()
 
 const SpikeSourceArray &SpikeSourceArray::inst()
 {
-	static SpikeSourceArray inst;
+	static const SpikeSourceArray inst;
 	return inst;
 }
 
@@ -69,7 +69,7 @@ IfFacetsHardware1::IfFacetsHardware1()
 
 const IfFacetsHardware1 &IfFacetsHardware1::inst()
 {
-	static IfFacetsHardware1 inst;
+	static const IfFacetsHardware1 inst;
 	return inst;
 }
 
@@ -91,7 +91,7 @@ IfCondExp::IfCondExp()
 
 const IfCondExp &IfCondExp::inst()
 {
-	static IfCondExp inst;
+	static const IfCondExp inst;
 	return inst;
 }
 
@@ -115,7 +115,7 @@ EifCondExpIsfaIsta::EifCondExpIsfaIsta()
 
 const EifCondExpIsfaIsta &EifCondExpIsfaIsta::inst()
 {
-	static EifCondExpIsfaIsta inst;
+	static const EifCondExpIsfaIsta inst;
 	return inst;
 }
 }
