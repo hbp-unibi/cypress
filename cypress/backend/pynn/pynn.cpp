@@ -133,6 +133,7 @@ static const std::unordered_map<std::string, Json> DEFAULT_SETUPS = {
  */
 class PyNNUtil {
 private:
+	std::mutex util_mutex;
 	std::unordered_map<std::string, std::unique_ptr<std::shared_future<bool>>>
 	    m_import_map;
 
@@ -171,6 +172,7 @@ public:
 	 */
 	std::vector<bool> has_imports(const std::vector<std::string> &imports)
 	{
+		std::lock_guard<std::mutex> lock(util_mutex);
 		std::vector<bool> res;
 		for (const std::string &import : imports) {
 			auto res = m_import_map.emplace(import, nullptr);
@@ -329,7 +331,7 @@ void PyNN::do_run(NetworkBase &source, float duration) const
 		std::vector<std::string> params(
 		    {Resources::PYNN_INTERFACE.open(), "dump"});
 #endif
-		Process proc("python", params);
+		Process proc("cat", {});
 
 // Attach the error log
 #ifndef CYPRESS_DEBUG_BINNF
