@@ -331,7 +331,7 @@ void PyNN::do_run(NetworkBase &source, float duration) const
 		std::vector<std::string> params(
 		    {Resources::PYNN_INTERFACE.open(), "dump"});
 #endif
-		Process proc("cat", {});
+		Process proc("python", {});
 
 // Attach the error log
 #ifndef CYPRESS_DEBUG_BINNF
