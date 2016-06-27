@@ -98,8 +98,9 @@ public:
 	    : m_do_redirect(do_redirect)
 	{
 		// Setup the stdin, stdout, stderr pipes
-		if (pipe(m_child_stdout_pipe) != 0 || pipe(m_child_stderr_pipe) != 0 ||
-		    pipe(m_child_stdin_pipe) != 0) {
+		if (pipe2(m_child_stdout_pipe, O_CLOEXEC) != 0 ||
+		    pipe2(m_child_stderr_pipe, O_CLOEXEC) != 0 ||
+		    pipe2(m_child_stdin_pipe, O_CLOEXEC) != 0) {
 			throw std::runtime_error(
 			    "Cannot launch subprocess, error while creating communication "
 			    "pipes");
