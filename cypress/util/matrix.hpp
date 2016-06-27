@@ -32,6 +32,7 @@
 #include <algorithm>
 #include <memory>
 #include <ostream>
+#include <vector>
 #ifndef NDEBUG
 #include <sstream>
 #include <stdexcept>
