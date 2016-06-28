@@ -70,7 +70,7 @@ std::string tmpfile(std::string &path)
 		"abcdefghijklmnopqrstuvwxyz";
 
 	std::default_random_engine rng(std::random_device{}());
-	std::uniform_int_distribution<> dist(0, sizeof(ALPHANUM) - 1);
+	std::uniform_int_distribution<> dist(0, sizeof(ALPHANUM) - 2);
 
 	for (ssize_t i = path.size() - 1; i >= 0; i--) {
 		if (path[i] == 'X') {
