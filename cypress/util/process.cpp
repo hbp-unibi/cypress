@@ -98,9 +98,9 @@ public:
 	    : m_do_redirect(do_redirect)
 	{
 		// Setup the stdin, stdout, stderr pipes
-		if (pipe2(m_child_stdout_pipe, O_CLOEXEC) != 0 ||
-		    pipe2(m_child_stderr_pipe, O_CLOEXEC) != 0 ||
-		    pipe2(m_child_stdin_pipe, O_CLOEXEC) != 0) {
+		if (m_do_redirect && (pipe2(m_child_stdout_pipe, O_CLOEXEC) != 0 ||
+		                      pipe2(m_child_stderr_pipe, O_CLOEXEC) != 0 ||
+		                      pipe2(m_child_stdin_pipe, O_CLOEXEC) != 0)) {
 			throw std::runtime_error(
 			    "Cannot launch subprocess, error while creating communication "
 			    "pipes");
@@ -108,15 +108,8 @@ public:
 
 		m_pid = fork();  // Split the current process into two
 		if (m_pid == 0) {
+			// This is the child process -- redirect the child I/O to the pipe
 			if (m_do_redirect) {
-				// This is the child process -- close the corresponding ends of
-				// the
-				// pipe
-				close(m_child_stdout_pipe[0]);
-				close(m_child_stderr_pipe[0]);
-				close(m_child_stdin_pipe[1]);
-
-				// Connect stdout/stderr/stderr to the other end of the pipe
 				dup2(m_child_stdout_pipe[1], STDOUT_FILENO);
 				dup2(m_child_stderr_pipe[1], STDERR_FILENO);
 				dup2(m_child_stdin_pipe[0], STDIN_FILENO);
@@ -145,9 +138,9 @@ public:
 				close(m_child_stdin_pipe[0]);
 			}
 			else {
-				m_child_stdout_pipe[0] = STDOUT_FILENO;
-				m_child_stderr_pipe[0] = STDERR_FILENO;
-				m_child_stdin_pipe[1] = STDIN_FILENO;
+				m_child_stdout_pipe[0] = dup(STDOUT_FILENO);
+				m_child_stderr_pipe[0] = dup(STDERR_FILENO);
+				m_child_stdin_pipe[1] = dup(STDIN_FILENO);
 			}
 
 			// Create the file buffer object
@@ -185,7 +178,8 @@ public:
 	void close_child_stdin()
 	{
 		m_child_stdin->flush();
-		close(m_child_stdin_pipe[1]);
+		m_child_stdin = nullptr;
+		m_child_stdin_filebuf = nullptr;
 	}
 
 	bool running() { return update_status(false); }

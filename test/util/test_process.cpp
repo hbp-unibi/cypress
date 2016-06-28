@@ -104,5 +104,36 @@ TEST(process, signal)
 	EXPECT_FALSE(proc.running());
 	EXPECT_EQ(-9, proc.exitcode());
 }
+
+TEST(process, parallel)
+{
+	// This test must not deadlock
+	std::vector<std::thread> threads;
+	for (size_t i = 0; i < 64; i++) {
+		threads.emplace_back([i] {
+			const std::string s  ="Hello World " + std::to_string(i);
+			Process proc("cat", {});
+
+			proc.child_stdin() << s;
+			proc.close_child_stdin();
+
+			std::stringstream ss;
+			auto &is = proc.child_stdout();
+			while (is.good()) {
+				char c;
+				is.read(&c, 1);
+				if (is.gcount() == 1) {
+					ss << c;
+				}
+			}
+
+			EXPECT_EQ(0, proc.wait());
+			EXPECT_EQ(s, ss.str());
+		});
+	}
+	for (auto &thread : threads) {
+		thread.join();
+	}
+}
 }
 
