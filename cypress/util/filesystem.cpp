@@ -75,6 +75,8 @@ std::string tmpfile(std::string &path)
 	for (ssize_t i = path.size() - 1; i >= 0; i--) {
 		if (path[i] == 'X') {
 			path[i] = ALPHANUM[dist(rng)];
+		} else {
+			break;
 		}
 	}
 	return path;
