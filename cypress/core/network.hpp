@@ -83,14 +83,10 @@ public:
 
 	/**
 	 * Creates a population as a handle pointing at an already existing
-	 * population with the given population index.
-	 *
-	 * @param network is the network in which the population is located.
-	 * @arapm pid is the population index of the already existing population
-	 * in the referenced network.
+	 * population object.
 	 */
-	Population(const NetworkBase &network, PopulationIndex pid)
-	    : m_population(network, pid)
+	explicit Population(const PopulationBase &population)
+	    : m_population(population)
 	{
 	}
 
@@ -271,6 +267,18 @@ public:
 	using ViewableMixin_::operator();
 
 	/**
+	 * Creates a Neuron object pointing at the neuron specified by the given
+	 * NeuronBase instance.
+	 *
+	 * @param neuron is the NeuronBase instance from which this neuron instance
+	 * should be initialized.
+	 */
+	explicit Neuron(const NeuronBase &neuron)
+	    : m_neuron(neuron)
+	{
+	}
+
+	/**
 	 * Creates a Neuron object pointing at the nid-th neuron in the given
 	 * neuron population.
 	 *
@@ -389,7 +397,7 @@ public:
 	{
 		std::vector<Population<T>> res;
 		for (const PopulationBase &p : populations(name, T::inst())) {
-			res.emplace_back(*this, p.pid());
+			res.emplace_back(PopulationBase(*this, p.pid()));
 		}
 		return res;
 	}
@@ -493,8 +501,8 @@ inline Population<T>::Population(Network &network, size_t size,
                                  const typename T::Parameters &params,
                                  const typename T::Signals &signals,
                                  const char *name)
-    : Population(network, network.create_population_index<T>(size, params,
-                                                             signals, name))
+    : Population(PopulationBase(network, network.create_population_index<T>(
+                                             size, params, signals, name)))
 {
 }
 
