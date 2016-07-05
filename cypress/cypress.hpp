@@ -39,8 +39,6 @@
 #include <cypress/core/network.hpp>
 #include <cypress/core/neurons.hpp>
 #include <cypress/core/types.hpp>
-#include <cypress/util/matrix.hpp>
-#include <cypress/util/process.hpp>
 
 #endif /* CYPRESS_HPP */
 
