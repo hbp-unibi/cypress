@@ -58,15 +58,16 @@
 /**
  * Macro used for defining a named signal associated with a named signal.
  */
-#define NAMED_SIGNAL(NAME, IDX)                              \
-	static constexpr size_t idx_##NAME = IDX;                \
-	auto &record_##NAME(bool x = true)                       \
-	{                                                        \
-		record(IDX, x);                                      \
-		return *this;                                        \
-	}                                                        \
-	bool is_recording_##NAME() { return is_recording(IDX); } \
-	auto get_##NAME() { return data(IDX); }
+#define NAMED_SIGNAL(NAME, IDX)                                    \
+	static constexpr size_t idx_##NAME = IDX;                      \
+	auto &record_##NAME(bool x = true)                             \
+	{                                                              \
+		record(IDX, x);                                            \
+		return *this;                                              \
+	}                                                              \
+	bool is_recording_##NAME() const { return is_recording(IDX); } \
+	auto get_##NAME() { return data(IDX); }                        \
+	auto get_##NAME() const { return data(IDX); }
 
 namespace cypress {
 /*

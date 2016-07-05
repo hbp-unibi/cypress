@@ -361,10 +361,10 @@ public:
 	 * @param i is the signal index for which the data should be returned.
 	 * @return a reference at the data matrix.
 	 */
-	const Matrix<float>& data(size_t i)
+	const Matrix<float>& data(size_t i) const
 	{
 		static Matrix<float> empty;
-		auto res = read_data()[i];
+		auto res = const_cast<NeuronSignals*>(this)->read_data()[i];
 		if (!res) {
 			if (!is_recording(i)) {
 				throw SignalNotRecordedException();
