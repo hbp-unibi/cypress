@@ -30,6 +30,3 @@ target_link_libraries(measure_tuning_curves cypress)
 add_executable(inhibitory_synapses inhibitory_synapses)
 target_link_libraries(inhibitory_synapses cypress)
 
-add_executable(hopfield hopfield)
-target_link_libraries(hopfield cypress)
-

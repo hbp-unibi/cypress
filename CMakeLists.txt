@@ -85,6 +85,8 @@ add_library(cypress
 	cypress/backend/resources
 	cypress/backend/binnf/binnf
 	cypress/backend/binnf/marshaller
+	cypress/backend/nest/nest
+	cypress/backend/nest/sli
 	cypress/backend/nmpi/nmpi
 	cypress/backend/pynn/pynn
 	cypress/backend/pynn/transformation
