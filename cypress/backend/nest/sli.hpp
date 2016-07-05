@@ -17,30 +17,36 @@
  */
 
 /**
- * @file cypress.hpp
+ * @file sli.hpp
  *
- * Main header of cypress which includes all important headers from the
- * subfolders of the project.
+ * Contains some functions to turn a network description into a NEST SLI
+ * program and to parse the program response.
  *
  * @author Andreas Stöckel
  */
 
-#pragma once
-#ifndef CYPRESS_HPP
-#define CYPRESS_HPP
+#ifndef CYPRESS_BACKEND_SLI_HPP
+#define CYPRESS_BACKEND_SLI_HPP
 
-#include <cypress/backend/binnf/binnf.hpp>
-#include <cypress/backend/nest/nest.hpp>
-#include <cypress/backend/nmpi/nmpi.hpp>
-#include <cypress/backend/pynn/pynn.hpp>
-#include <cypress/backend/resources.hpp>
-#include <cypress/core/backend.hpp>
-#include <cypress/core/connector.hpp>
-#include <cypress/core/network.hpp>
-#include <cypress/core/neurons.hpp>
-#include <cypress/core/types.hpp>
-#include <cypress/util/matrix.hpp>
+#include <iosfwd>
+
+#include <cypress/core/network_base.hpp>
+
 #include <cypress/util/process.hpp>
 
-#endif /* CYPRESS_HPP */
+namespace cypress {
+namespace sli {
+/**
+ * Turns the given network into an SLI program and writes it into the given
+ * output stream.
+ */
+void write_network(std::ostream &os, const NetworkBase &net, float duration);
 
+/**
+ * Reads the response of the previously written SLI program.
+ */
+void read_response(std::istream &is, NetworkBase &net);
+}
+}
+
+#endif /* CYPRESS_BACKEND_SLI_HPP */
