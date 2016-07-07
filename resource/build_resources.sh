@@ -64,10 +64,10 @@ function build_resource {
 }
 
 # Download the hbp_neuromorphic_platform python package if it does not exist yet
-if [ ! -f "$DIR/backend/nmpi/lib/nmpi/nmpi_user.py" ]; then
+if [ ! -f "$OUT_DIR/nmpi/lib/nmpi_user.py" ]; then
 	echo "Downloading current version of the hbp_neuromorphic_platform package"
-	mkdir -p "$DIR/backend/nmpi/lib"
-	pip install -t "$DIR/backend/nmpi/lib" hbp_neuromorphic_platform
+        mkdir -p "$OUT_DIR/nmpi/lib"
+	wget https://raw.githubusercontent.com/HumanBrainProject/hbp-neuromorphic-client/master/nmpi/nmpi_user.py -O "$OUT_DIR/nmpi/lib/nmpi_user.py"
 	echo "Done."
 fi
 
@@ -85,6 +85,6 @@ build_resource PYNN_BINNF_LOOPBACK "$OUT_DIR/pynn/pynn_binnf_loopback.hpp" \
 
 # Build the NMPI Python code into a resource
 build_resource NMPI_BROKER "$OUT_DIR/nmpi/nmpi_broker.hpp" \
-	"$DIR/backend/nmpi/lib/nmpi/nmpi_user.py" \
+	"$OUT_DIR/nmpi/lib/nmpi_user.py" \
 	"$DIR/backend/nmpi/broker.py"
 
