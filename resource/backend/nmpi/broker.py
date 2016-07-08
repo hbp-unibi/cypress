@@ -252,8 +252,8 @@ while True:
         logger.info(
             "Created job with ID " +
             str(job_id) +
-            ", you can go to https://nmpi.hbpneuromorphic.eu/app/#/queue/" +
-            + str(job_id)
+            ", you can go to https://nmpi.hbpneuromorphic.eu/app/#/queue/"
+            + str(job_id) +
             " to retrieve the job results")
     except:
 #        if token is not None:
