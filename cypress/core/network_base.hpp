@@ -164,10 +164,10 @@ protected:
 	 * population.
 	 * @param name is the name of the population.
 	 */
-	PopulationIndex create_population_index(
-	    size_t size, const NeuronType &type,
-	    const NeuronParameters &params,
-	    const NeuronSignals &signals, const std::string &name);
+	PopulationIndex create_population_index(size_t size, const NeuronType &type,
+	                                        const NeuronParameters &params,
+	                                        const NeuronSignals &signals,
+	                                        const std::string &name);
 
 public:
 	/**
@@ -269,6 +269,26 @@ public:
 	const std::vector<ConnectionDescriptor> &connections() const;
 
 	/**
+	 * Returns the backend instance for the given backend string. The backend
+	 * string may be one of the following:
+	 *
+	 * - nest: executes the network using the native nest backend
+	 * - pynn.*: executes the network using the given PyNN backend
+	 * - nmpi.*: executes the network using NMPI and the given PyNN backend.
+	 * - nmpi.pynn.*: same as above.
+	 *
+	 * @param backend_id is the id of the backend that should be created.
+	 * @param argc is the number of command line arguments. Needed when the NMPI
+	 * backend should be used.
+	 * @param argv is the array containing the command line arguments. Needed
+	 * when the NMPI backend should be used.
+	 * @return a pointer at a new backend instance.
+	 */
+	static std::unique_ptr<Backend> make_backend(const std::string &backend_id,
+	                                             int argc = 0,
+	                                             const char *argv[] = nullptr);
+
+	/**
 	 * Executes the network on the given backend and stores the results in the
 	 * population objects. This function is simply a wrapper for Backend.run().
 	 * If there is an error during execution, the run function will throw a
@@ -278,9 +298,26 @@ public:
 	 * be executed on.
 	 * @param duration is the simulation-time. If a value smaller or equal to
 	 * zero is given, the simulation time is automatically chosen.
-	 * @return a reference at this Network instance for simple method chaining.
 	 */
 	void run(const Backend &backend, float duration = 0.0);
+
+	/**
+	 * Executes the network on the given backend and stores the results in the
+	 * population objects. This function is simply a wrapper for Backend.run().
+	 * If there is an error during execution, the run function will throw a
+	 * exception.
+	 *
+	 * @param backend_id is a string describing the backend instance. See
+	 * make_backend() for more information on available backend strings.
+	 * @param argc is the number of command line arguments. Needed when the NMPI
+	 * backend should be used.
+	 * @param argv is the array containing the command line arguments. Needed
+	 * when the NMPI backend should be used.
+	 * @param duration is the simulation-time. If a value smaller or equal to
+	 * zero is given, the simulation time is automatically chosen.
+	 */
+	void run(const std::string &backend_id, float duration = 0.0, int argc = 0,
+	         const char *argv[] = nullptr);
 
 	/**
 	 * Returns the duration of the network. The duration is defined as the
@@ -303,4 +340,4 @@ public:
 };
 }
 
-#endif /* CYPRESS_CORE_NETWORK_BASE_HPP */	
+#endif /* CYPRESS_CORE_NETWORK_BASE_HPP */

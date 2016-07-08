@@ -273,10 +273,7 @@ public:
 	 * @param neuron is the NeuronBase instance from which this neuron instance
 	 * should be initialized.
 	 */
-	explicit Neuron(const NeuronBase &neuron)
-	    : m_neuron(neuron)
-	{
-	}
+	explicit Neuron(const NeuronBase &neuron) : m_neuron(neuron) {}
 
 	/**
 	 * Creates a Neuron object pointing at the nid-th neuron in the given
@@ -485,9 +482,49 @@ public:
 		return *this;
 	}
 
+	/**
+	 * Executes the network on the given backend and stores the results in the
+	 * population objects. This function is simply a wrapper for Backend.run().
+	 * If there is an error during execution, the run function will throw a
+	 * exception.
+	 *
+	 * @param backend is a reference at the backend instance the network should
+	 * be executed on.
+	 * @param duration is the simulation-time. If a value smaller or equal to
+	 * zero is given, the simulation time is automatically chosen.
+	 * @return a reference at this network for method chaining.
+	 */
 	Network &run(const Backend &backend, float duration = 0.0)
 	{
 		NetworkBase::run(backend, duration);
+		return *this;
+	}
+
+	/**
+	 * Executes the network on the given backend and stores the results in the
+	 * population objects. This function is simply a wrapper for Backend.run().
+	 * If there is an error during execution, the run function will throw a
+	 * exception. The backend string may be one of the following:
+	 *
+	 * - nest: executes the network using the native nest backend
+	 * - pynn.*: executes the network using the given PyNN backend
+	 * - nmpi.*: executes the network using NMPI and the given PyNN backend.
+	 * - nmpi.pynn.*: same as above.
+	 *
+	 * @param backend_id is a string describing the backend instance. See
+	 * make_backend() for more information on available backend strings.
+	 * @param argc is the number of command line arguments. Needed when the NMPI
+	 * backend should be used.
+	 * @param argv is the array containing the command line arguments. Needed
+	 * when the NMPI backend should be used.
+	 * @param duration is the simulation-time. If a value smaller or equal to
+	 * zero is given, the simulation time is automatically chosen.
+	 * @return a reference at this network for method chaining.
+	 */
+	Network &run(const std::string &backend_id, float duration = 0.0,
+	             int argc = 0, const char *argv[] = nullptr)
+	{
+		NetworkBase::run(backend_id, duration, argc, argv);
 		return *this;
 	}
 };

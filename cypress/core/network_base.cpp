@@ -25,6 +25,10 @@
 #include <cypress/core/network_base.hpp>
 #include <cypress/core/network_base_objects.hpp>
 
+#include <cypress/backend/nest/nest.hpp>
+#include <cypress/backend/nmpi/nmpi.hpp>
+#include <cypress/backend/pynn/pynn.hpp>
+
 namespace cypress {
 namespace internal {
 /**
@@ -172,8 +176,7 @@ PopulationIndex NetworkBase::create_population_index(
     const NeuronSignals &signals, const std::string &name)
 {
 	// Create a new population data store
-	auto data = std::make_shared<PopulationData>(
-	    size, &type, name);
+	auto data = std::make_shared<PopulationData>(size, &type, name);
 
 	// Copy the given parameters to the new population
 	NeuronParameters(data, 0, size) = params;
@@ -192,7 +195,7 @@ size_t NetworkBase::population_count() const
 size_t NetworkBase::neuron_count() const
 {
 	size_t res = 0;
-	for (const auto &pop: m_impl->populations()) {
+	for (const auto &pop : m_impl->populations()) {
 		res += pop->size();
 	}
 	return res;
@@ -246,9 +249,89 @@ const std::vector<ConnectionDescriptor> &NetworkBase::connections() const
 	return m_impl->connections();
 }
 
+static std::vector<std::string> split(const std::string &s, char delim)
+{
+	std::vector<std::string> elems;
+	std::stringstream ss(s);
+	std::string elem;
+	while (getline(ss, elem, delim)) {
+		elems.push_back(elem);
+	}
+	return elems;
+}
+
+static std::string join(const std::vector<std::string> &elems, char delim)
+{
+	bool first = true;
+	std::stringstream ss;
+	for (const std::string &elem : elems) {
+		if (!first) {
+			ss << delim;
+		}
+		first = false;
+		ss << elem;
+	}
+	return ss.str();
+}
+
+std::unique_ptr<Backend> NetworkBase::make_backend(
+    const std::string &backend_id, int argc, const char *argv[])
+{
+	std::vector<std::string> elems = split(backend_id, '.');
+
+	// Make sure the backend identifier is not empty
+	if (elems.empty()) {
+		throw std::invalid_argument("Backend ID must not be empty!");
+	}
+
+	// Forward calls starting with "nmpi" to the NMPI platform
+	if (elems[0] == "nmpi") {
+		if (argc <= 0 || !argv) {
+			throw std::invalid_argument(
+			    "Command line arguments were not passed to run(), but these "
+			    "are required for the NMPI backend!");
+		}
+		elems.erase(elems.begin());  // Remove the first element
+		if (elems.empty()) {
+			throw std::invalid_argument(
+			    "Expected another backend name following \"nmpi\"!");
+		}
+		auto backend = std::move(make_backend(join(elems, '.')));
+		if (dynamic_cast<PyNN *>(backend.get()) == nullptr) {
+			throw std::invalid_argument(
+			    "NMPI backend only works in conjunction with PyNN backends!");
+		}
+		std::unique_ptr<PyNN> pynn_backend(dynamic_cast<PyNN *>(backend.get()));
+		backend.release();
+		return std::move(
+		    std::make_unique<NMPI>(std::move(pynn_backend), argc, argv));
+	}
+	else if (elems[0] == "pynn") {
+		elems.erase(elems.begin());  // Remove the first element
+		if (elems.empty()) {
+			throw std::invalid_argument(
+			    "Expected another backend name following \"pynn\"!");
+		}
+		return std::make_unique<PyNN>(join(elems, '.'));
+	}
+	else if (elems[0] == "nest") {
+		return std::move(std::make_unique<NEST>());
+	}
+	else {
+		return std::move(std::make_unique<PyNN>(join(elems, '.')));
+	}
+	return nullptr;
+}
+
 void NetworkBase::run(const Backend &backend, float duration)
 {
 	backend.run(*this, duration);
+}
+
+void NetworkBase::run(const std::string &backend_id, float duration, int argc,
+                      const char *argv[])
+{
+	make_backend(backend_id, argc, argv)->run(*this, duration);
 }
 
 float NetworkBase::duration() const
@@ -270,10 +353,7 @@ float NetworkBase::duration() const
 	return res;
 }
 
-NetworkRuntime NetworkBase::runtime() const
-{
-	return m_impl->m_runtime;
-}
+NetworkRuntime NetworkBase::runtime() const { return m_impl->m_runtime; }
 
 void NetworkBase::runtime(const NetworkRuntime &runtime)
 {
