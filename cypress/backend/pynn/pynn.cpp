@@ -304,7 +304,8 @@ void PyNN::do_run(NetworkBase &source, float duration) const
 	if (import.empty()) {
 		std::stringstream ss;
 		ss << "The simulator \"" << m_simulator << "\" with canonical name \""
-		   << m_normalised_simulator << "\" was not found on this system. The "
+		   << m_normalised_simulator << "\" was not found on this system or an "
+		                                "error occured during the import. The "
 		                                "following imports were tried: ";
 		for (size_t i = 0; i < m_imports.size(); i++) {
 			if (i > 0) {
