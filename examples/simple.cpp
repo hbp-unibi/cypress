@@ -40,11 +40,7 @@ int main(int argc, const char *argv[])
 	            SpikeSourceArraySignals().record_spikes())
 	        .add_population<IfCondExp>("neuron", 4,
 	                                   IfCondExpParameters().v_rest(-60.0),
-	                                   IfCondExpSignals()
-	                                       .record_spikes()/*
-	                                       .record_v()
-	                                       .record_gsyn_exc()
-	                                       .record_gsyn_inh()*/)
+	                                   IfCondExpSignals().record_spikes())
 	        .add_connection("source", "neuron", Connector::one_to_one(0.16))
 	        .run(argv[1], 0.0, argc, argv);
 
