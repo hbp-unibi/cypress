@@ -248,11 +248,12 @@ while True:
             source=script,
             platform=args.platform,
             collab_id=config["collab_id"])
+        job_id = str(job_id).split("/")[-1]
         logger.info(
             "Created job with ID " +
             str(job_id) +
             ", you can go to https://nmpi.hbpneuromorphic.eu/app/#/queue/" +
-            str(job_id) +
+            + str(job_id)
             " to retrieve the job results")
     except:
 #        if token is not None:
