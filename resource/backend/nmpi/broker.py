@@ -302,6 +302,18 @@ for dataitem in datalist:
         logger.info("Done!")
         break
 
+# Output both stdout and stderr
+if os.path.isfile(tmpdir + ".stderr") and os.stat(tmpdir + ".stderr").st_size > 0:
+    logger.info("Response stderr (" + tmpdir + ".stderr)")
+    with open(tmpdir + ".stderr") as f:
+        for s in f:
+            sys.stderr.write(s)
+if os.path.isfile(tmpdir + ".stdout") and os.stat(tmpdir + ".stdout").st_size > 0:
+    logger.info("Response stdout (" + tmpdir + ".stdout)")
+    with open(tmpdir + ".stdout") as f:
+        for s in f:
+            sys.stdout.write(s)
+
 # Exit with the correct status
 sys.exit(0 if status == "finished" else 1)
 
