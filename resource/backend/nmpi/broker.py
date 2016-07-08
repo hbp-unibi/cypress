@@ -297,8 +297,10 @@ for dataitem in datalist:
         # Move the content from the temporary directory to the top-level
         # directory, remove the temporary directory
         for filename in os.listdir(tmpdir):
-            shutil.move(os.path.join(tmpdir, filename), filename)
-        os.rmdir(tmpdir)
+            dest = os.path.join(os.getcwd(), filename)
+            if not os.path.isdir(dest):
+                shutil.copy(os.path.join(tmpdir, filename), os.path.join(os.getcwd(),filename))
+        shutil.rmtree(tmpdir)
 
         logger.info("Done!")
         break
