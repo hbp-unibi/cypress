@@ -199,7 +199,7 @@ public:
 	/**
 	 * Returns the type of the neuron.
 	 */
-	const NeuronType &type() const;
+	const NeuronType &type() const { return m_network[m_pid].type(); }
 
 	/**
 	 * Returns a reference at the network instance the neuron is part of.

@@ -222,7 +222,17 @@ PopulationBase NetworkBase::population(PopulationIndex pid)
 	return PopulationBase(m_impl, pid);
 }
 
+const PopulationBase NetworkBase::population(PopulationIndex pid) const
+{
+	return PopulationBase(m_impl, pid);
+}
+
 PopulationBase NetworkBase::operator[](PopulationIndex pid)
+{
+	return population(pid);
+}
+
+const PopulationBase NetworkBase::operator[](PopulationIndex pid) const
 {
 	return population(pid);
 }

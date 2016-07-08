@@ -220,7 +220,11 @@ public:
 	 */
 	PopulationBase population(PopulationIndex pid);
 
+	const PopulationBase population(PopulationIndex pid) const;
+
 	PopulationBase operator[](PopulationIndex pid);
+
+	const PopulationBase operator[](PopulationIndex pid) const;
 
 	/**
 	 * Returns a list of populations available in the network, filtered by the
