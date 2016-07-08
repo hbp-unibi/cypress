@@ -239,16 +239,34 @@ bool marshall_response(NetworkBase &net, std::istream &is)
 			if (block.matrix.cols() != 1 || block.colidx("times") != 0) {
 				throw BinnfDecodeException("Invalid spike_times column count");
 			}
-			auto pop = net[tar_pid];
-			auto idx = pop.type().signal_index("spikes");
-			if (idx.valid() && pop.signals().is_recording(idx.value())) {
-				pop[tar_nid].signals().data(
+			auto neuron = net[tar_pid][tar_nid];
+			auto idx = neuron.type().signal_index("spike_times");
+			if (idx.valid() && neuron.signals().is_recording(idx.value())) {
+				neuron.signals().data(
 				    idx.value(),
 				    std::make_shared<Matrix<float>>(
 				        block.matrix.rows(), 1,
 				        reinterpret_cast<float *>(block.matrix.begin())));
 			}
 			has_target = false;
+		}
+		else if (block.name.size() > 6 && block.name.substr(0, 6) == "trace_") {
+			if (!has_target) {
+				throw BinnfDecodeException("No target neuron set");
+			}
+			if (block.matrix.cols() != 2 || block.colidx("times") != 0 || block.colidx("values") != 1) {
+				throw BinnfDecodeException("Invalid trace data layout!");
+			}
+			const std::string signal = block.name.substr(6, block.name.size() - 6);
+			auto neuron = net[tar_pid][tar_nid];
+			auto idx = neuron.type().signal_index(signal);
+			if (idx.valid() && neuron.signals().is_recording(idx.value())) {
+				neuron.signals().data(
+					idx.value(),
+				    std::make_shared<Matrix<float>>(
+				        block.matrix.rows(), 2,
+				        reinterpret_cast<float *>(block.matrix.begin())));
+			}
 		}
 		else if (block.name == "runtimes") {
 			const size_t total_col = block.colidx("total");
