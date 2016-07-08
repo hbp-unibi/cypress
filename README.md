@@ -21,7 +21,7 @@ Furthermore Python in version 2.7 and `pip` must be installed, as well as the Py
 sudo pip install pyNN requests pyminifier
 ```
 
-In order to run network simulations you also need to install a PyNN simulator backend, for example NEST. See http://www.nest-simulator.org/ for information on how to install NEST.
+In order to run network simulations you also need to install NEST or PyNN with an appropriate simulator backend (for example sPyNNaker). See http://www.nest-simulator.org/ for information on how to install NEST.
 
 Note that for now building is only tested on Fedora 23 and Debian 8. Patches for other Linux distributions and other platforms are highly welcome.
 
@@ -55,7 +55,7 @@ int main(int argc, const char *argv[])
         .add_population<SpikeSourceArray>("source", 1, {100.0, 200.0, 300.0})
         .add_population<IfCondExp>("neuron", 4, {}, {"spikes"})
         .add_connection("source", "neuron", Connector::all_to_all(0.16))
-        .run(PyNN(argv[1]));
+        .run(argv[1]);
 
     // Print the results
     for (auto neuron: net.population<IfCondExp>("neuron")) {
@@ -70,10 +70,13 @@ You can compile this code using the following command line:
 ```bash
 g++ -std=c++14 cypress_test.cpp -o cypress_test -lcypress -lpthread
 ```
-Then run it with the NEST backing using
+Then run it with the native NEST backing using
 ```bash
 ./cypress_test nest
 ```
+Other backends include `pynn.X` where `X` is the name of a PyNN backend, or
+`nmpi.X` or `nmpi.pynn.X` where `X` is the name of a PyNN backend that should
+be executed on the NMPI platform.
 
 Features
 --------
