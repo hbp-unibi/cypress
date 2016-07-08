@@ -22,8 +22,13 @@
 using namespace cypress;
 using namespace cypress::nef;
 
-int main(int, char **)
+int main(int argc, const char *argv[])
 {
+	if (argc != 2 && !NMPI::check_args(argc, argv)) {
+		std::cout << "Usage: " << argv[0] << " <SIMULATOR>" << std::endl;
+		return 1;
+	}
+
 	// Some aliases to save keystrokes...
 	using Neuron = IfFacetsHardware1;
 	using Parameters = Neuron::Parameters;
@@ -85,8 +90,8 @@ int main(int, char **)
 		    return (tar % 2) == 1;
 		}, exc_bias_synaptic_weight));
 
-	// Run the network on spikey
-	net.run(PyNN("spikey"));
+	// Run the network
+	net.run(argv[1], 0.0, argc, argv);
 
 	// Evaluate the neurons, create a result matrix containing the tuning curve
 	// of each neuron in the population as column

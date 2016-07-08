@@ -40,7 +40,7 @@ int main(int argc, const char *argv[])
 		return 1;
 	}
 
-	using Neuron = IfFacetsHardware1;
+	using Neuron = IfCondExp;
 	using Signals = Neuron::Signals;
 
 	static const size_t n_src = 8;
@@ -48,8 +48,8 @@ int main(int argc, const char *argv[])
 	static const float exc_frequency = 10.0;   // Hz
 	static const float inh_frequency = 100.0;  // Hz
 	static const float runtime = 1.0e3;        // ms
-	static const float w_exc = 0.004;
-	static const float w_inh = -0.007;
+	static const float w_exc = 0.04;
+	static const float w_inh = -0.07;
 
 	// Create the network
 	Network net =
@@ -65,14 +65,14 @@ int main(int argc, const char *argv[])
 
 	// Connect the excitatory input to the target and run the simulation
 	net.add_connection("src_exc", "tar", Connector::all_to_all(w_exc));
-	net.run(PyNN(argv[1]), runtime);
+	net.run(argv[1], runtime, argc, argv);
 	std::cout << "Average firing rate without inhibitory synapses "
 	          << avg_fire_rate(net.population<Neuron>("tar"), runtime)
 	          << std::endl;
 
 	// Connect the inhibitory input to the target and run the simulation
 	net.add_connection("src_inh", "tar", Connector::all_to_all(w_inh));
-	net.run(PyNN(argv[1]), runtime);
+	net.run(argv[1], runtime, argc, argv);
 	std::cout << "Average firing rate with inhibitory synapses "
 	          << avg_fire_rate(net.population<Neuron>("tar"), runtime)
 	          << std::endl;

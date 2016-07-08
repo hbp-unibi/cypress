@@ -40,16 +40,19 @@ int main(int argc, const char *argv[])
 	            SpikeSourceArraySignals().record_spikes())
 	        .add_population<IfCondExp>("neuron", 4,
 	                                   IfCondExpParameters().v_rest(-60.0),
-	                                   IfCondExpSignals().record_spikes())
+	                                   IfCondExpSignals()
+	                                       .record_spikes()/*
+	                                       .record_v()
+	                                       .record_gsyn_exc()
+	                                       .record_gsyn_inh()*/)
 	        .add_connection("source", "neuron", Connector::one_to_one(0.16))
-	        .run(PyNN(argv[1]));
+	        .run(argv[1], 0.0, argc, argv);
 
 	// Print the runtimes
 	std::cout << "Runtime statistic: total " << net.runtime().total
-	          << "s, simulation " << net.runtime().sim
-	          << "s, initialization " << net.runtime().initialize
-	          << "s, finalization " << net.runtime().finalize << "s"
-	          << std::endl;
+	          << "s, simulation " << net.runtime().sim << "s, initialization "
+	          << net.runtime().initialize << "s, finalization "
+	          << net.runtime().finalize << "s" << std::endl;
 
 	// Print the spike times for each neuron
 	for (auto neuron : net.population<IfCondExp>("neuron")) {
