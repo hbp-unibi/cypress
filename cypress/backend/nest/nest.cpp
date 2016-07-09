@@ -84,13 +84,6 @@ public:
 static NESTUtil NEST_UTIL;
 }
 
-NEST::NEST()
-{
-	// Nothing to be done here
-}
-
-NEST::~NEST() = default;
-
 void NEST::do_run(NetworkBase &source, float duration) const
 {
 	if (!installed()) {

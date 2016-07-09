@@ -32,18 +32,25 @@
 
 #include <cypress/core/network_base.hpp>
 
-#include <cypress/util/process.hpp>
-
 namespace cypress {
 namespace sli {
 /**
  * Turns the given network into an SLI program and writes it into the given
  * output stream.
+ *
+ * @param os is the output stream to which the SLI script should be written.
+ * @param net is the network that should be turned into an SLI script.
+ * @param duration is the network simulation time in seconds.
  */
 void write_network(std::ostream &os, const NetworkBase &net, float duration);
 
 /**
  * Reads the response of the previously written SLI program.
+ *
+ * @param is is the input stream from which the response should be read. Note
+ * that the response must be produced by an SLI program previously produced by
+ * write_network().
+ * @param net is the network into which the response should be written.
  */
 void read_response(std::istream &is, NetworkBase &net);
 }

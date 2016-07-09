@@ -16,6 +16,16 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+/**
+ * @fíle nest.hpp
+ *
+ * Contains the native NEST backend for Cypress. Directly comminucates with a
+ * "nest" executable via stdin/stdout by sending an SLI script generated from
+ * the network description.
+ *
+ * @author Andreas Stöckel
+ */
+
 #pragma once
 
 #ifndef CYPRESS_BACKEND_NEST_HPP
@@ -30,7 +40,8 @@
 namespace cypress {
 /**
  * The NEST backend directly runs the simulation on the NEST simulator without
- * using PyNN. A recent version of NEST must be installed.
+ * using PyNN. A recent version of NEST must be installed and the "nest"
+ * executable must be available in the path.
  */
 class NEST : public Backend {
 private:
@@ -38,22 +49,12 @@ private:
 
 public:
 	/**
-	 * Exception thrown if the given PyNN backend is not found.
+	 * Exception thrown if the given NEST backend is not found.
 	 */
 	class NESTSimulatorNotFound : public std::runtime_error {
 	public:
 		using std::runtime_error::runtime_error;
 	};
-
-	/**
-	 * Constructor of the NEST backend. For now takes no parameters.
-	 */
-	NEST();
-
-	/**
-	 * Destructor of the PyNN class.
-	 */
-	~NEST() override;
 
 	/**
 	 * Returns true if NEST is installed.

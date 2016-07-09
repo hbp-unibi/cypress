@@ -31,6 +31,13 @@ namespace cypress {
 namespace sli {
 namespace {
 
+/**
+ * Converts two time stamps to a duration in seconds.
+ *
+ * @param t1 is the first time stamp.
+ * @param t2 is the second time stamp.
+ * @return the duration in seconds.
+ */
 template<typename T>
 float to_seconds(const T &t1, const T &t2) {
 	return std::chrono::duration<float>(t2 - t1).count();
