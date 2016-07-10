@@ -240,7 +240,7 @@ bool marshall_response(NetworkBase &net, std::istream &is)
 				throw BinnfDecodeException("Invalid spike_times column count");
 			}
 			auto neuron = net[tar_pid][tar_nid];
-			auto idx = neuron.type().signal_index("spike_times");
+			auto idx = neuron.type().signal_index("spikes");
 			if (idx.valid() && neuron.signals().is_recording(idx.value())) {
 				neuron.signals().data(
 				    idx.value(),
