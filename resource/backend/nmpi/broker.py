@@ -235,15 +235,15 @@ while True:
 
     time.sleep(0.1)
 
-    client = Client(username=config["username"], token=token)
-    config["token"] = client.token
-
-    # Save the configuration, including the current client token
-    with open(config_file, 'w') as fd:
-        json.dump(config, fd, indent=4)
-
     # Submit the job, if this fails, explicitly query the password
     try:
+        client = Client(username=config["username"], token=token)
+        config["token"] = client.token
+
+        # Save the configuration, including the current client token
+        with open(config_file, 'w') as fd:
+            json.dump(config, fd, indent=4)
+
         job_id = client.submit_job(
             source=script,
             platform=args.platform,
@@ -256,11 +256,11 @@ while True:
             + str(job_id) +
             " to retrieve the job results")
     except:
-#        if token is not None:
-#            token = None
-#            continue
-#        else:
-        raise
+        if token is not None:
+            token = None
+            continue
+        else:
+            raise
     break
 
 # Wait until the job has switched to either the "error" or the "finished" state
