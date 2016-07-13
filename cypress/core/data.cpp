@@ -275,15 +275,15 @@ PopulationDataView &PopulationDataView::operator=(
 	const size_t size = m_nid1 - m_nid0;
 	if (m_own_parameters && other.m_own_parameters) {
 		copy(other.m_data->parameters(), other.m_nid0, other.m_nid1,
-			 m_data->parameters(), m_nid0, m_nid1, size);
+		     m_data->parameters(), m_nid0, m_nid1, size);
 	}
 	if (m_own_record && other.m_own_record) {
-	copy(other.m_data->record(), other.m_nid0, other.m_nid1, m_data->record(),
-	     m_nid0, m_nid1, size);
+		copy(other.m_data->record(), other.m_nid0, other.m_nid1,
+		     m_data->record(), m_nid0, m_nid1, size);
 	}
 	if (m_own_data && other.m_own_data) {
 		copy(other.m_data->data(), other.m_nid0, other.m_nid1, m_data->data(),
-	     m_nid0, m_nid1, size);
+		     m_nid0, m_nid1, size);
 	}
 	return *this;
 }
