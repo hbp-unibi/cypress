@@ -886,4 +886,29 @@ TEST(network, non_recorded_data)
 	EXPECT_TRUE(pop.signals().get_spikes().empty());
 }
 
+TEST(network, neuron_parameters)
+{
+	IfCondExpParameters p1 = IfCondExpParameters().v_rest(-40.0f);
+	IfCondExpParameters p2 = p1;
+	IfCondExpParameters p3(p1);
+
+	ASSERT_EQ(-40.0f, p1.v_rest());
+	ASSERT_EQ(-40.0f, p2.v_rest());
+	ASSERT_EQ(-40.0f, p3.v_rest());
+
+	p1.v_rest(-50.0f);
+	ASSERT_EQ(-50.0f, p1.v_rest());
+	ASSERT_EQ(-40.0f, p2.v_rest());
+	ASSERT_EQ(-40.0f, p3.v_rest());
+
+	p2.v_rest(-60.0f);
+	ASSERT_EQ(-50.0f, p1.v_rest());
+	ASSERT_EQ(-60.0f, p2.v_rest());
+	ASSERT_EQ(-40.0f, p3.v_rest());
+
+	p3.v_rest(-70.0f);
+	ASSERT_EQ(-50.0f, p1.v_rest());
+	ASSERT_EQ(-60.0f, p2.v_rest());
+	ASSERT_EQ(-70.0f, p3.v_rest());
+}
 }
