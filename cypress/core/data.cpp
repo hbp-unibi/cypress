@@ -71,7 +71,8 @@ static IterableRange<typename T::iterator> write(T &data, NeuronIndex nid0,
 	// Check whether this is an homogeneous write access. In case the
 	// underlying population already is homogeneous or a non-partial write
 	// is performed, only the first storage element needs to be accessed.
-	if ((nid1 - nid0 == size) && (!partial || data.size() <= 1)) {
+	if ((nid1 - nid0 == std::max<ssize_t>(1, size)) &&
+	    (!partial || data.size() <= 1)) {
 		data.resize(1);
 		return make_iterable_range(data.begin(), data.begin() + 1);
 	}
@@ -79,7 +80,7 @@ static IterableRange<typename T::iterator> write(T &data, NeuronIndex nid0,
 	// If the data is currently homogeneous, heterogenise it
 	const size_t old_size = data.size();
 	if (old_size <= 1) {
-		data.resize(size);
+		data.resize(std::max<ssize_t>(1, size));
 		if (old_size == 1) {
 			std::fill(data.begin() + 1, data.end(), data[0]);
 		}

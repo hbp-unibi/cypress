@@ -153,7 +153,7 @@ public:
 	 * Constructor of the PopulationData class.
 	 */
 	PopulationData(
-	    size_t size = 0, NeuronType const *type = nullptr,
+	    size_t size = 1, NeuronType const *type = nullptr,
 	    const std::string &name = std::string(),
 	    const std::vector<ParameterType> &parameters =
 	        std::vector<ParameterType>(),
