@@ -208,7 +208,11 @@ class UniformFunctorConnector;
 template <typename RandomEngine>
 class FixedProbabilityConnector;
 
-class GaussianNoiseConnector;
+template <typename RandomEngine>
+class FixedFanInConnector;
+
+template <typename RandomEngine>
+class FixedFanOutConnector;
 
 /**
  * The abstract Connector class defines the basic interface used to construct
@@ -352,49 +356,58 @@ public:
 	                  size_t seed);
 
 	/**
-	 * Connector adapter which ensures connections are only produced with a
-	 * certain probability which is uniformly sampled.
+	 * Connector which randomly selects neurons from the source population and
+	 * ensures a fixed fan in (number of incomming connections) in each of the
+	 * target neurons.
 	 *
-	 * @param connector another connector that should be modified by this
-	 * connector.
-	 * @param p probability with which an connection is created.
-	 * @param engine is a shared pointer at the random number generator that
-	 * should be used.
+	 * @param n_fan_in is the fan in that should be ensured.
+	 * @param weight is the connection weight.
+	 * @param delay is the synaptic delay.
 	 */
-	template <typename RandomEngine>
-	static std::unique_ptr<FixedProbabilityConnector<RandomEngine>>
-	fixed_probability(std::unique_ptr<Connector> connector, float p,
-	                  std::shared_ptr<RandomEngine> engine);
+	static std::unique_ptr<FixedFanInConnector<std::default_random_engine>>
+	fixed_fan_in(size_t n_fan_in, float weight, float delay = 0.0);
 
 	/**
-	 * Connector adapter which ensures connections are only produced with a
-	 * certain probability which is uniformly sampled.
+	 * Connector which randomly selects neurons from the source population and
+	 * ensures a fixed fan in (number of incomming connections) in each of the
+	 * target neurons. Uses the given seed for the initialization of the random
+	 * engine.
 	 *
-	 * @param connector another connector that should be modified by this
-	 * connector.
-	 * @param p probability with which an connection is created.
+	 * @param n_fan_in is the fan in that should be ensured.
+	 * @param weight is the connection weight.
+	 * @param delay is the synaptic delay.
+	 * @param seed is the seed that should be used in order to initialize the
+	 * random engine.
 	 */
-	template <typename RandomEngine>
-	static std::unique_ptr<FixedProbabilityConnector<RandomEngine>>
-	fixed_probability(std::unique_ptr<Connector> connector, float p,
-	                  size_t seed);
+	static std::unique_ptr<FixedFanInConnector<std::default_random_engine>>
+	fixed_fan_in(size_t n_fan_in, float weight, float delay, size_t seed);
 
 	/**
-	 * Connector adapter which adds Gaussian noise to the synaptic parameters.
+	 * Connector which randomly selects neurons from the target population and
+	 * ensures a fixed fan out (number of outgoing connections) in each of the
+	 * source neurons.
 	 *
-	 * @param connector another connector that should be modified by this
-	 * connector.
-	 * @param stddev_weight is the weight standard deviation. Note that the
-	 * sign of the synaptic weight will not be modified (an excitatory synapse
-	 * will not suddenly become inhibitory), the weights are clamped to zero.
-	 * @param stddev_delay is the delay standard deviation. The result is
-	 * clamped to zero.
-	 * @param resurrect if true, also adds noise to zero-weight synapses,
-	 * effectively generating connections where none were before.
+	 * @param n_fan_in is the fan in that should be ensured.
+	 * @param weight is the connection weight.
+	 * @param delay is the synaptic delay.
 	 */
-	/*	static std::unique_ptr<GaussianNoiseConnector> gaussian_noise(
-	        std::unique_ptr<Connector> connector, float stddev_weight = 0.0,
-	        float stddev_delay = 0.0, bool resurrect = false);*/
+	static std::unique_ptr<FixedFanOutConnector<std::default_random_engine>>
+	fixed_fan_out(size_t n_fan_out, float weight, float delay = 0.0);
+
+	/**
+	 * Connector which randomly selects neurons from the target population and
+	 * ensures a fixed fan out (number of outgoing connections) in each of the
+	 * source neurons. Uses the given seed for the initialization of the random
+	 * engine.
+	 *
+	 * @param n_fan_out is the fan out that should be ensured.
+	 * @param weight is the connection weight.
+	 * @param delay is the synaptic delay.
+	 * @param seed is the seed that should be used in order to initialize the
+	 * random engine.
+	 */
+	static std::unique_ptr<FixedFanOutConnector<std::default_random_engine>>
+	fixed_fan_out(size_t n_fan_out, float weight, float delay, size_t seed);
 };
 
 /**
@@ -715,8 +728,8 @@ public:
 	void connect(const ConnectionDescriptor &descr,
 	             std::vector<Connection> &tar) const override
 	{
-		const size_t first = tar.size();
-		m_connector->connect(descr, tar);
+		const size_t first = tar.size();   // Old number of connections
+		m_connector->connect(descr, tar);  // Instantiate the connections
 		std::uniform_real_distribution<float> distr(0.0, 1.0);
 		for (size_t i = first; i < tar.size(); i++) {
 			if (distr(*m_engine) >= m_p) {
@@ -729,6 +742,139 @@ public:
 	{
 		return m_connector->valid(descr);
 	}
+};
+
+/**
+ * Base class for both the FixedFanInConnector and FixedFanOutConnector classes.
+ * Provides a protected member function for the generation of the random
+ * permutations of input/output neuron indices.
+ */
+template <typename RandomEngine>
+class FixedFanConnectorBase : public UniformConnector {
+private:
+	std::shared_ptr<RandomEngine> m_engine;
+
+protected:
+	template <typename F>
+	void generate_connections(size_t offs, size_t len, size_t subset_len,
+	                          size_t i0, size_t i1, const F &f) const
+	{
+		// Initialize a vector with the identity permutation
+		std::vector<size_t> perm(len);
+		for (size_t i = 0; i < len; i++) {
+			perm[i] = offs + i;
+		}
+
+		// Iterate over each target neuron, create a new permutation containing
+		// the source neuron indices and instantiate the connection
+		std::uniform_int_distribution<size_t> distr(0, perm.size() - 1);
+		for (size_t i = i0; i < i1; i++) {
+			// Generate a new permutation for the first subset_len elements
+			for (size_t j = 0; j < subset_len; j++) {
+				std::swap(perm[j], perm[distr(*m_engine)]);
+			}
+
+			// Create the connections
+			for (size_t j = 0; j < subset_len; j++) {
+				f(i, perm[j]);
+			}
+		}
+	}
+
+public:
+	FixedFanConnectorBase(float weight, float delay,
+	                      std::shared_ptr<RandomEngine> engine)
+	    : UniformConnector(weight, delay), m_engine(std::move(engine))
+	{
+	}
+};
+
+/**
+ * Connects each neuron in the target population with a fixed number of neurons
+ * in the source population.
+ */
+template <typename RandomEngine>
+class FixedFanInConnector : public FixedFanConnectorBase<RandomEngine> {
+private:
+	using Base = FixedFanConnectorBase<RandomEngine>;
+
+	size_t m_n_fan_in;
+
+public:
+	FixedFanInConnector(size_t n_fan_in, float weight, float delay,
+	                    std::shared_ptr<RandomEngine> engine)
+	    : Base(weight, delay, std::move(engine)), m_n_fan_in(n_fan_in)
+	{
+	}
+
+	~FixedFanInConnector() override {}
+
+	void connect(const ConnectionDescriptor &descr,
+	             std::vector<Connection> &tar) const override
+	{
+		Base::generate_connections(
+		    descr.nid_src0(), descr.nsrc(), m_n_fan_in, descr.nid_tar0(),
+		    descr.nid_tar1(), [&](size_t i, size_t r) {
+			    tar.emplace_back(descr.pid_src(), descr.pid_tar(), r, i,
+			                     Base::weight(), Base::delay());
+			});
+	}
+
+	/**
+	 * Checks the validity of the connection. For the FixedFanInConnector to be
+	 * valid, the number of neurons in the source population must be at least
+	 * equal to the fan in.
+	 */
+	bool valid(const ConnectionDescriptor &descr) const override
+	{
+		return descr.nsrc() >= m_n_fan_in;
+	}
+
+	std::string name() const override { return "FixedFanInConnector"; }
+};
+
+/**
+ * Connects each neuron in the source population to a fixed number of neurons
+ * in the target population.
+ */
+template <typename RandomEngine>
+class FixedFanOutConnector : public FixedFanConnectorBase<RandomEngine> {
+private:
+	using Base = FixedFanConnectorBase<RandomEngine>;
+
+	size_t m_n_fan_out;
+
+public:
+	FixedFanOutConnector(size_t n_fan_out, float weight, float delay,
+	                     std::shared_ptr<RandomEngine> engine)
+	    : Base(weight, delay, std::move(engine)), m_n_fan_out(n_fan_out)
+	{
+	}
+
+	~FixedFanOutConnector() override {}
+
+	void connect(const ConnectionDescriptor &descr,
+	             std::vector<Connection> &tar) const override
+	{
+		Base::generate_connections(
+		    descr.nid_tar0(), descr.ntar(), m_n_fan_out, descr.nid_src0(),
+		    descr.nid_src1(), [&](size_t i, size_t r) {
+			    tar.emplace_back(descr.pid_src(), descr.pid_tar(), i, r,
+			                     Base::weight(), Base::delay());
+			});
+	}
+
+	/**
+	 * Checks the validity of the connection. For the FixedFanOutConnector,
+	 * the number of neurons in the target population must be at least equal to
+	 * the fan out.
+	 */
+	bool valid(const ConnectionDescriptor &descr) const override
+	{
+		return descr.ntar() >= m_n_fan_out;
+	}
+
+	std::string name() const override { return "FixedFanOutConnector"; }
 };
 
 /**
@@ -784,26 +930,43 @@ inline std::unique_ptr<FixedProbabilityConnector<std::default_random_engine>>
 Connector::fixed_probability(std::unique_ptr<Connector> connector, float p,
                              size_t seed)
 {
-	return std::move(fixed_probability<std::default_random_engine>(
-	    std::move(connector), p, seed));
+	return std::move(
+	    std::make_unique<FixedProbabilityConnector<std::default_random_engine>>(
+	        std::move(connector), p,
+	        std::make_shared<std::default_random_engine>(seed)));
 }
 
-template <typename RandomEngine>
-inline std::unique_ptr<FixedProbabilityConnector<RandomEngine>>
-Connector::fixed_probability(std::unique_ptr<Connector> connector, float p,
-                             std::shared_ptr<RandomEngine> engine)
+inline std::unique_ptr<FixedFanInConnector<std::default_random_engine>>
+Connector::fixed_fan_in(size_t n_fan_in, float weight, float delay)
 {
-	return std::move(std::make_unique<FixedProbabilityConnector<RandomEngine>>(
-	    std::move(connector), p, engine));
+	return std::move(
+	    fixed_fan_in(n_fan_in, weight, delay, std::random_device()()));
 }
 
-template <typename RandomEngine>
-inline std::unique_ptr<FixedProbabilityConnector<RandomEngine>>
-Connector::fixed_probability(std::unique_ptr<Connector> connector, float p,
-                             size_t seed)
+inline std::unique_ptr<FixedFanInConnector<std::default_random_engine>>
+Connector::fixed_fan_in(size_t n_fan_in, float weight, float delay, size_t seed)
 {
-	return std::move(fixed_probability<std::default_random_engine>(
-	    std::move(connector), p, std::make_shared<RandomEngine>(seed)));
+	return std::move(
+	    std::make_unique<FixedFanInConnector<std::default_random_engine>>(
+	        n_fan_in, weight, delay,
+	        std::make_shared<std::default_random_engine>(seed)));
+}
+
+inline std::unique_ptr<FixedFanOutConnector<std::default_random_engine>>
+Connector::fixed_fan_out(size_t n_fan_out, float weight, float delay)
+{
+	return std::move(
+	    fixed_fan_out(n_fan_out, weight, delay, std::random_device()()));
+}
+
+inline std::unique_ptr<FixedFanOutConnector<std::default_random_engine>>
+Connector::fixed_fan_out(size_t n_fan_out, float weight, float delay,
+                         size_t seed)
+{
+	return std::move(
+	    std::make_unique<FixedFanOutConnector<std::default_random_engine>>(
+	        n_fan_out, weight, delay,
+	        std::make_shared<std::default_random_engine>(seed)));
 }
 }
 
