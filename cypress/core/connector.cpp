@@ -59,8 +59,6 @@ std::vector<Connection> instantiate_connections(
  * Class AllToAllConnector
  */
 
-const std::string AllToAllConnector::m_name = "AllToAllConnector";
-
 void AllToAllConnector::connect(const ConnectionDescriptor &descr,
                                 std::vector<Connection> &tar) const
 {
@@ -78,8 +76,6 @@ void AllToAllConnector::connect(const ConnectionDescriptor &descr,
  * Class OneToOneConnector
  */
 
-const std::string OneToOneConnector::m_name = "OneToOneConnector";
-
 void OneToOneConnector::connect(const ConnectionDescriptor &descr,
                                 std::vector<Connection> &tar) const
 {
@@ -93,8 +89,6 @@ void OneToOneConnector::connect(const ConnectionDescriptor &descr,
  * Class FromListConnector
  */
 
-const std::string FromListConnector::m_name = "FromListConnector";
-
 void FromListConnector::connect(const ConnectionDescriptor &descr,
                                 std::vector<Connection> &tar) const
 {
@@ -106,24 +100,4 @@ void FromListConnector::connect(const ConnectionDescriptor &descr,
 		}
 	}
 }
-
-/*
- * Class FunctorConnectorBase
- */
-
-const std::string FunctorConnectorBase::m_name = "FunctorConnector";
-
-/*
- * Class UniformFunctorConnectorBase
- */
-
-const std::string UniformFunctorConnectorBase::m_name =
-    "UniformFunctorConnector";
-
-/**
- * Class FixedProbabilityConnectorBase
- */
-
-const std::string FixedProbabilityConnectorBase::m_name =
-    "FixedProbabilityConnector";
 }

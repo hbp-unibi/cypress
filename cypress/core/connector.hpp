@@ -261,7 +261,7 @@ public:
 	 * @return a reference at a string describing the name of the descriptor
 	 * type.
 	 */
-	virtual const std::string &name() const = 0;
+	virtual std::string name() const = 0;
 
 	/**
 	 * Virtual destructor of the connector.
@@ -554,9 +554,6 @@ public:
  * target population.
  */
 class AllToAllConnector : public UniformConnector {
-private:
-	static const std::string m_name;
-
 public:
 	using UniformConnector::UniformConnector;
 
@@ -567,7 +564,7 @@ public:
 
 	bool valid(const ConnectionDescriptor &) const override { return true; }
 
-	const std::string &name() const override { return m_name; }
+	std::string name() const override { return "AllToAllConnector"; }
 };
 
 /**
@@ -575,9 +572,6 @@ public:
  * population. The number of neurons in both populations must be equal.
  */
 class OneToOneConnector : public UniformConnector {
-private:
-	static const std::string m_name;
-
 public:
 	using UniformConnector::UniformConnector;
 
@@ -591,7 +585,7 @@ public:
 		return descr.nsrc() == descr.ntar();
 	}
 
-	const std::string &name() const override { return m_name; }
+	std::string name() const override { return "OneToOneConnector"; }
 };
 
 /**
@@ -601,8 +595,6 @@ public:
  */
 class FromListConnector : public Connector {
 private:
-	static const std::string m_name;
-
 	std::vector<LocalConnection> m_connections;
 
 public:
@@ -623,22 +615,17 @@ public:
 
 	bool valid(const ConnectionDescriptor &) const override { return true; }
 
-	const std::string &name() const override { return m_name; }
+	std::string name() const override { return "FromListConnector"; }
 };
 
 class FunctorConnectorBase : public Connector {
-private:
-	static const std::string m_name;
-
 public:
-	const std::string &name() const override { return m_name; }
+	std::string name() const override { return "FunctorConnector"; }
 };
 
 template <typename Callback>
 class FunctorConnector : public FunctorConnectorBase {
 private:
-	static const std::string m_name;
-
 	Callback m_cback;
 
 public:
@@ -666,13 +653,10 @@ public:
 };
 
 class UniformFunctorConnectorBase : public UniformConnector {
-private:
-	static const std::string m_name;
-
 public:
 	using UniformConnector::UniformConnector;
 
-	const std::string &name() const override { return m_name; }
+	std::string name() const override { return "UniformFunctorConnector"; }
 };
 
 template <typename Callback>
@@ -708,11 +692,8 @@ public:
 };
 
 class FixedProbabilityConnectorBase : public Connector {
-private:
-	static const std::string m_name;
-
 public:
-	const std::string &name() const override { return m_name; }
+	std::string name() const override { return "FixedProbabilityConnector"; }
 };
 
 template <typename RandomEngine>
