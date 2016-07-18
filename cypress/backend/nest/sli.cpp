@@ -38,8 +38,9 @@ namespace {
  * @param t2 is the second time stamp.
  * @return the duration in seconds.
  */
-template<typename T>
-float to_seconds(const T &t1, const T &t2) {
+template <typename T>
+float to_seconds(const T &t1, const T &t2)
+{
 	return std::chrono::duration<float>(t2 - t1).count();
 }
 
@@ -87,8 +88,8 @@ KeyValue<V> kv(const std::string &key, const V &value)
  */
 void write_parameters(std::ostream &os, const IfCondExpParameters &params)
 {
-	os << "<< " << kv("C_m", params.cm() * 1e3)          // nF -> pF
-	   << kv("g_L", params.cm() / params.tau_m() * 1e3)  // uS -> nS
+	os << "<< " << kv("C_m", params.cm() * 1e3)  // nF -> pF
+	   << kv("g_L", params.g_leak() * 1e3)       // uS -> nS
 	   << kv("tau_syn_ex", params.tau_syn_E())
 	   << kv("tau_syn_in", params.tau_syn_I())
 	   << kv("t_ref", params.tau_refrac()) << kv("V_reset", params.v_reset())
@@ -468,7 +469,8 @@ void read_response(std::istream &is, NetworkBase &net)
 					break;
 				case STATE_DATA_MODALITY:  // Load the recorded modality
 					modality = std::stol(line, &idx);
-					if (modality < MODALITY_SPIKES || modality > MODALITY_GSYN_INH) {
+					if (modality < MODALITY_SPIKES ||
+					    modality > MODALITY_GSYN_INH) {
 						throw std::invalid_argument("Invalid modality!");
 					}
 					state = STATE_DATA_LEN;
@@ -476,8 +478,7 @@ void read_response(std::istream &is, NetworkBase &net)
 				case STATE_DATA_LEN:  // Load the data length and create the
 					                  // target matrix
 					len = std::stoull(line, &idx);
-					data = fetch_data_matrix(net[pid], nid, len,
-					                         modality);
+					data = fetch_data_matrix(net[pid], nid, len, modality);
 					data_idx = 0;
 					if (len > 0) {
 						state = STATE_DATA;
@@ -494,8 +495,8 @@ void read_response(std::istream &is, NetworkBase &net)
 						// Use some C pointer magic here to avoid having to
 						// substr "line"
 						const char *s = line.c_str();
-						char *s0 = const_cast<char*>(s);
-						char *s1 = const_cast<char*>(s) + line.size();
+						char *s0 = const_cast<char *>(s);
+						char *s1 = const_cast<char *>(s) + line.size();
 
 						// Extract the first column
 						(*data)(data_idx, 0) = strtof(s0, &s1);
@@ -503,7 +504,7 @@ void read_response(std::istream &is, NetworkBase &net)
 						// Extract the second column
 						s1++;
 						s0 = s1;
-						s1 = const_cast<char*>(s) + line.size();
+						s1 = const_cast<char *>(s) + line.size();
 						(*data)(data_idx, 1) = strtof(s0, &s1);
 
 						// Calulcate the total number of characters processed
@@ -522,13 +523,10 @@ void read_response(std::istream &is, NetworkBase &net)
 	}
 
 	// Set the network benchmark
-	net.runtime({
-		to_seconds(t_setup, t_done),
-		to_seconds(t_simulate_start, t_simulate_stop),
-		to_seconds(t_setup, t_simulate_start),
-		to_seconds(t_simulate_stop, t_done)
-	});
+	net.runtime({to_seconds(t_setup, t_done),
+	             to_seconds(t_simulate_start, t_simulate_stop),
+	             to_seconds(t_setup, t_simulate_start),
+	             to_seconds(t_simulate_stop, t_done)});
 }
 }
 }
-
