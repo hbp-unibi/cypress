@@ -104,8 +104,9 @@ public:
 	 * @param name is the (optional) name of the population.
 	 */
 	Population(Network &network, size_t size,
-	           const typename T::Parameters &params,
-	           const typename T::Signals &signals, const char *name = "");
+	           const typename T::Parameters &params = typename T::Parameters(),
+	           const typename T::Signals &signals = typename T::Signals(),
+	           const char *name = "");
 
 	/**
 	 * Creates a new population in the given network.
@@ -121,7 +122,7 @@ public:
 	 * @param name is the (optional) name of the population.
 	 */
 	Population(Network &network, size_t size,
-	           const typename T::Parameters &params, const char *name = "")
+	           const typename T::Parameters &params, const char *name)
 	    : Population(network, size, params, typename T::Signals(), name)
 	{
 	}
