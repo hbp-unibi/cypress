@@ -2,6 +2,7 @@ Cypress
 =======
 
 ![Synfire Chain Example](https://raw.githubusercontent.com/hbp-sanncs/cypress/master/docs/synfire_result_spikey.png)
+*Synfire chain example running on the Spikey neuromorphic hardware system*
 
 Cypress is a C++ Spiking Neural Network Simulation Framework. It allows to describe
 and execute spiking neural networks on various simulation platforms directly in
