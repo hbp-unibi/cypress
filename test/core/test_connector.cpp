@@ -228,10 +228,10 @@ TEST(connector, fixed_fan_in)
 	});
 
 	std::vector<size_t> fan_in(16);
-	for (auto c: connections1) {
+	for (auto c : connections1) {
 		fan_in[c.n.tar]++;
 	}
-	for (size_t fi: fan_in) {
+	for (size_t fi : fan_in) {
 		EXPECT_EQ(8U, fi);
 	}
 
@@ -243,13 +243,16 @@ TEST(connector, fixed_fan_in)
 TEST(connector, fixed_fan_in_seed)
 {
 	std::vector<Connection> connections1 = instantiate_connections({
-	    {0, 0, 16, 1, 0, 16, std::move(Connector::fixed_fan_in(8, 0.1, 1.0, 8791))},
+	    {0, 0, 16, 1, 0, 16,
+	     std::move(Connector::fixed_fan_in(8, 0.1, 1.0, 8791))},
 	});
 	std::vector<Connection> connections2 = instantiate_connections({
-	    {0, 0, 16, 1, 0, 16, std::move(Connector::fixed_fan_in(8, 0.1, 1.0, 8791))},
+	    {0, 0, 16, 1, 0, 16,
+	     std::move(Connector::fixed_fan_in(8, 0.1, 1.0, 8791))},
 	});
 	std::vector<Connection> connections3 = instantiate_connections({
-	    {0, 0, 16, 1, 0, 16, std::move(Connector::fixed_fan_in(8, 0.1, 1.0, 8792))},
+	    {0, 0, 16, 1, 0, 16,
+	     std::move(Connector::fixed_fan_in(8, 0.1, 1.0, 8792))},
 	});
 
 	EXPECT_TRUE(connections1 == connections2);
@@ -269,10 +272,10 @@ TEST(connector, fixed_fan_out)
 	});
 
 	std::vector<size_t> fan_out(16);
-	for (auto c: connections1) {
+	for (auto c : connections1) {
 		fan_out[c.n.src]++;
 	}
-	for (size_t fo: fan_out) {
+	for (size_t fo : fan_out) {
 		EXPECT_EQ(8U, fo);
 	}
 
@@ -284,13 +287,16 @@ TEST(connector, fixed_fan_out)
 TEST(connector, fixed_fan_out_seed)
 {
 	std::vector<Connection> connections1 = instantiate_connections({
-	    {0, 0, 16, 1, 0, 16, std::move(Connector::fixed_fan_out(8, 0.1, 1.0, 8791))},
+	    {0, 0, 16, 1, 0, 16,
+	     std::move(Connector::fixed_fan_out(8, 0.1, 1.0, 8791))},
 	});
 	std::vector<Connection> connections2 = instantiate_connections({
-	    {0, 0, 16, 1, 0, 16, std::move(Connector::fixed_fan_out(8, 0.1, 1.0, 8791))},
+	    {0, 0, 16, 1, 0, 16,
+	     std::move(Connector::fixed_fan_out(8, 0.1, 1.0, 8791))},
 	});
 	std::vector<Connection> connections3 = instantiate_connections({
-	    {0, 0, 16, 1, 0, 16, std::move(Connector::fixed_fan_out(8, 0.1, 1.0, 8792))},
+	    {0, 0, 16, 1, 0, 16,
+	     std::move(Connector::fixed_fan_out(8, 0.1, 1.0, 8792))},
 	});
 
 	EXPECT_TRUE(connections1 == connections2);
