@@ -322,6 +322,9 @@ public:
 	NAMED_PARAMETER(a, 12);
 	NAMED_PARAMETER(b, 13);
 	NAMED_PARAMETER(delta_T, 14);
+
+	auto &g_leak(float x) { return tau_m(cm() / x); }
+	float g_leak() const { return cm() / tau_m(); }
 };
 
 class EifCondExpIsfaIstaSignals final
