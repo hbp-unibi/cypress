@@ -106,15 +106,15 @@ void write_parameters(std::ostream &os,
                       const EifCondExpIsfaIstaParameters &params)
 {
 	os << "<< " << kv("C_m", params.cm() * 1e3)
-	   << kv("g_L", params.cm() / params.tau_m() * 1e3)
+	   << kv("g_L", params.g_leak() * 1e3)
 	   << kv("tau_syn_ex", params.tau_syn_E())
 	   << kv("tau_syn_in", params.tau_syn_I())
-	   << kv("t_ref", params.tau_refrac()) << kv("V_reset", params.v_reset())
-	   << kv("V_th", params.v_thresh()) << kv("E_L", params.v_rest())
-	   << kv("V_m", params.v_rest()) << kv("E_ex", params.e_rev_E())
-	   << kv("E_in", params.e_rev_I()) << kv("I_e", params.i_offset() * 1e3)
-	   << kv("a", params.a()) << kv("b", params.b() * 1e3)
-	   << kv("Delta_T", params.delta_T()) << ">>";
+	   << kv("t_ref", params.tau_refrac()) << kv("tau_w", params.tau_w())
+	   << kv("V_reset", params.v_reset()) << kv("V_th", params.v_thresh())
+	   << kv("E_L", params.v_rest()) << kv("V_m", params.v_rest())
+	   << kv("E_ex", params.e_rev_E()) << kv("E_in", params.e_rev_I())
+	   << kv("I_e", params.i_offset() * 1e3) << kv("a", params.a() * 1e3)
+	   << kv("b", params.b() * 1e3) << kv("Delta_T", params.delta_T()) << ">>";
 }
 
 /**
