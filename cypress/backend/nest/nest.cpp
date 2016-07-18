@@ -16,13 +16,18 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <csignal>
+#include <fstream>
 #include <iostream>
 #include <mutex>
 #include <thread>
 
+#include <unistd.h>
+
 #include <cypress/backend/nest/nest.hpp>
 #include <cypress/backend/nest/sli.hpp>
 #include <cypress/util/process.hpp>
+#include <cypress/util/filesystem.hpp>
 
 namespace cypress {
 namespace {
@@ -96,16 +101,26 @@ void NEST::do_run(NetworkBase &source, float duration) const
 	Process proc("nest", {"--verbosity=INFO", "-"});
 
 	// Serialise the network into it and start the simulation
+	std::signal(SIGPIPE, SIG_IGN);
 	sli::write_network(proc.child_stdin(), source, duration);
 	proc.close_child_stdin();
 
-	// Read the network response
-	sli::read_response(proc.child_stdout(), source);
+	// Read the network response and messages
+	std::string log_path = ".cypress_err_nest_XXXXXX";
+	{
+		std::ofstream log_stream(filesystem::tmpfile(log_path));
+		sli::read_response(proc.child_stdout(), source, log_stream);
 
-	// Wait for the subprocess to exit
-	if (proc.wait() != 0) {
-		throw ExecutionError(std::string("Error while executing the NEST"));
+		// Wait for the subprocess to exit
+		if (proc.wait() != 0) {
+			std::ifstream log_stream_in(log_path);
+			Process::generic_pipe(log_stream_in, std::cerr);
+			throw ExecutionError(
+				std::string("Error while executing the NEST simulation, see " +
+				            log_path + " for the above information."));
+		}
 	}
+	unlink(log_path.c_str());
 }
 
 bool NEST::installed() { return NEST_UTIL.installed(); }

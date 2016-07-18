@@ -51,8 +51,9 @@ void write_network(std::ostream &os, const NetworkBase &net, float duration);
  * that the response must be produced by an SLI program previously produced by
  * write_network().
  * @param net is the network into which the response should be written.
+ * @param errs is the stream to which error messages should be written.
  */
-void read_response(std::istream &is, NetworkBase &net);
+void read_response(std::istream &is, NetworkBase &net, std::ostream &errs);
 }
 }
 

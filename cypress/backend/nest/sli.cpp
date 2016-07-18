@@ -397,7 +397,7 @@ void write_network(std::ostream &os, const NetworkBase &net, float duration)
 	os << "(##cypress_done) =\n";
 }
 
-void read_response(std::istream &is, NetworkBase &net)
+void read_response(std::istream &is, NetworkBase &net, std::ostream &errs)
 {
 	// States of the internally used state machine
 	constexpr int STATE_DEFAULT = 0;
@@ -518,6 +518,11 @@ void read_response(std::istream &is, NetworkBase &net)
 			if (idx != line.size()) {
 				throw std::invalid_argument(
 				    "Unexpected characters at the end of the line!");
+			}
+		}
+		else if (state == STATE_DEFAULT) {
+			if (!line.empty()) {
+				errs << line << std::endl;
 			}
 		}
 	}
