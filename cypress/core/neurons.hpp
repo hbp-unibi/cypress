@@ -339,6 +339,16 @@ public:
 	NAMED_SIGNAL(gsyn_exc, 2);
 	NAMED_SIGNAL(gsyn_inh, 3);
 };
+
+/*
+ * Define some common aliases in order to save typing.
+ */
+using LIF = IfCondExp;
+using LIFParameters = IfCondExpParameters;
+using LIFSignals = IfCondExpSignals;
+using AdEx = EifCondExpIsfaIsta;
+using AdExParameters = EifCondExpIsfaIstaParameters;
+using AdExSignals = EifCondExpIsfaIstaSignals;
 }
 
 #undef NAMED_SIGNAL
