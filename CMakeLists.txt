@@ -88,6 +88,8 @@ add_library(cypress
 	cypress/backend/nest/nest
 	cypress/backend/nest/sli
 	cypress/backend/nmpi/nmpi
+	cypress/backend/power/netio4
+	cypress/backend/power/power
 	cypress/backend/pynn/pynn
 	cypress/backend/pynn/transformation
 	cypress/core/backend
