@@ -57,6 +57,11 @@ public:
 	};
 
 	/**
+	 * Returns the canonical name of the backend.
+	 */
+	std::string name() const override { return "nest"; }
+
+	/**
 	 * Returns true if NEST is installed.
 	 */
 	static bool installed();

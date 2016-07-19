@@ -57,6 +57,11 @@ public:
 	void run(NetworkBase &network, float duration = 0.0) const;
 
 	/**
+	 * Returns the canonical name of the backend.
+	 */
+	virtual std::string name() const = 0;
+
+	/**
 	 * Destructor of the backend class.
 	 */
 	virtual ~Backend();

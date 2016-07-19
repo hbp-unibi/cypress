@@ -110,6 +110,11 @@ public:
 	~NMPI() override;
 
 	/**
+	 * Returns the canonical name of the backend.
+	 */
+	std::string name() const override;
+
+	/**
 	 * Returns true if the given arguments consititure a call on the NMPI server
 	 * in which case no further checking should be performed.
 	 */

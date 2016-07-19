@@ -77,6 +77,11 @@ public:
 	float timestep();
 
 	/**
+	 * Returns the canonical name of the backend.
+	 */
+	std::string name() const override { return m_normalised_simulator; }
+
+	/**
 	 * Returns the simulator name as provided by the user.
 	 */
 	const std::string &simulator() const { return m_simulator; }

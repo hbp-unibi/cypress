@@ -146,6 +146,11 @@ NMPI::NMPI(const std::string &pynn_backend, int &argc, const char *argv[],
 
 NMPI::~NMPI() = default;
 
+std::string NMPI::name() const
+{
+	return m_pynn->name();
+}
+
 bool NMPI::check_args(int argc, const char *argv[])
 {
 	return (argc >= 2 && argv[argc - 1] == SERVER_ARG);
