@@ -37,7 +37,7 @@
 using namespace cypress;
 
 // Enable for Spikey. TODO: Implement trafo from IfFacetsHardware1 to LIF
-#define SPIKEY
+//#define SPIKEY
 
 /**
  * Parameters of the inhibitory synfire chain.
@@ -54,18 +54,9 @@ struct SynfireCainParameters {
 	/**
 	 * Synaptic weight of the excitatory connections.
 	 */
-	float w_syn_exc = 0.009;
+	float w_syn = 0.009;
 #else
-	float w_syn_exc = 0.05;
-#endif
-
-#ifdef SPIKEY
-	/**
-	 * Synaptic weight of the inhibitory connections.
-	 */
-	float w_syn_inh = -0.010;
-#else
-	float w_syn_inh = -0.055;
+	float w_syn = 0.035;
 #endif
 
 	/**
@@ -135,44 +126,39 @@ public:
 
 			m_fs_pop(fs0, fs1).connect_to(  // Inhibitory connections
 			    m_rs_pop(rs0, rs1),
-			    Connector::fixed_fan_in(params.n_connect, params.w_syn_inh,
+			    Connector::fixed_fan_in(params.n_connect, -params.w_syn,
 			                            params.delta_syn));
 			if (i > 0) {  // Forward connections
 				const size_t rsm1 = (i - 1) * params.n_rs;
 				m_rs_pop(rsm1, rs0).connect_to(
 				    m_rs_pop(rs0, rs1),
-				    Connector::fixed_fan_in(params.n_connect, params.w_syn_exc,
+				    Connector::fixed_fan_in(params.n_connect, params.w_syn,
 				                            params.delta_syn));
 				m_rs_pop(rsm1, rs0).connect_to(
 				    m_fs_pop(fs0, fs1),
-				    Connector::fixed_fan_in(params.n_connect, params.w_syn_exc,
+				    Connector::fixed_fan_in(params.n_connect, params.w_syn,
 				                            params.delta_syn));
 			}
 		}
 		if (params.loop) {
 			rs_out().connect_to(rs_in(), Connector::fixed_fan_in(
-			                                 params.n_connect, params.w_syn_exc,
+			                                 params.n_connect, params.w_syn,
 			                                 params.delta_syn));
 			rs_out().connect_to(fs_in(), Connector::fixed_fan_in(
-			                                 params.n_connect, params.w_syn_exc,
+			                                 params.n_connect, params.w_syn,
 			                                 params.delta_syn));
 		}
 	}
 
 	Population<Neuron> rs_pop() { return m_rs_pop; }
-
 	Population<Neuron> fs_pop() { return m_fs_pop; }
-
 	PopulationView<Neuron> rs_in() { return m_rs_pop(0, m_params.n_rs); }
-
 	PopulationView<Neuron> fs_in() { return m_fs_pop(0, m_params.n_fs); }
-
 	PopulationView<Neuron> rs_out()
 	{
 		return m_rs_pop((m_params.length - 1) * m_params.n_rs,
 		                m_params.length * m_params.n_rs);
 	}
-
 	PopulationView<Neuron> fs_out()
 	{
 		return m_fs_pop((m_params.length - 1) * m_params.n_fs,
@@ -206,11 +192,9 @@ static void write_spike_times(const char *fn, const T &obj, F f)
 	}
 }
 
-const std::vector<std::vector<float>> create_input(size_t n, size_t a = 3,
-                                                   float sigma = 2.0,
-                                                   size_t repeat = 1,
-                                                   float delay = 50.0,
-                                                   float offs = 5.0)
+static const std::vector<std::vector<float>> create_input(
+    size_t n, size_t a = 3, float sigma = 2.0, size_t repeat = 1,
+    float delay = 50.0, float offs = 5.0)
 {
 	std::default_random_engine re(std::random_device{}());
 	std::normal_distribution<float> distr(0.0, sigma);
@@ -278,16 +262,16 @@ int main(int argc, const char *argv[])
 	}
 	source.connect_to(
 	    synfire_chain.rs_in(),
-	    Connector::fixed_fan_in(params.n_connect, params.w_syn_exc,
+	    Connector::fixed_fan_in(params.n_connect, params.w_syn,
 	                            params.delta_syn));
 	source.connect_to(
 	    synfire_chain.fs_in(),
-	    Connector::fixed_fan_in(params.n_connect, params.w_syn_exc,
+	    Connector::fixed_fan_in(params.n_connect, params.w_syn,
 	                            params.delta_syn));
 
 	// Run the simulation
 	std::cout << "Running the simulation..." << std::endl;
-	net.run(argv[1], 2000.0);
+	net.run(argv[1], 2000.0, argc, argv);
 
 	// Write the results to disk
 	std::cout << "Writing results to disk..." << std::endl;
