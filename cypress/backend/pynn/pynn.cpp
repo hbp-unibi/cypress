@@ -359,6 +359,8 @@ void PyNN::do_run(NetworkBase &source, float duration) const
 #ifndef CYPRESS_DEBUG_BINNF
 		if ((!binnf::marshall_response(source, proc.child_stdout())) |
 		    (proc.wait() != 0)) {
+			log_thread.join(); // Make sure the logging thread has finished
+
 			std::ifstream log_stream_in(log_path);
 			Process::generic_pipe(log_stream_in, std::cerr);
 			throw ExecutionError(
