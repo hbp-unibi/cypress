@@ -275,8 +275,8 @@ PyNN::PyNN(const std::string &simulator, const Json &setup)
 	auto it = DEFAULT_SETUPS.find(m_normalised_simulator);
 	if (it != DEFAULT_SETUPS.end()) {
 		m_setup = it->second;
-		join(m_setup, setup);
 	}
+	join(m_setup, setup); // Ensures m_setup is not null
 }
 
 PyNN::~PyNN() = default;

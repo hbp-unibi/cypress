@@ -60,7 +60,7 @@ public:
 	 * @param setup contains additional setup information that should be passed
 	 * to the backend.
 	 */
-	PyNN(const std::string &simulator, const Json &setup = Json::object());
+	PyNN(const std::string &simulator, const Json &setup = Json());
 
 	/**
 	 * Destructor of the PyNN class.
