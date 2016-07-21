@@ -30,7 +30,7 @@
 #ifndef CYPRESS_BACKEND_HPP
 #define CYPRESS_BACKEND_HPP
 
-#include <stdexcept>
+#include <string>
 
 namespace cypress {
 
@@ -53,6 +53,11 @@ protected:
 public:
 	/**
 	 * Simulates the given spiking neural network for the given duration.
+	 *
+	 * @param network is the network that should be simulated. The simulation
+	 * result will be written to the network instance.
+	 * @param duration is the duration for which the network should be
+	 * simulated.
 	 */
 	void run(NetworkBase &network, float duration = 0.0) const;
 
