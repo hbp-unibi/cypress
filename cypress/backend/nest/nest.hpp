@@ -35,7 +35,9 @@
 #include <string>
 #include <vector>
 
+#include <cypress/backend/nest/sli.hpp>
 #include <cypress/core/backend.hpp>
+#include <cypress/util/json.hpp>
 
 namespace cypress {
 /**
@@ -45,6 +47,8 @@ namespace cypress {
  */
 class NEST : public Backend {
 private:
+	sli::Params m_params;
+
 	void do_run(NetworkBase &network, float duration) const override;
 
 public:
@@ -55,6 +59,24 @@ public:
 	public:
 		using std::runtime_error::runtime_error;
 	};
+
+	/**
+	 * Constructor of the NEST backend class, takes a PyNN-like setup JSON
+	 * object.
+	 *
+	 * @param setup is a JSON object which supports the following settings:
+	 *
+	 * {
+	 *    "timestep": 0.1, // The simulation timestep
+	 *    "record_interval": 1.0 // Sample interval when recording
+	 * }
+	 */
+	NEST(const Json &setup = Json());
+
+	/**
+	 * Destructor of the NEST backend class.
+	 */
+	~NEST() override = default;
 
 	/**
 	 * Returns the canonical name of the backend.

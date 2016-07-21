@@ -166,11 +166,13 @@ size_t create_recorder(std::ostream &os, const std::string &name, size_t &gid)
 	return ++gid;
 }
 
-size_t create_multimeter(std::ostream &os, const std::string &name, size_t &gid)
+size_t create_multimeter(std::ostream &os, const std::string &name, size_t &gid,
+                         const Params &params)
 {
 	os << "/multimeter << /withtime true /withgid false /to_file false "
-	      "/to_memory true /record_from [/"
-	   << name << "] >> Create\n";
+	      "/to_memory true /interval "
+	   << params.record_interval << " /record_from [/" << name
+	   << "] >> Create\n";
 	return ++gid;
 }
 
@@ -277,7 +279,8 @@ struct RecorderInfo {
 
 std::vector<RecorderInfo> write_recorders(
     std::ostream &os, const std::vector<PopulationBase> &populations,
-    size_t &gid, const std::map<size_t, size_t> &pop_gid_map)
+    size_t &gid, const std::map<size_t, size_t> &pop_gid_map,
+    const Params &params)
 {
 	std::vector<RecorderInfo> res;
 	for (size_t i = 0; i < populations.size(); i++) {
@@ -314,18 +317,19 @@ std::vector<RecorderInfo> write_recorders(
 			}
 			if (info.v) {
 				res.push_back({population.pid(), j,
-				               create_multimeter(os, "V_m", gid), MODALITY_V});
+				               create_multimeter(os, "V_m", gid, params),
+				               MODALITY_V});
 				os << gid << " " << (pop_gid_offs + j) << " Connect\n";
 			}
 			if (info.gsyn_exc) {
 				res.push_back({population.pid(), j,
-				               create_multimeter(os, "g_ex", gid),
+				               create_multimeter(os, "g_ex", gid, params),
 				               MODALITY_GSYN_EXC});
 				os << gid << " " << (pop_gid_offs + j) << " Connect\n";
 			}
 			if (info.gsyn_inh) {
 				res.push_back({population.pid(), j,
-				               create_multimeter(os, "g_in", gid),
+				               create_multimeter(os, "g_in", gid, params),
 				               MODALITY_GSYN_INH});
 				os << gid << " " << (pop_gid_offs + j) << " Connect\n";
 			}
@@ -376,17 +380,19 @@ std::shared_ptr<Matrix<float>> fetch_data_matrix(PopulationBase pop,
 }
 }
 
-void write_network(std::ostream &os, const NetworkBase &net, float duration)
+void write_network(std::ostream &os, const NetworkBase &net, float duration,
+                   const Params &params)
 {
 	std::map<size_t, size_t> pop_gid_map;
 
 	// Create the network, setup recorder
 	size_t gid = 0;
 	os << "(##cypress_setup) =\n";
+	os << "0 <<" << kv("resolution", params.timestep) << ">> SetStatus\n";
 	write_populations(os, net.populations(), gid, pop_gid_map);
 	write_connections(os, net.connections(), gid, pop_gid_map);
 	std::vector<RecorderInfo> recorder_info =
-	    write_recorders(os, net.populations(), gid, pop_gid_map);
+	    write_recorders(os, net.populations(), gid, pop_gid_map, params);
 
 	// Simulate the network
 	os << "(##cypress_simulate_start) =\n";

@@ -25,7 +25,6 @@
 #include <unistd.h>
 
 #include <cypress/backend/nest/nest.hpp>
-#include <cypress/backend/nest/sli.hpp>
 #include <cypress/util/process.hpp>
 #include <cypress/util/filesystem.hpp>
 
@@ -89,6 +88,16 @@ public:
 static NESTUtil NEST_UTIL;
 }
 
+NEST::NEST(const Json &setup)
+{
+	if (setup.count("timestep") > 0) {
+		m_params.timestep = setup["timestep"];
+	}
+	if (setup.count("record_interval") > 0) {
+		m_params.record_interval = setup["record_interval"];
+	}
+}
+
 void NEST::do_run(NetworkBase &source, float duration) const
 {
 	if (!installed()) {
@@ -98,11 +107,11 @@ void NEST::do_run(NetworkBase &source, float duration) const
 	}
 
 	// Start the NEST child process
-	Process proc("nest", {"--verbosity=INFO", "-"});
+	Process proc("nest", {"--verbosity=WARNING", "-"});
 
 	// Serialise the network into it and start the simulation
 	std::signal(SIGPIPE, SIG_IGN);
-	sli::write_network(proc.child_stdin(), source, duration);
+	sli::write_network(proc.child_stdin(), source, duration, m_params);
 	proc.close_child_stdin();
 
 	// Read the network response and messages
@@ -110,16 +119,18 @@ void NEST::do_run(NetworkBase &source, float duration) const
 	{
 		std::ofstream log_stream(filesystem::tmpfile(log_path));
 		sli::read_response(proc.child_stdout(), source, log_stream);
-
-		// Wait for the subprocess to exit
-		if (proc.wait() != 0) {
-			std::ifstream log_stream_in(log_path);
-			Process::generic_pipe(log_stream_in, std::cerr);
-			throw ExecutionError(
-				std::string("Error while executing the NEST simulation, see " +
-				            log_path + " for the above information."));
-		}
 	}
+
+	// Wait for the subprocess to exit
+	if (proc.wait() != 0) {
+		std::ifstream log_stream_in(log_path);
+		Process::generic_pipe(log_stream_in, std::cerr);
+		throw ExecutionError(
+			std::string("Error while executing the NEST simulation, see " +
+			            log_path + " for the above information."));
+	}
+	std::ifstream log_stream_in(log_path);
+	Process::generic_pipe(log_stream_in, std::cerr);
 	unlink(log_path.c_str());
 }
 

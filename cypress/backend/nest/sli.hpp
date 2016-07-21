@@ -35,6 +35,14 @@
 namespace cypress {
 namespace sli {
 /**
+ * Parameters influencing the simulation.
+ */
+struct Params {
+	float timestep = 0.1;
+	float record_interval = 1.0;
+};
+
+/**
  * Turns the given network into an SLI program and writes it into the given
  * output stream.
  *
@@ -42,7 +50,8 @@ namespace sli {
  * @param net is the network that should be turned into an SLI script.
  * @param duration is the network simulation time in seconds.
  */
-void write_network(std::ostream &os, const NetworkBase &net, float duration);
+void write_network(std::ostream &os, const NetworkBase &net, float duration,
+                   const Params &params = Params());
 
 /**
  * Reads the response of the previously written SLI program.
