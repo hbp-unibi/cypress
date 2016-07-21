@@ -242,7 +242,8 @@ void write_populations(std::ostream &os,
 
 void write_connections(std::ostream &os,
                        const std::vector<ConnectionDescriptor> &descrs,
-                       size_t &, const std::map<size_t, size_t> &pop_gid_map)
+                       size_t &, const std::map<size_t, size_t> &pop_gid_map,
+                       const Params &params)
 {
 	// TODO: Here we blindly generate all connections. NEST directly supports
 	// most of our connection types, so this code could be much improved
@@ -259,7 +260,8 @@ void write_connections(std::ostream &os,
 		   << (it_tar->second + connection.n.tar) << " " << std::showpoint
 		   << connection.n.synapse.weight * 1e3 << " "
 		   << std::showpoint  // uS -> nS
-		   << std::max(0.1f, connection.n.synapse.delay) << " Connect\n";
+		   << std::max(params.timestep, connection.n.synapse.delay)
+		   << " Connect\n";
 	}
 }
 
@@ -390,7 +392,7 @@ void write_network(std::ostream &os, const NetworkBase &net, float duration,
 	os << "(##cypress_setup) =\n";
 	os << "0 <<" << kv("resolution", params.timestep) << ">> SetStatus\n";
 	write_populations(os, net.populations(), gid, pop_gid_map);
-	write_connections(os, net.connections(), gid, pop_gid_map);
+	write_connections(os, net.connections(), gid, pop_gid_map, params);
 	std::vector<RecorderInfo> recorder_info =
 	    write_recorders(os, net.populations(), gid, pop_gid_map, params);
 
