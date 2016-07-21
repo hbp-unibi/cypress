@@ -41,6 +41,7 @@
 #include <cypress/core/data.hpp>
 #include <cypress/core/neurons_base.hpp>
 #include <cypress/core/types.hpp>
+#include <cypress/util/json.hpp>
 
 namespace cypress {
 
@@ -286,11 +287,14 @@ public:
 	 * backend should be used.
 	 * @param argv is the array containing the command line arguments. Needed
 	 * when the NMPI backend should be used.
+	 * @param setup is an optional Json object which contains backend
+	 * configuration.
 	 * @return a pointer at a new backend instance.
 	 */
-	static std::unique_ptr<Backend> make_backend(const std::string &backend_id,
+	static std::unique_ptr<Backend> make_backend(std::string backend_id,
 	                                             int argc = 0,
-	                                             const char *argv[] = nullptr);
+	                                             const char *argv[] = nullptr,
+	                                             Json setup = Json());
 
 	/**
 	 * Executes the network on the given backend and stores the results in the

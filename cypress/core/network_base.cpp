@@ -29,6 +29,8 @@
 #include <cypress/backend/nmpi/nmpi.hpp>
 #include <cypress/backend/pynn/pynn.hpp>
 
+#include <cypress/util/json.hpp>
+
 namespace cypress {
 namespace internal {
 /**
@@ -284,9 +286,24 @@ static std::string join(const std::vector<std::string> &elems, char delim)
 	return ss.str();
 }
 
-std::unique_ptr<Backend> NetworkBase::make_backend(
-    const std::string &backend_id, int argc, const char *argv[])
+std::unique_ptr<Backend> NetworkBase::make_backend(std::string backend_id,
+                                                   int argc, const char *argv[],
+                                                   Json setup)
 {
+	// Split the input string at the "=" -- the lefthand part contains the
+	// backend identifier, the right-hand part possible Json simulator setup
+	// data.
+	size_t config_pos = backend_id.find("=");
+	if (config_pos != std::string::npos) {
+		if (!setup.is_null()) {
+			throw std::invalid_argument(
+			    "Setup data present in the backend identifier, but explicit "
+			    "setup given in the call to make_backend()!");
+		}
+		setup = Json::parse(backend_id.substr(
+		    config_pos + 1, backend_id.size() - config_pos + 1));
+		backend_id = backend_id.substr(0, config_pos);
+	}
 	std::vector<std::string> elems = split(backend_id, '.');
 
 	// Make sure the backend identifier is not empty
@@ -306,7 +323,8 @@ std::unique_ptr<Backend> NetworkBase::make_backend(
 			throw std::invalid_argument(
 			    "Expected another backend name following \"nmpi\"!");
 		}
-		auto backend = std::move(make_backend(join(elems, '.')));
+		auto backend =
+		    std::move(make_backend(join(elems, '.'), argc, argv, setup));
 		if (dynamic_cast<PyNN *>(backend.get()) == nullptr) {
 			throw std::invalid_argument(
 			    "NMPI backend only works in conjunction with PyNN backends!");
@@ -322,13 +340,13 @@ std::unique_ptr<Backend> NetworkBase::make_backend(
 			throw std::invalid_argument(
 			    "Expected another backend name following \"pynn\"!");
 		}
-		return std::make_unique<PyNN>(join(elems, '.'));
+		return std::make_unique<PyNN>(join(elems, '.'), setup);
 	}
 	else if (elems[0] == "nest") {
-		return std::move(std::make_unique<NEST>());
+		return std::move(std::make_unique<NEST>(setup));
 	}
 	else {
-		return std::move(std::make_unique<PyNN>(join(elems, '.')));
+		return std::move(std::make_unique<PyNN>(join(elems, '.'), setup));
 	}
 	return nullptr;
 }
