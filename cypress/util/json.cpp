@@ -19,17 +19,28 @@
 #include <cypress/util/json.hpp>
 
 namespace cypress {
-// Just make sure the header compiles
-
-Json& join(Json &tar, const Json &src) {
+static Json &join_impl(Json &tar, const Json &src)
+{
 	if (tar.is_object() && src.is_object()) {
 		const std::map<std::string, Json> map = src;
-		for (const auto &elem: map) {
+		for (const auto &elem : map) {
 			join(tar[elem.first], elem.second);
 		}
-	} else {
+	}
+	else {
 		tar = src;
 	}
 	return tar;
+}
+
+Json &join(Json &tar, const Json &src)
+{
+	if (tar.is_null()) {
+		tar = Json::object();
+	}
+	if (src.is_null()) {
+		return join_impl(tar, Json::object());
+	}
+	return join_impl(tar, src);
 }
 }
