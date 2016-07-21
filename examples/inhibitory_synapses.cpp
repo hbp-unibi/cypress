@@ -41,41 +41,37 @@ int main(int argc, const char *argv[])
 	}
 
 	using Neuron = IfCondExp;
+//	using Neuron = IfFacetsHardware1;
 	using Signals = Neuron::Signals;
 
 	static const size_t n_src = 8;
 	static const size_t n_tar = 8;
-	static const float exc_frequency = 10.0;   // Hz
-	static const float inh_frequency = 100.0;  // Hz
-	static const float runtime = 1.0e3;        // ms
-	static const float w_exc = 0.04;
-	static const float w_inh = -0.07;
+	static const float f = 25.0;        // Hz
+	static const float runtime = 1.0e3;  // ms
 
-	// Create the network
-	Network net =
-	    Network()
-	        .add_population<SpikeSourceArray>(
-	            "src_exc", n_src, SpikeSourceArray::constant_frequency(
-	                                  0.0, runtime, exc_frequency))
-	        .add_population<SpikeSourceArray>(
-	            "src_inh", n_src, SpikeSourceArray::constant_frequency(
-	                                  0.0, runtime, inh_frequency))
-	        .add_population<Neuron>("tar", n_tar, {},
-	                                Signals().record_spikes());
-
-	// Connect the excitatory input to the target and run the simulation
-	net.add_connection("src_exc", "tar", Connector::all_to_all(w_exc));
-	net.run(argv[1], runtime, argc, argv);
-	std::cout << "Average firing rate without inhibitory synapses "
-	          << avg_fire_rate(net.population<Neuron>("tar"), runtime)
-	          << std::endl;
-
-	// Connect the inhibitory input to the target and run the simulation
-	net.add_connection("src_inh", "tar", Connector::all_to_all(w_inh));
-	net.run(argv[1], runtime, argc, argv);
-	std::cout << "Average firing rate with inhibitory synapses "
-	          << avg_fire_rate(net.population<Neuron>("tar"), runtime)
-	          << std::endl;
+	// Sweep over w_syn_inh and w_syn_exc, create the network and run it
+	for (float w_syn_exc = 0.0; w_syn_exc < 0.1; w_syn_exc += 0.01) {
+		for (float w_syn_inh = 0.0; w_syn_inh < 0.1; w_syn_inh += 0.01) {
+			Network net =
+			    Network()
+			        .add_population<SpikeSourceArray>(
+			            "src1", n_src,
+			            SpikeSourceArray::constant_frequency(0.0, runtime, f))
+			        .add_population<SpikeSourceArray>(
+			            "src2", n_src,
+			            SpikeSourceArray::constant_frequency(0.0, runtime, f))
+			        .add_population<Neuron>("tar", n_tar, {},
+			                                Signals().record_spikes())
+			        .add_connection("src1", "tar",
+			                        Connector::all_to_all(-w_syn_inh))
+			        .add_connection("src2", "tar",
+			                        Connector::all_to_all(w_syn_exc))
+			        .run(argv[1], runtime, argc, argv);
+			std::cout << w_syn_exc << "," << w_syn_inh << ","
+			          << avg_fire_rate(net.population<Neuron>("tar"), runtime)
+			          << std::endl;
+		}
+	}
 
 	return 0;
 }
