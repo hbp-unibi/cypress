@@ -374,7 +374,9 @@ void PyNN::do_run(NetworkBase &source, float duration) const
 	}
 
 	// Remove the log file
-	unlink(log_path.c_str());
+	if (m_setup.count("keep_log") == 0 || !m_setup["keep_log"]) {
+		unlink(log_path.c_str());
+	}
 }
 
 std::string PyNN::nmpi_platform() const
