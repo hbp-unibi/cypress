@@ -18,6 +18,7 @@
 
 #include <fstream>
 #include <sstream>
+#include <mutex>
 
 #include <cypress/backend/power/netio4.hpp>
 #include <cypress/util/process.hpp>
@@ -66,6 +67,10 @@ void NetIO4::read_json_config(cypress::Json &config)
 
 std::string NetIO4::control(const std::string &cmd) const
 {
+	// Only one thread at a time may communicate with the NETIO4 device!
+	static std::mutex control_mutex;
+	std::lock_guard<std::mutex> lock(control_mutex);
+
 	std::stringstream ss_in, ss_out, ss_err;
 
 	// Build the input
