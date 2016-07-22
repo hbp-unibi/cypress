@@ -38,6 +38,7 @@ private:
 	std::string m_simulator;
 	std::string m_normalised_simulator;
 	std::vector<std::string> m_imports;
+	bool m_keep_log;
 	Json m_setup;
 
 	void do_run(NetworkBase &network, float duration) const override;

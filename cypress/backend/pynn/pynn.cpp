@@ -277,6 +277,14 @@ PyNN::PyNN(const std::string &simulator, const Json &setup)
 		m_setup = it->second;
 	}
 	join(m_setup, setup); // Ensures m_setup is not null
+
+	// Read the keep_log flag from the setup. Do not pass it to the PyNN
+	// backend.
+	m_keep_log = false;
+	if (m_setup.count("keep_log") > 0 && m_setup["keep_log"]) {
+		m_keep_log = true;
+		m_setup.erase("keep_log");
+	}
 }
 
 PyNN::~PyNN() = default;
@@ -374,7 +382,7 @@ void PyNN::do_run(NetworkBase &source, float duration) const
 	}
 
 	// Remove the log file
-	if (m_setup.count("keep_log") == 0 || !m_setup["keep_log"]) {
+	if (!m_keep_log) {
 		unlink(log_path.c_str());
 	}
 }
