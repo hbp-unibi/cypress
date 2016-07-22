@@ -16,6 +16,15 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+/**
+ * @file power.hpp
+ *
+ * Contains an adapter backend which performs power management tasks, such as
+ * automatically switchin the neuromorphic devices on/off and resetting them.
+ *
+ * @author Andreas Stöckel
+ */
+
 #pragma once
 
 #ifndef CYPRESS_BACKEND_POWER_POWER_HPP
@@ -35,26 +44,56 @@ namespace cypress {
  */
 class PowerDevice {
 public:
-	virtual ~PowerDevice() {};
+	virtual ~PowerDevice(){};
 
+	/**
+	 * Returns the state of the device with the given name. If the device cannot
+	 * be controlled, false should be returned.
+	 *
+	 * @param device is the canonical backend name (returned by backend.name())
+	 * of the device for which the state should be returned.
+	 * @return true if the device is currently switched on, false in all other
+	 * cases.
+	 */
 	virtual bool state(const std::string &device) = 0;
+
+	/**
+	 * Switches the device with teh given name on.
+	 *
+	 * @param device is the canonical backend name (returned by backend.name())
+	 * of the device that should be controlled.
+	 * @return true if the operation was successful, false otherwise.
+	 */
 	virtual bool switch_on(const std::string &device) = 0;
+
+	/**
+	 * Switches the device with teh given name off.
+	 *
+	 * @param device is the canonical backend name (returned by backend.name())
+	 * of the device that should be controlled.
+	 * @return true if the operation was successful, false otherwise.
+	 */
 	virtual bool switch_off(const std::string &device) = 0;
 };
 
 /**
- * The NMPI backend executes the program on a Neuromorphic Platform Interface
- * server.
+ * The PowerManagementBackend is responsible for switching neuromorphic hardware
+ * devices on and off when necessary and to automatically reset them in case
+ * there is an error during the execution, which are sometimes caused by buggy
+ * firmware. E.g. the Spikey device sometimes looses the USB connection, which
+ * can only be solved by a power cycle. Furthermore, due to annoying noise being
+ * emitted from the device, it is extremely important for the sanity of the
+ * people
+ * sitting in the same room, that the device is switched on exactly if
+ * experments are running.
  */
 class PowerManagementBackend : public Backend {
 private:
-	std::unique_ptr<PowerDevice> m_device;
+	std::shared_ptr<PowerDevice> m_device;
 	std::unique_ptr<Backend> m_backend;
 
 	/**
-	 * This method just forwards the given data to the PyNN instance -- it is
-	 * not called on the client computer, since the constructor intercepts the
-	 * program flow.
+	 * This method just forwards the given data to the backend instance.
 	 */
 	void do_run(NetworkBase &network, float duration) const override;
 
@@ -66,7 +105,7 @@ public:
 	 * to the neuromorphic hardware.
 	 * @param backend is the backend which actually executes the network.
 	 */
-	PowerManagementBackend(std::unique_ptr<PowerDevice> device,
+	PowerManagementBackend(std::shared_ptr<PowerDevice> device,
 	                       std::unique_ptr<Backend> backend);
 
 	/**
@@ -75,7 +114,8 @@ public:
 	~PowerManagementBackend() override;
 
 	/**
-	 * Returns the canonical name of the backend.
+	 * Returns the canonical name of the backend. Forward the call to the actual
+	 * backend being wrapped by the PowerManagementBackend.
 	 */
 	std::string name() const override { return m_backend->name(); }
 };
