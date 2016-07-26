@@ -34,6 +34,7 @@
 #include <cypress/backend/resources.hpp>
 #include <cypress/core/exceptions.hpp>
 #include <cypress/core/network_base.hpp>
+#include <cypress/core/neurons.hpp>
 #include <cypress/util/process.hpp>
 #include <cypress/util/filesystem.hpp>
 
@@ -127,6 +128,24 @@ static const std::unordered_map<std::string, Json> DEFAULT_SETUPS = {
     {"nmmc1", {{"timestep", 1.0}}},
     {"nmpm1", {{"neuron_size", 4}}},
     {"spikey", Json::object()}};
+
+/**
+ * Map containing the supported neuron types per simulator.
+ */
+static const std::unordered_map<std::string,
+                                std::unordered_set<const NeuronType *>>
+    SUPPORTED_NEURON_TYPE_MAP = {
+        {"nmmc1", {&SpikeSourceArray::inst(), &IfCondExp::inst()}},
+        {"nmpm1",
+         {&SpikeSourceArray::inst(), &IfCondExp::inst(),
+          &EifCondExpIsfaIsta::inst()}},
+        {"ess",
+         {&SpikeSourceArray::inst(), &IfCondExp::inst(),
+          &EifCondExpIsfaIsta::inst()}},
+        {"spikey", {&SpikeSourceArray::inst(), &IfFacetsHardware1::inst()}},
+        {"__default__",
+         {&SpikeSourceArray::inst(), &IfCondExp::inst(),
+          &EifCondExpIsfaIsta::inst()}}};
 
 /**
  * Static class used to lookup information about the PyNN simulations.
@@ -296,6 +315,15 @@ float PyNN::timestep()
 		return 0.0;  // No minimum timestep on analogue neuromorphic hardware
 	}
 	return m_setup.value("timestep", 0.1);  // Default is 0.1ms
+}
+
+std::unordered_set<const NeuronType *> PyNN::supported_neuron_types() const
+{
+	auto it = SUPPORTED_NEURON_TYPE_MAP.find(m_normalised_simulator);
+	if (it != SUPPORTED_NEURON_TYPE_MAP.end()) {
+		return it->second;
+	}
+	return SUPPORTED_NEURON_TYPE_MAP.find("__default__")->second;
 }
 
 void PyNN::do_run(NetworkBase &source, float duration) const

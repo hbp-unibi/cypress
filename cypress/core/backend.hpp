@@ -31,6 +31,7 @@
 #define CYPRESS_BACKEND_HPP
 
 #include <string>
+#include <unordered_set>
 
 namespace cypress {
 
@@ -38,6 +39,7 @@ namespace cypress {
  * Forward declarations
  */
 class NetworkBase;
+class NeuronType;
 
 /**
  * The Backend class is an abstract base class which provides the facilities
@@ -60,6 +62,17 @@ public:
 	 * simulated.
 	 */
 	void run(NetworkBase &network, float duration = 0.0) const;
+
+	/**
+	 * Returns a set of neuron types which are supported by this backend. Trying
+	 * to execute a network with other neurons than the ones specified in the
+	 * result of this function will result in an exception.
+	 *
+	 * @return a set of neuron types supported by this particular backend
+	 * instance.
+	 */
+	virtual std::unordered_set<const NeuronType *> supported_neuron_types()
+	    const = 0;
 
 	/**
 	 * Returns the canonical name of the backend.

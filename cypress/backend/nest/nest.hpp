@@ -79,6 +79,12 @@ public:
 	~NEST() override = default;
 
 	/**
+	 * Returns the neuron types supported by the NEST backend.
+	 */
+	std::unordered_set<const NeuronType *> supported_neuron_types()
+	    const override;
+
+	/**
 	 * Returns the canonical name of the backend.
 	 */
 	std::string name() const override { return "nest"; }

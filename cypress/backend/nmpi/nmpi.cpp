@@ -146,10 +146,13 @@ NMPI::NMPI(const std::string &pynn_backend, int &argc, const char *argv[],
 
 NMPI::~NMPI() = default;
 
-std::string NMPI::name() const
+std::unordered_set<const NeuronType *> NMPI::supported_neuron_types()
+    const
 {
-	return m_pynn->name();
+	return m_pynn->supported_neuron_types();
 }
+
+std::string NMPI::name() const { return m_pynn->name(); }
 
 bool NMPI::check_args(int argc, const char *argv[])
 {

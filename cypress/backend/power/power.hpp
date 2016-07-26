@@ -114,6 +114,15 @@ public:
 	~PowerManagementBackend() override;
 
 	/**
+	 * Returns the neuron types supported by the actual backend.
+	 */
+	std::unordered_set<const NeuronType *> supported_neuron_types()
+	    const override
+	{
+		return m_backend->supported_neuron_types();
+	}
+
+	/**
 	 * Returns the canonical name of the backend. Forward the call to the actual
 	 * backend being wrapped by the PowerManagementBackend.
 	 */

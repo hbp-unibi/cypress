@@ -78,6 +78,17 @@ public:
 	float timestep();
 
 	/**
+	 * Returns a set of neuron types which are supported by this backend. Trying
+	 * to execute a network with other neurons than the ones specified in the
+	 * result of this function will result in an exception.
+	 *
+	 * @return a set of neuron types supported by this particular backend
+	 * instance.
+	 */
+	std::unordered_set<const NeuronType *> supported_neuron_types()
+	    const override;
+
+	/**
 	 * Returns the canonical name of the backend.
 	 */
 	std::string name() const override { return m_normalised_simulator; }
