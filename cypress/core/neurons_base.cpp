@@ -48,7 +48,7 @@ Optional<size_t> NeuronType::signal_index(const std::string &name) const
  */
 
 NullNeuron::NullNeuron()
-    : NeuronTypeBase(0, "", {}, {}, {}, {}, {}, false, false)
+    : NeuronTypeBase("", {}, {}, {}, {}, {}, false, false)
 {
 }
 

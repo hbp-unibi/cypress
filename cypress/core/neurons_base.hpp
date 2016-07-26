@@ -56,15 +56,14 @@ protected:
 	/**
 	 * Constructor of the NeuronTypeDescriptor structure.
 	 */
-	NeuronType(int type_id, const std::string &name,
+	NeuronType(const std::string &name,
 	           const std::vector<std::string> &parameter_names,
 	           const std::vector<std::string> &parameter_units,
 	           const std::vector<float> &parameter_defaults,
 	           const std::vector<std::string> &signal_names,
 	           const std::vector<std::string> &signal_units,
 	           bool conductance_based, bool spike_source)
-	    : type_id(type_id),
-	      name(name),
+	    : name(name),
 	      parameter_names(parameter_names),
 	      parameter_units(parameter_units),
 	      parameter_defaults(parameter_defaults),
@@ -76,11 +75,6 @@ protected:
 	}
 
 public:
-	/**
-	 * Type id as understood by the Python part of Cypress.
-	 */
-	const int type_id;
-
 	/**
 	 * Name of the neuron type.
 	 */

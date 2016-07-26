@@ -42,7 +42,8 @@ public:
 
 /**
  * Exception that should be thrown by implementations of the Backend class if
- * do_run fails.
+ * do_run fails. Only should be thrown if the simulator itself fails and not
+ * because of any internal reason.
  */
 class ExecutionError : public CypressException {
 public:
@@ -134,6 +135,14 @@ public:
 	          "Cannot retrieve data for signal which is not being recorded.")
 	{
 	}
+};
+
+/**
+ * Exception thrown if something is not supported by a certain backend.
+ */
+class NotSupportedException: public CypressException {
+public:
+	using CypressException::CypressException;
 };
 }
 

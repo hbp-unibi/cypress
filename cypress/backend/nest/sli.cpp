@@ -234,8 +234,9 @@ void write_populations(std::ostream &os,
 			                 Population<SpikeSourceArray>(population), gid);
 		}
 		else {
-			throw ExecutionError("Population type " + population.type().name +
-			                     " not supported by the NEST backend!");
+			throw NotSupportedException("Population type " +
+			                            population.type().name +
+			                            " not supported by the NEST backend!");
 		}
 	}
 }

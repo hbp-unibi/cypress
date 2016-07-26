@@ -41,6 +41,21 @@ static const Header CONNECTIONS_HEADER = {
     {INT, INT, INT, INT, FLOAT, FLOAT}};
 static const int32_t ALL_NEURONS = std::numeric_limits<int32_t>::max();
 
+static const std::map<const NeuronType *, int32_t> NEURON_TYPE_ID_MAP{
+    {{&SpikeSourceArray::inst(), 0},
+     {&IfCondExp::inst(), 1},
+     {&EifCondExpIsfaIsta::inst(), 2},
+     {&IfFacetsHardware1::inst(), 3}}};
+
+static int32_t binnf_type_id(const NeuronType &type)
+{
+	auto it = NEURON_TYPE_ID_MAP.find(&type);
+	if (it != NEURON_TYPE_ID_MAP.end()) {
+		return it->second;
+	}
+	throw NotSupportedException(std::string("Neuron type \"") + type.name +
+	                            "\" not supported!");
+}
 
 /**
  * Constructs and sends the matrix containing the populations to the simulator.
@@ -72,7 +87,7 @@ static void write_populations(const std::vector<PopulationBase> &populations,
 	Matrix<Number> mat(populations.size(), header.size());
 	for (size_t i = 0; i < populations.size(); i++) {
 		mat(i, 0) = int32_t(populations[i].size());
-		mat(i, 1) = int32_t(populations[i].type().type_id);
+		mat(i, 1) = int32_t(binnf_type_id(populations[i].type()));
 		size_t j = 2;
 		for (auto const &signal : signals) {
 			// Lookup the signal index for this population
@@ -254,15 +269,17 @@ bool marshall_response(NetworkBase &net, std::istream &is)
 			if (!has_target) {
 				throw BinnfDecodeException("No target neuron set");
 			}
-			if (block.matrix.cols() != 2 || block.colidx("times") != 0 || block.colidx("values") != 1) {
+			if (block.matrix.cols() != 2 || block.colidx("times") != 0 ||
+			    block.colidx("values") != 1) {
 				throw BinnfDecodeException("Invalid trace data layout!");
 			}
-			const std::string signal = block.name.substr(6, block.name.size() - 6);
+			const std::string signal =
+			    block.name.substr(6, block.name.size() - 6);
 			auto neuron = net[tar_pid][tar_nid];
 			auto idx = neuron.type().signal_index(signal);
 			if (idx.valid() && neuron.signals().is_recording(idx.value())) {
 				neuron.signals().data(
-					idx.value(),
+				    idx.value(),
 				    std::make_shared<Matrix<float>>(
 				        block.matrix.rows(), 2,
 				        reinterpret_cast<float *>(block.matrix.begin())));
@@ -274,12 +291,10 @@ bool marshall_response(NetworkBase &net, std::istream &is)
 			const size_t initialize_col = block.colidx("initialize");
 			const size_t finalize_col = block.colidx("finalize");
 
-			net.runtime({
-				block.matrix(0, total_col).f,
-				block.matrix(0, sim_col).f,
-				block.matrix(0, initialize_col).f,
-				block.matrix(0, finalize_col).f
-			});
+			net.runtime({block.matrix(0, total_col).f,
+			             block.matrix(0, sim_col).f,
+			             block.matrix(0, initialize_col).f,
+			             block.matrix(0, finalize_col).f});
 
 			has_target = false;
 		}

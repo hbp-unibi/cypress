@@ -24,7 +24,7 @@ namespace cypress {
  */
 
 SpikeSourceArray::SpikeSourceArray()
-    : NeuronTypeBase(0, "SpikeSourceArray", {"spike_times"}, {"ms"}, {},
+    : NeuronTypeBase("SpikeSourceArray", {"spike_times"}, {"ms"}, {},
                      {"spikes"}, {"ms"}, false, true)
 {
 }
@@ -59,8 +59,8 @@ std::vector<float> SpikeSourceArray::constant_frequency(float t_start,
  */
 
 IfFacetsHardware1::IfFacetsHardware1()
-    : NeuronTypeBase(3, "IfFacetsHardware1", {"g_leak", "tau_refrac", "v_rest",
-                                              "v_thresh", "v_reset", "e_rev_I"},
+    : NeuronTypeBase("IfFacetsHardware1", {"g_leak", "tau_refrac", "v_rest",
+                                           "v_thresh", "v_reset", "e_rev_I"},
                      {"uS", "ms", "mV", "mV", "mV", "mV"},
                      {20.0, 1.0, -75.0, -55.0, -80.0, -80.0}, {"spikes", "v"},
                      {"ms", "mV"}, true, false)
@@ -79,7 +79,7 @@ const IfFacetsHardware1 &IfFacetsHardware1::inst()
 
 IfCondExp::IfCondExp()
     : NeuronTypeBase(
-          1, "IfCondExp",
+          "IfCondExp",
           {"cm", "tau_m", "tau_syn_E", "tau_syn_I", "tau_refrac", "v_rest",
            "v_thresh", "v_reset", "e_rev_E", "e_rev_I", "i_offset"},
           {"nF", "ms", "ms", "ms", "ms", "mV", "mV", "mV", "mV", "mV", "nA"},
@@ -100,7 +100,7 @@ const IfCondExp &IfCondExp::inst()
  */
 
 EifCondExpIsfaIsta::EifCondExpIsfaIsta()
-    : NeuronTypeBase(2, "EifCondExpIsfaIsta",
+    : NeuronTypeBase("EifCondExpIsfaIsta",
                      {"cm", "tau_m", "tau_syn_E", "tau_syn_I", "tau_refrac",
                       "tau_w", "v_rest", "v_thresh", "v_reset", "e_rev_E",
                       "e_rev_I", "i_offset", "a", "b", "delta_T"},
