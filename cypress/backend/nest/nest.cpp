@@ -126,8 +126,8 @@ void NEST::do_run(NetworkBase &source, float duration) const
 		std::ifstream log_stream_in(log_path);
 		Process::generic_pipe(log_stream_in, std::cerr);
 		throw ExecutionError(
-			std::string("Error while executing the NEST simulation, see " +
-			            log_path + " for the above information."));
+		    std::string("Error while executing the NEST simulation, see " +
+		                log_path + " for the above information."));
 	}
 	std::ifstream log_stream_in(log_path);
 	Process::generic_pipe(log_stream_in, std::cerr);

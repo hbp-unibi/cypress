@@ -276,7 +276,7 @@ PyNN::PyNN(const std::string &simulator, const Json &setup)
 	if (it != DEFAULT_SETUPS.end()) {
 		m_setup = it->second;
 	}
-	join(m_setup, setup); // Ensures m_setup is not null
+	join(m_setup, setup);  // Ensures m_setup is not null
 
 	// Read the keep_log flag from the setup. Do not pass it to the PyNN
 	// backend.
@@ -367,7 +367,7 @@ void PyNN::do_run(NetworkBase &source, float duration) const
 #ifndef CYPRESS_DEBUG_BINNF
 		if ((!binnf::marshall_response(source, proc.child_stdout())) |
 		    (proc.wait() != 0)) {
-			log_thread.join(); // Make sure the logging thread has finished
+			log_thread.join();  // Make sure the logging thread has finished
 
 			std::ifstream log_stream_in(log_path);
 			Process::generic_pipe(log_stream_in, std::cerr);
