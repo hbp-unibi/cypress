@@ -81,7 +81,7 @@ std::string NetIO4::control(const std::string &cmd) const
 
 	// Call netcat to communicate with the device
 	if (cypress::Process::exec("nc",
-	                           {"-w", "1", m_addr, std::to_string(m_port)},
+	                           {"-w", "5", m_addr, std::to_string(m_port)},
 	                           ss_in, ss_out, ss_err) != 0) {
 		throw std::runtime_error(
 		    "NETIO4: Error while executing netcat (nc), make sure the program "
