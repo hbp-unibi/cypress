@@ -24,6 +24,7 @@
 #include <mutex>
 
 #include <cypress/backend/power/power.hpp>
+#include <cypress/core/exceptions.hpp>
 #include <cypress/util/process.hpp>
 
 namespace cypress {
@@ -191,7 +192,7 @@ void PowerManagementBackend::do_run(NetworkBase &network, float duration) const
 			power_off_manager.add_device(m_device, dev_name);
 			return;
 		}
-		catch (std::runtime_error e) {
+		catch (ExecutionError e) {
 			// If an exception occurred, switch off the device. If this was
 			// successful, try again
 			if (repeat > 1) {
