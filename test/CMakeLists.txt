@@ -30,6 +30,7 @@ include_directories(
 add_executable(test_cypress_core
 	core/test_network
 	core/test_connector
+	core/test_transformation
 )
 target_link_libraries(test_cypress_core
 	cypress

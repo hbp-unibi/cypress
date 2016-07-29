@@ -41,6 +41,15 @@ public:
 };
 
 /**
+ * Exceptions that should be thrown by implementations of the Transformation
+ * class in case do_copy_results() or do_transform() fails.
+ */
+class TransformationException: public CypressException {
+public:
+	using CypressException::CypressException;
+};
+
+/**
  * Exception that should be thrown by implementations of the Backend class if
  * do_run fails. Only should be thrown if the simulator itself fails and not
  * because of any internal reason.
