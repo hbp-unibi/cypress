@@ -152,22 +152,23 @@ class Cypress:
         https://github.com/electronicvisions/hbp_platform_demo/blob/master/nmpm1/run.py
         """
         import pylogging
-        from pymarocco import PyMarocco, Placement
-        from pyhalbe.Coordinate import HICANNGlobal, Enum
+        from pymarocco import PyMarocco
 
         # Deactivate logging
-        for domain in ["Default", "marocco", "sthal.HICANNConfigurator.Time"]:
-            pylogging.set_loglevel(
-                pylogging.get(domain), pylogging.LogLevel.ERROR)
+#        for domain in ["Default", "marocco", "sthal.HICANNConfigurator.Time"]:
+#            pylogging.set_loglevel(
+#                pylogging.get(domain), pylogging.LogLevel.ERROR)
+        pylogging.set_loglevel(pylogging.get("marocco"), pylogging.LogLevel.DEBUG)
+        pylogging.set_loglevel(pylogging.get("ESS"), pylogging.LogLevel.DEBUG)
 
         # Copy and delete non-standard setup parameters
         neuron_size = setup["neuron_size"] if "neuron_size" in setup else 1
         del setup["neuron_size"]
 
         marocco = PyMarocco()
-        marocco.placement.setDefaultNeuronSize(neuron_size)
-        marocco.placement.use_output_buffer7_for_dnc_input_and_bg_hack = True
-        marocco.placement.minSPL1 = False
+        marocco.neuron_placement.default_neuron_size(neuron_size)
+        marocco.neuron_placement.restrict_rightmost_neuron_blocks(True)
+        marocco.neuron_placement.minimize_number_of_sending_repeaters(False)
         if simulator == "ess":
             marocco.backend = PyMarocco.ESS
             marocco.calib_backend = PyMarocco.Default
