@@ -227,7 +227,7 @@ Transformations::construct_neuron_type_transformation_chain(
 
 	// Step 2: Try to find the shortest path from an unsupported type to a
 	// supported type
-	std::vector<std::vector<TransformationCtor>> paths;
+	std::vector<TransformationCtor> path;
 	for (const NeuronType *unsupported_type : unsupported_types) {
 		// Find the start node
 		const auto it = node_idx_map.find(unsupported_type);
@@ -248,7 +248,6 @@ Transformations::construct_neuron_type_transformation_chain(
 
 			// Add the path to the path list, mark visited nodes as "supported"
 			if (!res.empty()) {
-				std::vector<TransformationCtor> path;
 				size_t idx = start_idx;
 				nodes[idx].supported = true;
 				for (size_t i = 0; i < res.size(); i++) {
@@ -256,7 +255,6 @@ Transformations::construct_neuron_type_transformation_chain(
 					nodes[idx].supported = true;
 					path.emplace_back(std::get<0>(transformations[res[i]]));
 				}
-				paths.emplace_back(path);
 				continue;
 			}
 		}
@@ -266,12 +264,9 @@ Transformations::construct_neuron_type_transformation_chain(
 		    "supported neuron type was found.");
 	}
 
-	// Step 3: Extract the transformations from the paths
-	std::vector<TransformationCtor> res;
-	for (ssize_t i = paths.size() - 1; i >= 0; i--) {
-		res.insert(res.end(), paths[i].begin(), paths[i].end());
-	}
-	return res;
+	// Step 3: Reverse the execution order and return the resulting path
+	std::reverse(path.begin(), path.end());
+	return path;
 }
 
 void Transformations::execute(
