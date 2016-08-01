@@ -24,6 +24,7 @@
 #include <cypress/core/exceptions.hpp>
 #include <cypress/core/network_base.hpp>
 #include <cypress/core/network_base_objects.hpp>
+#include <cypress/core/transformation.hpp>
 
 #include <cypress/backend/nest/nest.hpp>
 #include <cypress/backend/nmpi/nmpi.hpp>
@@ -62,6 +63,17 @@ private:
 	mutable bool m_connections_sorted;
 
 public:
+	/**
+	 * Flag indicating whether lossy transformations should be used when
+	 * executing the network.
+	 */
+	bool use_lossy_trafos;
+
+	/**
+	 * Set of disabled transformation identifiers.
+	 */
+	std::unordered_set<std::string> disabled_trafo_ids;
+
 	/**
 	 * Default constructor of the NetworkData class.
 	 */
@@ -351,15 +363,37 @@ std::unique_ptr<Backend> NetworkBase::make_backend(std::string backend_id,
 	return nullptr;
 }
 
+bool NetworkBase::use_lossy_trafos() const
+{
+	return m_impl->use_lossy_trafos;
+}
+
+void NetworkBase::use_lossy_trafos(bool use_lossy) const
+{
+	m_impl->use_lossy_trafos = use_lossy;
+}
+
+const std::unordered_set<std::string> &NetworkBase::disabled_trafo_ids() const
+{
+	return m_impl->disabled_trafo_ids;
+}
+
+std::unordered_set<std::string> &NetworkBase::disabled_trafo_ids()
+{
+	return m_impl->disabled_trafo_ids;
+}
+
 void NetworkBase::run(const Backend &backend, float duration)
 {
-	backend.run(*this, duration);
+	Transformations::run(backend, *this, TransformationAuxData{duration},
+	                     m_impl->disabled_trafo_ids, m_impl->use_lossy_trafos);
 }
 
 void NetworkBase::run(const std::string &backend_id, float duration, int argc,
                       const char *argv[])
 {
-	make_backend(backend_id, argc, argv)->run(*this, duration);
+	auto backend = make_backend(backend_id, argc, argv);
+	run(*backend, duration);
 }
 
 float NetworkBase::duration() const

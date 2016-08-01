@@ -69,7 +69,7 @@ struct TransformationProperties {
 /**
  * Auxiliary data which may be affected by the transformation.
  */
-class TransformationAuxData {
+struct TransformationAuxData {
 	/**
 	 * Contains the network simulation duration. Certain transformations may
 	 * choose to extend the actual simulation duration.
@@ -91,7 +91,8 @@ protected:
 	 * @param src is the network which should be modified.
 	 * @return is a new Network instance which contains the transformed data.
 	 */
-	virtual NetworkBase do_transform(const NetworkBase &src) = 0;
+	virtual NetworkBase do_transform(const NetworkBase &src,
+	                                 TransformationAuxData &aux) = 0;
 
 	/**
 	 * Function called after the network was executed. This function should copy
@@ -137,7 +138,7 @@ public:
 	/**
 	 * Copys the results from a transformed network to the original network.
 	 */
-	void copy_results(const NetworkBase &src, NetworkBase &tar);
+	void copy_results(const NetworkBase &src, NetworkBase &tar) const;
 
 	virtual ~Transformation(){};
 };
@@ -187,17 +188,19 @@ public:
 	 * @param network is the network instance that is the subject of the
 	 * transformation.
 	 * @param backend is the backend on which the network should be executed.
+	 * @param aux is auxiliary data that should be passed to the run() method
+	 * of the backend, such as the network execution time.
 	 * @param disabled_trafo_ids is a set of transformation identifiers
 	 * specifying transformations which should not be executed.
 	 * @param use_lossy if true allows the use of so called "lossy"
 	 * transformations. These transformations may result in a network which is
 	 * not equivalent to the network the user described.
 	 */
-	static void execute(
-	    const NetworkBase &network, const Backend &backend,
-	    const std::unordered_set<std::string> &disabled_trafo_ids =
-	        std::unordered_set<std::string>(),
-	    bool use_lossy = true);
+	static void run(const Backend &backend, NetworkBase network,
+	                const TransformationAuxData &aux,
+	                std::unordered_set<std::string> disabled_trafo_ids =
+	                    std::unordered_set<std::string>(),
+	                bool use_lossy = true);
 
 	/**
 	 * Registers a general transformation which should be executed if an

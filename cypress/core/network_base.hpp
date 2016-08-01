@@ -35,6 +35,7 @@
 
 #include <memory>
 #include <string>
+#include <unordered_set>
 #include <vector>
 
 #include <cypress/core/connector.hpp>
@@ -295,6 +296,30 @@ public:
 	                                             int argc = 0,
 	                                             const char *argv[] = nullptr,
 	                                             Json setup = Json());
+
+	/**
+	 * Returns the state of the "use_lossy_trafos" flag. If true, applies
+	 * possibly lossy transformations to the network in order to run it on the
+	 * target platform. The default value is "true".
+	 */
+	bool use_lossy_trafos() const;
+
+	/**
+	 * Sets the "use_lossy_trafos" flag. If true, allows to apply lossy
+	 * transformations to allow running a network on the target platform. The
+	 * defautl value is "true".
+	 */
+	void use_lossy_trafos(bool use_lossy) const;
+
+	/**
+	 * Returns the list of currently disabled transformation ids.
+	 */
+	const std::unordered_set<std::string> &disabled_trafo_ids() const;
+
+	/**
+	 * Returns the list of currently disabled transformation ids.
+	 */
+	std::unordered_set<std::string> &disabled_trafo_ids();
 
 	/**
 	 * Executes the network on the given backend and stores the results in the

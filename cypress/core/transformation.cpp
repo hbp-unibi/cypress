@@ -20,6 +20,7 @@
 #include <queue>
 #include <limits>
 #include <mutex>
+#include <stack>
 #include <tuple>
 #include <unordered_map>
 
@@ -53,6 +54,18 @@ void Transformation::do_copy_results(const NetworkBase &src,
 		}
 		tar[i].signals() = src[i].signals();
 	}
+}
+
+NetworkBase Transformation::transform(const NetworkBase &src,
+                                      TransformationAuxData &aux)
+{
+	return do_transform(src, aux);
+}
+
+void Transformation::copy_results(const NetworkBase &src,
+                                  NetworkBase &tar) const
+{
+	do_copy_results(src, tar);
 }
 
 /**
@@ -120,7 +133,7 @@ static std::vector<const NeuronType *> find_unsupported_neuron_types(
 			res.emplace(&population.type());
 		}
 	}
-	return std::vector<const NeuronType*>(res.begin(), res.end());
+	return std::vector<const NeuronType *>(res.begin(), res.end());
 }
 }
 
@@ -269,36 +282,112 @@ Transformations::construct_neuron_type_transformation_chain(
 	return path;
 }
 
-void Transformations::execute(
-    const NetworkBase &network, const Backend &backend,
-    const std::unordered_set<std::string> &disabled_trafo_ids, bool use_lossy)
+void Transformations::run(const Backend &backend, NetworkBase network,
+                          const TransformationAuxData &aux,
+                          std::unordered_set<std::string> disabled_trafo_ids,
+                          bool use_lossy)
 {
-	// List of transformations that should be executed
-	std::vector<TransformationCtor> trafos;
-
-	// Fetch all neuron type transformations which are not disabled
-	auto available_neuron_trafos =
-	    TransformationRegistry::get_neuron_type_transformations();
-	for (auto it = available_neuron_trafos.begin();
-	     it != available_neuron_trafos.end(); it++) {
-		if (disabled_trafo_ids.count(std::get<0> (*it)()->id()) > 0) {
-			it = available_neuron_trafos.erase(it);
-		}
-	}
-
-	// Iterate over the network and find neuron types which are not supported
-	// by the backend
+	// Iterate over the network and find neuron types which are not
+	// supported by the backend
 	const std::unordered_set<const NeuronType *> supported_types =
 	    backend.supported_neuron_types();
 	const std::vector<const NeuronType *> unsupported_types =
 	    find_unsupported_neuron_types(network, supported_types);
-	if (!unsupported_types.empty()) {
-		std::vector<TransformationCtor> neuron_trafos =
-		    construct_neuron_type_transformation_chain(
-		        unsupported_types, supported_types, available_neuron_trafos,
-		        use_lossy);
-		trafos.insert(trafos.end(), neuron_trafos.begin(), neuron_trafos.end());
-	}
+
+	bool done;
+	do {
+		// Fetch all neuron type transformations which are not disabled
+		auto available_neuron_trafos =
+		    TransformationRegistry::get_neuron_type_transformations();
+		for (auto it = available_neuron_trafos.begin();
+		     it != available_neuron_trafos.end(); it++) {
+			if (disabled_trafo_ids.count(std::get<0> (*it)()->id()) > 0) {
+				it = available_neuron_trafos.erase(it);
+			}
+		}
+
+		// Add the neuron transformations to the transformation list
+		std::vector<TransformationCtor> neuron_trafos;
+		if (!unsupported_types.empty()) {
+			construct_neuron_type_transformation_chain(
+			    unsupported_types, supported_types, available_neuron_trafos,
+			    use_lossy);
+		}
+
+		// Apply the neuron transformations, store each intermediate network on
+		// the "networks" stack
+		TransformationAuxData aux_cpy = aux;
+		std::stack<NetworkBase> networks;
+		std::stack<std::unique_ptr<Transformation>> trafos;
+
+		// Applies a single transformation and returns true if it succeeded
+		auto apply_trafo = [&](std::unique_ptr<Transformation> trafo) {
+			try {
+				// Try to apply the transformation. If this fails for some
+				// reason, skip this transformation in the next run and try
+				// again
+				trafos.emplace(std::move(trafo));
+				networks.emplace(std::move(
+				    trafos.top()->transform(networks.top(), aux_cpy)));
+			}
+			catch (TransformationException e) {
+				// TODO: Log this incident!
+				disabled_trafo_ids.emplace(trafos.top()->id());
+				return false;
+			}
+			return true;
+		};
+
+		// Applies all transformations, runs the network, and copyies the data
+		// back to the original network
+		auto apply_trafos = [&]() {
+			for (const auto &ctor : neuron_trafos) {
+				if (!apply_trafo(std::move(ctor()))) {
+					return false;
+				}
+			}
+
+			// Apply all general transformations
+			for (const auto &descr :
+			     TransformationRegistry::get_general_transformations()) {
+				std::unique_ptr<Transformation> trafo =
+				    std::move(std::get<0>(descr)());
+				if (disabled_trafo_ids.count(trafo->id()) > 0) {
+					continue;  // Skip disabled transformations
+				}
+
+				// Check whether the transformation applies to the current
+				// network and backend, if yes, execute it
+				if (std::get<1>(descr)(backend, networks.top()) &&
+				    !apply_trafo(std::move(trafo))) {
+					return false;
+				}
+			}
+			return true;
+		};
+
+		// Try to apply all transformations, if one fails, blacklist it and try
+		// again
+		networks.emplace(network);
+		if ((done = apply_trafos())) {
+			// Run the network
+			backend.run(networks.top(), aux_cpy.duration);
+
+			// Copy the data back to the original network
+			while (!trafos.empty()) {
+				// Fetch the network on top of the stack as source network
+				NetworkBase network_src = networks.top();
+				networks.pop();
+
+				// Copy the results from the source network to the next network
+				// on the stack
+				trafos.top()->copy_results(network_src, networks.top());
+
+				// Erase the current network
+				trafos.pop();
+			}
+		}
+	} while (!done);
 }
 
 RegisteredTransformation Transformations::register_general_transformation(
