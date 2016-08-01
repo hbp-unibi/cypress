@@ -174,7 +174,7 @@ public:
 	 */
 	static std::vector<TransformationCtor>
 	construct_neuron_type_transformation_chain(
-	    const std::unordered_set<const NeuronType *> &unsupported_types,
+	    const std::vector<const NeuronType *> &unsupported_types,
 	    const std::unordered_set<const NeuronType *> &supported_types,
 	    const std::vector<std::tuple<TransformationCtor, const NeuronType *,
 	                                 const NeuronType *>> &transformations,

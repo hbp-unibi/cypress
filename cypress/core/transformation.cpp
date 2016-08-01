@@ -109,7 +109,7 @@ struct NeuronTypeNode {
 	std::vector<size_t> edges;
 };
 
-static std::unordered_set<const NeuronType *> find_unsupported_neuron_types(
+static std::vector<const NeuronType *> find_unsupported_neuron_types(
     const NetworkBase &network,
     const std::unordered_set<const NeuronType *> &supported_neuron_types)
 {
@@ -120,13 +120,13 @@ static std::unordered_set<const NeuronType *> find_unsupported_neuron_types(
 			res.emplace(&population.type());
 		}
 	}
-	return res;
+	return std::vector<const NeuronType*>(res.begin(), res.end());
 }
 }
 
 std::vector<TransformationCtor>
 Transformations::construct_neuron_type_transformation_chain(
-    const std::unordered_set<const NeuronType *> &unsupported_types,
+    const std::vector<const NeuronType *> &unsupported_types,
     const std::unordered_set<const NeuronType *> &supported_types,
     const std::vector<std::tuple<TransformationCtor, const NeuronType *,
                                  const NeuronType *>> &transformations,
@@ -290,7 +290,7 @@ void Transformations::execute(
 	// by the backend
 	const std::unordered_set<const NeuronType *> supported_types =
 	    backend.supported_neuron_types();
-	const std::unordered_set<const NeuronType *> unsupported_types =
+	const std::vector<const NeuronType *> unsupported_types =
 	    find_unsupported_neuron_types(network, supported_types);
 	if (!unsupported_types.empty()) {
 		std::vector<TransformationCtor> neuron_trafos =
