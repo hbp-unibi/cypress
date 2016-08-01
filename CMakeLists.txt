@@ -91,7 +91,6 @@ add_library(cypress
 	cypress/backend/power/netio4
 	cypress/backend/power/power
 	cypress/backend/pynn/pynn
-	cypress/backend/pynn/transformation
 	cypress/core/backend
 	cypress/core/connector
 	cypress/core/data

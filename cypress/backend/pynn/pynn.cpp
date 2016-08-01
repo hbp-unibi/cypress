@@ -30,7 +30,6 @@
 
 #include <cypress/backend/binnf/marshaller.hpp>
 #include <cypress/backend/pynn/pynn.hpp>
-#include <cypress/backend/pynn/transformation.hpp>
 #include <cypress/backend/resources.hpp>
 #include <cypress/core/exceptions.hpp>
 #include <cypress/core/network_base.hpp>
@@ -40,8 +39,6 @@
 
 // Enable to get a textual dump of the BiNNF instead of running the simulation
 //#define CYPRESS_DEBUG_BINNF
-
-using namespace cypress::pynn;
 
 namespace cypress {
 namespace {
@@ -357,8 +354,6 @@ void PyNN::do_run(NetworkBase &source, float duration) const
 
 	// Run the PyNN python backend
 	{
-		Transformation trafo(0.1);
-
 #ifndef CYPRESS_DEBUG_BINNF
 		std::vector<std::string> params(
 		    {Resources::PYNN_INTERFACE.open(), "run", "--simulator",
@@ -384,11 +379,7 @@ void PyNN::do_run(NetworkBase &source, float duration) const
 
 		// Send the network description to the simulator, inject the connection
 		// transformation to rewrite the connections
-		binnf::marshall_network(
-		    source, proc.child_stdin(),
-		    [&trafo](Connection cs[], size_t size) mutable -> size_t {
-			    return trafo.transform_connections(cs, size);
-			});
+		binnf::marshall_network(source, proc.child_stdin());
 		proc.close_child_stdin();
 
 // Wait for the process to be done

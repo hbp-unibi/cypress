@@ -32,7 +32,6 @@
 #define CYPRESS_BINNF_MARSHALLER_HPP
 
 #include <iosfwd>
-#include <functional>
 
 namespace cypress {
 
@@ -49,15 +48,8 @@ namespace binnf {
  * @param net_in is the network description which is read and serialised into
  * the output stream.
  * @param os is the output stream to which the input network is written.
- * @param connection_trafo is a callback function that can be used to transform
- * the list of connections according to the capabilities of the target platform.
  */
-void marshall_network(NetworkBase &net, std::ostream &os,
-                      std::function<size_t(Connection connections[],
-                                           size_t count)> connection_trafo =
-                          [](Connection[], size_t count) -> size_t {
-	                      return count;
-	                  });
+void marshall_network(NetworkBase &net, std::ostream &os);
 
 /**
  * Ten waits for a response from the simulator on the the given input stream and
