@@ -149,7 +149,8 @@ Transformations::construct_neuron_type_transformation_chain(
 
 		// Add the start node to the priority queue, execute the Dijkstra
 		// algorithm
-		std::priority_queue<std::tuple<size_t, size_t>> q;
+		using T = std::tuple<size_t, size_t>;
+		std::priority_queue<T, std::vector<T>, std::greater<T>> q;
 		q.emplace(0, start_idx);
 		while (!q.empty()) {
 			const size_t u = std::get<1>(q.top());
