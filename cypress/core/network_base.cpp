@@ -30,6 +30,8 @@
 #include <cypress/backend/nmpi/nmpi.hpp>
 #include <cypress/backend/pynn/pynn.hpp>
 
+#include <cypress/transformations/registry.hpp>
+
 #include <cypress/util/json.hpp>
 
 namespace cypress {
@@ -392,6 +394,10 @@ void NetworkBase::run(const Backend &backend, float duration)
 	if (duration <= 0) {
 		duration = this->duration();
 	}
+
+	// Run the network through the transformation machinery, make sure all
+	// transformations are registered
+	transformations::register_();
 	Transformations::run(backend, *this, TransformationAuxData{duration},
 	                     m_impl->disabled_trafo_ids, m_impl->use_lossy_trafos);
 }
