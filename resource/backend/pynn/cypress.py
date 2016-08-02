@@ -403,6 +403,12 @@ class Cypress:
                           ["nid_src", "nid_tar", "weight", "delay"]
                           }, cs, 0, cs.strides)
 
+        # Fix delays in nest having to be larger than and multiples of the
+        # simulation timestep
+        if self.simulator == "nest":
+            dt = self.get_time_step()
+            csv["delay"] = np.maximum(np.round(csv["delay"] / dt), 1.0) * dt
+
         # Build the actual connections, iterate over blocks which share pid_src
         # and pid_tar
         def create_projection(elem, begin, end):
