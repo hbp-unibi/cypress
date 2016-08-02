@@ -83,3 +83,16 @@ target_link_libraries(test_cypress_backend
 )
 add_test(test_cypress_backend test_cypress_backend)
 
+#
+# Transformation tests
+#
+
+add_executable(test_cypress_transformations
+	transformations/test_spikey_if_cond_exp
+)
+target_link_libraries(test_cypress_transformations
+	cypress
+	${GTEST_LIBRARIES}
+)
+add_test(test_cypress_transformations test_cypress_transformations)
+
