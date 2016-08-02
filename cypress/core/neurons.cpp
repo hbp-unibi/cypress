@@ -16,6 +16,8 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <random>
+
 #include <cypress/core/neurons.hpp>
 
 namespace cypress {
@@ -35,23 +37,57 @@ const SpikeSourceArray &SpikeSourceArray::inst()
 	return inst;
 }
 
-std::vector<float> SpikeSourceArray::constant_interval(float t_start,
-                                                       float t_end,
-                                                       float interval)
+/*
+ * Class SpikeSourcePoisson
+ */
+
+SpikeSourcePoisson::SpikeSourcePoisson()
+    : NeuronTypeBase("SpikeSourceArray", {"rate", "start", "duration"},
+                     {"Hz", "ms", "ms"}, {{0.0, 0.0, 1e3}}, {"spikes"}, {"ms"},
+                     false, true)
 {
-	const size_t n_samples = (t_end - t_start) / interval;
-	std::vector<float> result(n_samples);
-	for (size_t i = 0; i < n_samples; i++) {
-		result[i] = t_start + interval * (i + 1);
-	}
-	return result;
 }
 
-std::vector<float> SpikeSourceArray::constant_frequency(float t_start,
-                                                        float t_end,
-                                                        float frequency)
+const SpikeSourcePoisson &SpikeSourcePoisson::inst()
 {
-	return constant_interval(t_start, t_end, 1000.0 / frequency);
+	static const SpikeSourcePoisson inst;
+	return inst;
+}
+
+/*
+ * Class SpikeSourceConstFreq
+ */
+
+SpikeSourceConstFreq::SpikeSourceConstFreq()
+    : NeuronTypeBase("SpikeSourceConstFreq",
+                     {"rate", "start", "duration", "sigma"},
+                     {"Hz", "ms", "ms", "ms"}, {{0.0, 0.0, 1e3, 0.0}},
+                     {"spikes"}, {"ms"}, false, true)
+{
+}
+
+const SpikeSourceConstFreq &SpikeSourceConstFreq::inst()
+{
+	static const SpikeSourceConstFreq inst;
+	return inst;
+}
+
+/*
+ * Class SpikeSourceConstInterval
+ */
+
+SpikeSourceConstInterval::SpikeSourceConstInterval()
+    : NeuronTypeBase("SpikeSourceConstFreq",
+                     {"interval", "start", "duration", "sigma"},
+                     {"ms", "ms", "ms", "ms"}, {{0.0, 0.0, 1e3, 0.0}},
+                     {"spikes"}, {"ms"}, false, true)
+{
+}
+
+const SpikeSourceConstInterval &SpikeSourceConstInterval::inst()
+{
+	static const SpikeSourceConstInterval inst;
+	return inst;
 }
 
 /*

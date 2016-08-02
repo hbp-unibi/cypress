@@ -76,6 +76,15 @@ namespace cypress {
 class SpikeSourceArray;
 class SpikeSourceArrayParameters;
 class SpikeSourceArraySignals;
+class SpikeSourcePoisson;
+class SpikeSourcePoissonParameters;
+class SpikeSourcePoissonSignals;
+class SpikeSourceConstFreq;
+class SpikeSourceConstFreqParameters;
+class SpikeSourceConstFreqSignals;
+class SpikeSourceConstInterval;
+class SpikeSourceConstIntervalParameters;
+class SpikeSourceConstIntervalSignals;
 class IfCondExp;
 class IfCondExpParameters;
 class IfCondExpSignals;
@@ -91,7 +100,8 @@ class EifCondExpIsfaIstaSignals;
  */
 
 /**
- * Neuron type representing a spike source array.
+ * Virtual neuron which produces spikes at fixed points in time. This points
+ * are given per neuron as an array, hence the name.
  */
 class SpikeSourceArray final : public NeuronTypeBase<SpikeSourceArrayParameters,
                                                      SpikeSourceArraySignals> {
@@ -100,11 +110,6 @@ private:
 
 public:
 	static const SpikeSourceArray &inst();
-
-	static std::vector<float> constant_interval(float t_start, float t_end,
-	                                            float interval);
-	static std::vector<float> constant_frequency(float t_start, float t_end,
-	                                             float frequency);
 };
 
 /**
@@ -149,11 +154,166 @@ public:
 	}
 };
 
+/**
+ * Class holing the signals that can be recorded from a SpikeSourceArray. Due to
+ * the nature of spike sources, only the spike times can be recorded.
+ */
 class SpikeSourceArraySignals final
     : public NeuronSignalsBase<SpikeSourceArraySignals, SpikeSourceArray, 1> {
 public:
 	using NeuronSignalsBase<SpikeSourceArraySignals, SpikeSourceArray,
 	                        1>::NeuronSignalsBase;
+
+	NAMED_SIGNAL(spikes, 0);
+};
+
+/*
+ * SpikeSourcePoisson
+ */
+
+/**
+ * Virtual neuron which produces spikes with spike times drawn fomr a poisson
+ * distribution.
+ */
+class SpikeSourcePoisson final
+    : public NeuronTypeBase<SpikeSourcePoissonParameters,
+                            SpikeSourcePoissonSignals> {
+private:
+	SpikeSourcePoisson();
+
+public:
+	static const SpikeSourcePoisson &inst();
+};
+
+/**
+ * The SpikeSourceArray missuses the parameter storage as storage for the
+ * individual spike times.
+ */
+class SpikeSourcePoissonParameters final
+    : public ConstantSizeNeuronParametersBase<SpikeSourcePoissonParameters,
+                                              SpikeSourcePoisson, 3> {
+public:
+	using ConstantSizeNeuronParametersBase<SpikeSourcePoissonParameters,
+	                                       SpikeSourcePoisson,
+	                                       3>::ConstantSizeNeuronParametersBase;
+
+	NAMED_PARAMETER(rate, 0);      // The spike rate in Hz
+	NAMED_PARAMETER(start, 1);     // The start time in ms
+	NAMED_PARAMETER(duration, 2);  // Duration of the spike sequence
+};
+
+/**
+ * Class holing the signals that can be recorded from a SpikeSourcePoisson. Due
+ * to the nature of spike sources, only the spike times can be recorded.
+ */
+class SpikeSourcePoissonSignals final
+    : public NeuronSignalsBase<SpikeSourcePoissonSignals, SpikeSourcePoisson,
+                               1> {
+public:
+	using NeuronSignalsBase<SpikeSourcePoissonSignals, SpikeSourcePoisson,
+	                        1>::NeuronSignalsBase;
+
+	NAMED_SIGNAL(spikes, 0);
+};
+
+/*
+ * SpikeSourceConstFreq
+ */
+
+/**
+ * Virtual neuron which produces spikes with spike times drawn fomr a poisson
+ * distribution.
+ */
+class SpikeSourceConstFreq final
+    : public NeuronTypeBase<SpikeSourceConstFreqParameters,
+                            SpikeSourceConstFreqSignals> {
+private:
+	SpikeSourceConstFreq();
+
+public:
+	static const SpikeSourceConstFreq &inst();
+};
+
+/**
+ * The SpikeSourceArray missuses the parameter storage as storage for the
+ * individual spike times.
+ */
+class SpikeSourceConstFreqParameters final
+    : public ConstantSizeNeuronParametersBase<SpikeSourceConstFreqParameters,
+                                              SpikeSourceConstFreq, 4> {
+public:
+	using ConstantSizeNeuronParametersBase<SpikeSourceConstFreqParameters,
+	                                       SpikeSourceConstFreq,
+	                                       4>::ConstantSizeNeuronParametersBase;
+
+	NAMED_PARAMETER(rate, 0);      // The spike rate in Hz
+	NAMED_PARAMETER(start, 1);     // The start time in ms
+	NAMED_PARAMETER(duration, 2);  // Duration of the spike sequence
+	NAMED_PARAMETER(sigma, 3);     // Gaussian spike time standard deviation
+};
+
+/**
+ * Class holing the signals that can be recorded from a SpikeSourceConstFreq.
+ * Due
+ * to the nature of spike sources, only the spike times can be recorded.
+ */
+class SpikeSourceConstFreqSignals final
+    : public NeuronSignalsBase<SpikeSourceConstFreqSignals,
+                               SpikeSourceConstFreq, 1> {
+public:
+	using NeuronSignalsBase<SpikeSourceConstFreqSignals, SpikeSourceConstFreq,
+	                        1>::NeuronSignalsBase;
+
+	NAMED_SIGNAL(spikes, 0);
+};
+
+/*
+ * SpikeSourceConstInterval
+ */
+
+/**
+ * Virtual neuron which produces spikes with spike times drawn fomr a poisson
+ * distribution.
+ */
+class SpikeSourceConstInterval final
+    : public NeuronTypeBase<SpikeSourceConstIntervalParameters,
+                            SpikeSourceConstIntervalSignals> {
+private:
+	SpikeSourceConstInterval();
+
+public:
+	static const SpikeSourceConstInterval &inst();
+};
+
+/**
+ * The SpikeSourceArray missuses the parameter storage as storage for the
+ * individual spike times.
+ */
+class SpikeSourceConstIntervalParameters final
+    : public ConstantSizeNeuronParametersBase<
+          SpikeSourceConstIntervalParameters, SpikeSourceConstInterval, 4> {
+public:
+	using ConstantSizeNeuronParametersBase<SpikeSourceConstIntervalParameters,
+	                                       SpikeSourceConstInterval,
+	                                       4>::ConstantSizeNeuronParametersBase;
+
+	NAMED_PARAMETER(interval, 0);  // The interval between spikes in ms
+	NAMED_PARAMETER(start, 1);     // The start time in ms
+	NAMED_PARAMETER(duration, 2);  // Duration of the spike sequence
+	NAMED_PARAMETER(sigma, 3);     // Gaussian spike time standard deviation
+};
+
+/**
+ * Class holing the signals that can be recorded from a
+ * SpikeSourceConstInterval. Due
+ * to the nature of spike sources, only the spike times can be recorded.
+ */
+class SpikeSourceConstIntervalSignals final
+    : public NeuronSignalsBase<SpikeSourceConstIntervalSignals,
+                               SpikeSourceConstInterval, 1> {
+public:
+	using NeuronSignalsBase<SpikeSourceConstIntervalSignals,
+	                        SpikeSourceConstInterval, 1>::NeuronSignalsBase;
 
 	NAMED_SIGNAL(spikes, 0);
 };
