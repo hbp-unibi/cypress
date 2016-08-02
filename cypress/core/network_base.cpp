@@ -221,6 +221,12 @@ std::shared_ptr<PopulationData> NetworkBase::population_data(
 	return m_impl->populations()[pid];
 }
 
+std::shared_ptr<const PopulationData> NetworkBase::population_data(
+    PopulationIndex pid) const
+{
+	return m_impl->populations()[pid];
+}
+
 PopulationBase NetworkBase::population(const std::string &name)
 {
 	auto pops = populations(name);

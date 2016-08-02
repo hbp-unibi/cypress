@@ -120,14 +120,6 @@ protected:
 	friend class ConnectableMixin;
 
 	/**
-	 * Returns the population data associated with the given population index.
-	 *
-	 * @param pid is the index of the population for which a reference at the
-	 * internal data should be returned.
-	 */
-	std::shared_ptr<PopulationData> population_data(PopulationIndex pid);
-
-	/**
 	 * Base connection method. Connects a range of neurons in the source
 	 * population to a range of neurons in the target population. All connection
 	 * methods in ConnectableMixin are relayed to this method.
@@ -188,6 +180,26 @@ public:
 	 * underlying network.
 	 */
 	~NetworkBase();
+
+	/**
+	 * Returns the raw population data associated with the given population
+	 * index. Try to avoid using this function directly. Proper use cases are
+	 * network transformations.
+	 *
+	 * @param pid is the index of the population for which a reference at the
+	 * internal data should be returned.
+	 */
+	std::shared_ptr<PopulationData> population_data(PopulationIndex pid);
+
+	/**
+	 * Returns the raw population data associated with the given population
+	 * index. Try to avoid using this function directly. Proper use cases are
+	 * network transformations.
+	 *
+	 * @param pid is the index of the population for which a reference at the
+	 * internal data should be returned.
+	 */
+	std::shared_ptr<const PopulationData> population_data(PopulationIndex pid) const;
 
 	/**
 	 * Compares whether two NetworkBase instances point at the same underlying
