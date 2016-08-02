@@ -103,6 +103,7 @@ add_library(cypress
 	cypress/core/network_mixins
 	cypress/core/spike_time_generators
 	cypress/core/transformation
+	cypress/core/transformation_util
 	cypress/core/types
 	cypress/nef/delta_sigma
 	cypress/nef/tuning_curve
