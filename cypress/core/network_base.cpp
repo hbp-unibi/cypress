@@ -369,10 +369,7 @@ std::unique_ptr<Backend> NetworkBase::make_backend(std::string backend_id,
 	return nullptr;
 }
 
-bool NetworkBase::use_lossy_trafos() const
-{
-	return m_impl->use_lossy_trafos;
-}
+bool NetworkBase::use_lossy_trafos() const { return m_impl->use_lossy_trafos; }
 
 void NetworkBase::use_lossy_trafos(bool use_lossy) const
 {
