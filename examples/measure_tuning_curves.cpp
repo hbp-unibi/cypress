@@ -66,7 +66,7 @@ int main(int argc, const char *argv[])
 	// Bias source population
 	const float len = evaluator.input_spike_train_len();
 	std::vector<float> bias_spikes =
-	    SpikeSourceArray::constant_interval(0.0, len, min_spike_interval);
+	    spikes::constant_interval(0.0, len, min_spike_interval);
 	Population<SpikeSourceArray> pop_src_bias(net, 1, bias_spikes);
 
 	// Target population

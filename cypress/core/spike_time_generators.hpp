@@ -17,29 +17,31 @@
  */
 
 /**
- * @file cypress.hpp
+ * @file spike_time_generators.hpp
  *
- * Main header of cypress which includes all important headers from the
- * subfolders of the project.
+ * Contains some methods for the generation of spike times.
  *
  * @author Andreas Stöckel
  */
 
-#pragma once
-#ifndef CYPRESS_HPP
-#define CYPRESS_HPP
+#ifndef CYPRESS_CORE_SPIKE_TIME_GENERATORS
+#define CYPRESS_CORE_SPIKE_TIME_GENERATORS
 
-#include <cypress/backend/binnf/binnf.hpp>
-#include <cypress/backend/nest/nest.hpp>
-#include <cypress/backend/nmpi/nmpi.hpp>
-#include <cypress/backend/pynn/pynn.hpp>
-#include <cypress/backend/resources.hpp>
-#include <cypress/core/backend.hpp>
-#include <cypress/core/connector.hpp>
-#include <cypress/core/network.hpp>
-#include <cypress/core/neurons.hpp>
-#include <cypress/core/spike_time_generators.hpp>
-#include <cypress/core/types.hpp>
+#include <vector>
 
-#endif /* CYPRESS_HPP */
+namespace cypress {
+namespace spikes {
 
+// TODO: Add support for seeds!
+
+std::vector<float> poisson(float t_start, float t_end, float rate);
+
+std::vector<float> constant_interval(float t_start, float t_end, float interval,
+                                     float sigma = 0.0);
+
+std::vector<float> constant_frequency(float t_start, float t_end,
+                                      float frequency, float sigma = 0.0);
+}
+}
+
+#endif /* CYPRESS_CORE_SPIKE_TIME_GENERATORS */

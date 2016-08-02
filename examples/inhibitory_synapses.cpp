@@ -56,10 +56,10 @@ int main(int argc, const char *argv[])
 			    Network()
 			        .add_population<SpikeSourceArray>(
 			            "src1", n_src,
-			            SpikeSourceArray::constant_frequency(0.0, runtime, f))
+			            spikes::constant_frequency(0.0, runtime, f, 5.0))
 			        .add_population<SpikeSourceArray>(
 			            "src2", n_src,
-			            SpikeSourceArray::constant_frequency(0.0, runtime, f))
+			            spikes::constant_frequency(0.0, runtime, f, 5.0))
 			        .add_population<Neuron>("tar", n_tar, {},
 			                                Signals().record_spikes())
 			        .add_connection("src1", "tar",
