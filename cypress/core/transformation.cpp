@@ -48,11 +48,39 @@ void Transformation::do_copy_results(const NetworkBase &src,
 
 	// Copy the recorded data from the source to the target network
 	for (size_t i = 0; i < src.population_count(); i++) {
-		if (&src[i].type() != &tar[i].type()) {
-			throw TransformationException(
-			    "Neron type was changed, cannot copy results!");
+		if (&src[i].type() == &tar[i].type()) {
+			tar[i].signals() = src[i].signals();
+			continue;
 		}
-		tar[i].signals() = src[i].signals();
+		// Map the source signals to signals with the same name in the
+		// target neuron
+		const NeuronType &src_type = src[i].type();
+		const NeuronType &tar_type = tar[i].type();
+		for (size_t j = 0; j < src_type.signal_names.size(); j++) {
+			// Make sure this signal was recorded in the source neuron
+			if (src[i].homogeneous_record() &&
+			    !src[i].signals().is_recording(j)) {
+				continue;
+			}
+
+			// Find the target index
+			const std::string &signal_name = src_type.signal_names[j];
+			auto idx = tar_type.signal_index(signal_name);
+			if (!idx.valid()) {
+				throw TransformationException("Cannot find signal " +
+				                              signal_name +
+				                              " in target population");
+			}
+
+			// Copy the data from the source to the target neuron
+			for (size_t k = 0; k < src[i].size(); k++) {
+				if (!src[i][k].signals().is_recording(j)) {
+					continue;
+				}
+				tar[i][k].signals().data(idx.value(),
+				                         src[i][k].signals().data_ptr(j));
+			}
+		}
 	}
 }
 

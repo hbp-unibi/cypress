@@ -355,9 +355,10 @@ public:
 	 * @param i is the signal index for which the data should be returned.
 	 * @return a reference at the data matrix.
 	 */
-	const Matrix<float> &data(size_t i) const
+	std::shared_ptr<Matrix<float>> data_ptr(size_t i) const
 	{
-		static Matrix<float> empty;
+		static std::shared_ptr<Matrix<float>> empty =
+		    std::make_shared<Matrix<float>>();
 		auto res = const_cast<NeuronSignals *>(this)->read_data()[i];
 		if (!res) {
 			if (!is_recording(i)) {
@@ -365,8 +366,18 @@ public:
 			}
 			return empty;
 		}
-		return *res;
+		return res;
 	}
+
+	/**
+	 * Returns a reference at the matrix containing the data for the i-th
+	 * signal. Throws an SignalNotRecordedException if the signal with the
+	 * given index is currently not being recorded.
+	 *
+	 * @param i is the signal index for which the data should be returned.
+	 * @return a reference at the data matrix.
+	 */
+	const Matrix<float> &data(size_t i) const { return *data_ptr(i); }
 
 	/**
 	 * Returns the number of signals.
