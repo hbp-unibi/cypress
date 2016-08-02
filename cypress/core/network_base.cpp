@@ -385,6 +385,10 @@ std::unordered_set<std::string> &NetworkBase::disabled_trafo_ids()
 
 void NetworkBase::run(const Backend &backend, float duration)
 {
+	// Automatically deduce the duration if none was given
+	if (duration <= 0) {
+		duration = this->duration();
+	}
 	Transformations::run(backend, *this, TransformationAuxData{duration},
 	                     m_impl->disabled_trafo_ids, m_impl->use_lossy_trafos);
 }
