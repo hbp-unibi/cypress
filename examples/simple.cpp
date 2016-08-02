@@ -16,6 +16,18 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+/**
+ * @file simple.cpp
+ *
+ * A simple network consisting of four source and four target neurons. The four
+ * source neurons emit spikes following a Poisson distribution. The source
+ * neurons are connected to the target neurons using an all-to-all projection.
+ * Spikes in both the source and target neuron populations are recorded and
+ * printed at the end of the program.
+ *
+ * @author Andreas Stöckel
+ */
+
 #include <iostream>
 #include <fstream>
 
@@ -32,16 +44,21 @@ int main(int argc, const char *argv[])
 
 	auto net =
 	    Network()
-	        .add_population<SpikeSourceArray>(
-	            "source", 4, {{100.0, 200.0, 300.0},
-	                          {400.0, 500.0, 600.0},
-	                          {700.0, 800.0, 900.0},
-	                          {1000.0, 1100.0, 1200.0}},
-	            SpikeSourceArraySignals().record_spikes())
-	        .add_population<IfCondExp>("neuron", 4,
-	                                   IfCondExpParameters().v_rest(-60.0),
-	                                   IfCondExpSignals().record_spikes())
-	        .add_connection("source", "neuron", Connector::one_to_one(0.16))
+	        // Add a named population of poisson spike sources
+	        .add_population<SpikeSourcePoisson>(
+	            "source", 4, SpikeSourcePoissonParameters()
+	                             .start(100.0)
+	                             .rate(100.0)
+	                             .duration(1000.0),
+	            SpikeSourcePoissonSignals().record_spikes())
+	        // Add a population of IfFacetsHardware1 neurons -- those neurons
+	        // are supported by all simulator backends
+	        .add_population<IfFacetsHardware1>(
+	            "target", 4, IfFacetsHardware1Parameters().g_leak(0.01),
+	            IfFacetsHardware1Signals().record_spikes())
+	        // Project each neuron in the population "source" onto each neuron
+	        // in the population "target"
+	        .add_connection("source", "target", Connector::one_to_one(0.016))
 	        .run(argv[1], 0.0, argc, argv);
 
 	// Print the runtimes
@@ -50,9 +67,19 @@ int main(int argc, const char *argv[])
 	          << net.runtime().initialize << "s, finalization "
 	          << net.runtime().finalize << "s" << std::endl;
 
-	// Print the spike times for each neuron
-	for (auto neuron : net.population<IfCondExp>("neuron")) {
-		std::cout << "Spike times for neuron " << neuron.nid() << std::endl;
+	// Print the spike times for each source neuron
+	for (auto neuron : net.population<SpikeSourcePoisson>("source")) {
+		std::cout << "Spike times for source neuron " << neuron.nid()
+		          << std::endl;
+		std::cout << neuron.signals().get_spikes();
+	}
+
+	std::cout << "---------" << std::endl;
+
+	// Print the spike times for each target neuron
+	for (auto neuron : net.population<IfFacetsHardware1>("target")) {
+		std::cout << "Spike times for target neuron " << neuron.nid()
+		          << std::endl;
 		std::cout << neuron.signals().get_spikes();
 	}
 
