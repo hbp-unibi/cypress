@@ -107,6 +107,9 @@ add_library(cypress
 	cypress/core/types
 	cypress/nef/delta_sigma
 	cypress/nef/tuning_curve
+	cypress/transformations/registry
+	cypress/transformations/spike_sources
+	cypress/transformations/spikey_if_cond_exp
 	cypress/util/comperator
 	cypress/util/filesystem
 	cypress/util/json
