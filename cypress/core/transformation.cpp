@@ -383,6 +383,9 @@ void Transformations::run(const Backend &backend, NetworkBase network,
 				// on the stack
 				trafos.top()->copy_results(network_src, networks.top());
 
+				// Copy the runtime info
+				networks.top().runtime(network_src.runtime());
+
 				// Erase the current network
 				trafos.pop();
 			}
