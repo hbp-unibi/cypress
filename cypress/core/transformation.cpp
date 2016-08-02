@@ -309,7 +309,7 @@ void Transformations::run(const Backend &backend, NetworkBase network,
 		// Add the neuron transformations to the transformation list
 		std::vector<TransformationCtor> neuron_trafos;
 		if (!unsupported_types.empty()) {
-			construct_neuron_type_transformation_chain(
+			neuron_trafos = construct_neuron_type_transformation_chain(
 			    unsupported_types, supported_types, available_neuron_trafos,
 			    use_lossy);
 		}
