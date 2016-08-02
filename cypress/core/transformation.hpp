@@ -48,6 +48,9 @@ class NeuronType;
 class NetworkBase;
 class Backend;
 
+template <typename T>
+class Population;
+
 /**
  * Structure describing the
  */
@@ -234,6 +237,14 @@ public:
 	 */
 	static RegisteredTransformation register_neuron_type_transformation(
 	    TransformationCtor ctor, const NeuronType &src, const NeuronType &tar);
+
+	template <typename SourceType, typename TargetType>
+	static RegisteredTransformation register_neuron_type_transformation(
+	    TransformationCtor ctor)
+	{
+		return register_neuron_type_transformation(ctor, SourceType::inst(),
+		                                           TargetType::inst());
+	}
 };
 }
 
