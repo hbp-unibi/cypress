@@ -182,18 +182,21 @@ Transformations::construct_neuron_type_transformation_chain(
 	auto dijkstra = [&](const size_t &start_idx, bool use_lossy) {
 		const size_t MAX_VAL = std::numeric_limits<size_t>::max();
 
-		// Initialize the "cost" vector
-		std::vector<size_t> cost(nodes.size(), MAX_VAL);
+		// Initialize the "cost" vector -- the cost consists of a flag
+		// indicating whether a lossy node was crossed and the actual cost
+		using Cost = std::tuple<bool, size_t>;
+		std::vector<Cost> cost(nodes.size(), Cost{true, MAX_VAL});
 		std::vector<size_t> prev(nodes.size(), MAX_VAL);
 		std::vector<bool> visited(nodes.size(), false);
-		cost[start_idx] = 0;
+		cost[start_idx] = Cost{false, 0};
 
 		// Add the start node to the priority queue, execute the Dijkstra
 		// algorithm
-		using T = std::tuple<size_t, size_t>;
+		using T = std::tuple<Cost, size_t>;
 		std::priority_queue<T, std::vector<T>, std::greater<T>> q;
-		q.emplace(0, start_idx);
+		q.emplace(cost[start_idx], start_idx);
 		while (!q.empty()) {
+			const Cost cu = std::get<0>(q.top());
 			const size_t u = std::get<1>(q.top());
 			q.pop();
 			if (visited[u]) {
@@ -203,7 +206,8 @@ Transformations::construct_neuron_type_transformation_chain(
 				if (edges[edge_idx].lossy && !use_lossy) {
 					continue;
 				}
-				const size_t alt = cost[u] + edges[edge_idx].cost;
+				const Cost alt = Cost(edges[edge_idx].lossy || std::get<0>(cu),
+				                      std::get<1>(cu) + edges[edge_idx].cost);
 				const size_t v = edges[edge_idx].tar_idx;
 				if (alt < cost[v]) {
 					cost[v] = alt;
@@ -216,7 +220,7 @@ Transformations::construct_neuron_type_transformation_chain(
 
 		// Find the node with minimum cost which is supported by the backend
 		size_t end_idx = 0;
-		size_t min_cost = MAX_VAL;
+		Cost min_cost = Cost{true, MAX_VAL};
 		for (size_t i = 0; i < cost.size(); i++) {
 			if (nodes[i].supported && cost[i] < min_cost) {
 				min_cost = cost[i];
@@ -226,7 +230,7 @@ Transformations::construct_neuron_type_transformation_chain(
 
 		// Create the resulting path by backtracking
 		std::vector<size_t> path;
-		if (min_cost != MAX_VAL) {
+		if (min_cost != Cost{true, MAX_VAL}) {
 			size_t idx = end_idx;
 			while (idx != start_idx) {
 				if (prev[idx] == MAX_VAL) {
@@ -280,12 +284,8 @@ Transformations::construct_neuron_type_transformation_chain(
 				continue;
 			}
 
-			// Find a shortest path to a supported neurons, try again with lossy
-			// transformations if this does not yield a result
-			std::vector<size_t> res = dijkstra(start_idx, false);
-			if (res.empty() && use_lossy) {
-				res = dijkstra(start_idx, true);
-			}
+			// Find a shortest path to a supported neuron
+			std::vector<size_t> res = dijkstra(start_idx, use_lossy);
 
 			// Add the path to the path list, mark visited nodes as "supported"
 			if (!res.empty()) {
