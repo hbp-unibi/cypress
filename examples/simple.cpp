@@ -61,12 +61,6 @@ int main(int argc, const char *argv[])
 	        .add_connection("source", "target", Connector::one_to_one(0.016))
 	        .run(argv[1], 0.0, argc, argv);
 
-	// Print the runtimes
-	std::cout << "Runtime statistic: total " << net.runtime().total
-	          << "s, simulation " << net.runtime().sim << "s, initialization "
-	          << net.runtime().initialize << "s, finalization "
-	          << net.runtime().finalize << "s" << std::endl;
-
 	// Print the spike times for each source neuron
 	for (auto neuron : net.population<SpikeSourcePoisson>("source")) {
 		std::cout << "Spike times for source neuron " << neuron.nid()
