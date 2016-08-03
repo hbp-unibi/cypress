@@ -24,13 +24,13 @@
 using namespace cypress;
 
 template <typename Population>
-static float avg_fire_rate(const Population &pop, float runtime)
+static float avg_fire_rate(const Population &pop, float duration)
 {
 	float avg_rate = 0.0;
 	for (auto neuron : pop) {
 		avg_rate += neuron.signals().get_spikes().size();
 	}
-	return avg_rate / float(pop.size()) / (runtime * 1e-3);
+	return avg_rate / float(pop.size()) / (duration * 1e-3);
 }
 
 int main(int argc, const char *argv[])
@@ -40,35 +40,38 @@ int main(int argc, const char *argv[])
 		return 1;
 	}
 
-	using Neuron = IfCondExp;
-//	using Neuron = IfFacetsHardware1;
+	using Neuron = IfFacetsHardware1;
 	using Signals = Neuron::Signals;
 
 	static const size_t n_src = 8;
 	static const size_t n_tar = 8;
-	static const float f = 25.0;        // Hz
-	static const float runtime = 1.0e3;  // ms
+	static const float f = 25.0;           // Hz
+	static const float duration = 1000.0;  // ms
 
 	// Sweep over w_syn_inh and w_syn_exc, create the network and run it
-	for (float w_syn_exc = 0.0; w_syn_exc < 0.1; w_syn_exc += 0.01) {
-		for (float w_syn_inh = 0.0; w_syn_inh < 0.1; w_syn_inh += 0.01) {
+	for (float w_syn_exc = 0.0; w_syn_exc < 0.016; w_syn_exc += 0.002) {
+		for (float w_syn_inh = 0.0; w_syn_inh < 0.016; w_syn_inh += 0.002) {
 			Network net =
 			    Network()
-			        .add_population<SpikeSourceArray>(
-			            "src1", n_src,
-			            spikes::constant_frequency(0.0, runtime, f, 5.0))
-			        .add_population<SpikeSourceArray>(
-			            "src2", n_src,
-			            spikes::constant_frequency(0.0, runtime, f, 5.0))
+			        .add_population<SpikeSourceConstFreq>(
+			            "src1", n_src, SpikeSourceConstFreqParameters()
+			                               .rate(f)
+			                               .duration(duration)
+			                               .sigma(2.0))
+			        .add_population<SpikeSourceConstFreq>(
+			            "src2", n_src, SpikeSourceConstFreqParameters()
+			                               .rate(f)
+			                               .duration(duration)
+			                               .sigma(2.0))
 			        .add_population<Neuron>("tar", n_tar, {},
 			                                Signals().record_spikes())
 			        .add_connection("src1", "tar",
 			                        Connector::all_to_all(-w_syn_inh))
 			        .add_connection("src2", "tar",
 			                        Connector::all_to_all(w_syn_exc))
-			        .run(argv[1], runtime, argc, argv);
+			        .run(argv[1], duration, argc, argv);
 			std::cout << w_syn_exc << "," << w_syn_inh << ","
-			          << avg_fire_rate(net.population<Neuron>("tar"), runtime)
+			          << avg_fire_rate(net.population<Neuron>("tar"), duration)
 			          << std::endl;
 		}
 	}
