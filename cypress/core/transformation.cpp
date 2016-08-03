@@ -29,6 +29,7 @@
 #include <cypress/core/transformation.hpp>
 #include <cypress/core/network_base.hpp>
 #include <cypress/core/network_base_objects.hpp>
+#include <cypress/util/logger.hpp>
 
 namespace cypress {
 
@@ -355,11 +356,26 @@ void Transformations::run(const Backend &backend, NetworkBase network,
 				// reason, skip this transformation in the next run and try
 				// again
 				trafos.emplace(std::move(trafo));
+				if (trafos.top()->properties().lossy) {
+					networks.top().logger().warn(
+					    "cypress",
+					    "Executing lossy transformation " + trafos.top()->id());
+				}
+				else {
+					networks.top().logger().info(
+					    "cypress",
+					    "Executing transformation " + trafos.top()->id());
+				}
 				networks.emplace(std::move(
 				    trafos.top()->transform(networks.top(), aux_cpy)));
 			}
 			catch (TransformationException e) {
-				// TODO: Log this incident!
+				networks.top().logger().warn(
+				    "cypress", "Error while executing the transformation " +
+				                   trafos.top()->id() + ": " + e.what());
+				networks.top().logger().info(
+				    "cypress",
+				    "Disabling this transformation and trying again.");
 				disabled_trafo_ids.emplace(trafos.top()->id());
 				return false;
 			}

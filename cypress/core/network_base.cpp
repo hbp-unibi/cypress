@@ -18,6 +18,7 @@
 
 #include <algorithm>
 #include <memory>
+#include <sstream>
 
 #include <cypress/core/backend.hpp>
 #include <cypress/core/data.hpp>
@@ -408,9 +409,18 @@ void NetworkBase::run(const Backend &backend, float duration)
 
 	// Run the network through the transformation machinery, make sure all
 	// transformations are registered
+	logger().info("cypress", "Executing network...");
 	transformations::register_();
 	Transformations::run(backend, *this, TransformationAuxData{duration},
 	                     m_impl->disabled_trafo_ids, m_impl->use_lossy_trafos);
+
+	// Print some execution summary
+	auto rt = runtime();
+	std::stringstream ss;
+	ss << "Done. Execution took " << rt.total << "s (simulation " << rt.sim
+	   << "s, initialization " << rt.initialize << "s, finalization "
+	   << rt.finalize << "s)";
+	logger().info("cypress", ss.str());
 }
 
 void NetworkBase::run(const std::string &backend_id, float duration, int argc,
