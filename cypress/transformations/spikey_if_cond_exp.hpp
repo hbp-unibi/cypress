@@ -46,7 +46,7 @@ protected:
 	                          IfCondExpSignals tar) override;
 
 public:
-	std::string id() const override { return "IFFH1ToLIF"; }
+	std::string id() const override { return "IfFacetsHardware1ToIfCondExp"; }
 
 	~IFFH1ToLIF(){};
 };

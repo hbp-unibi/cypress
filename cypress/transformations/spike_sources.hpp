@@ -46,7 +46,7 @@ protected:
 	                          SpikeSourceConstFreqSignals tar) override;
 
 public:
-	std::string id() const override { return "CIToCF"; }
+	std::string id() const override { return "ConstIntervalToConstFreq"; }
 
 	~CIToCF(){};
 };
@@ -66,7 +66,7 @@ protected:
 	                          SpikeSourceConstIntervalSignals tar) override;
 
 public:
-	std::string id() const override { return "CFToCI"; }
+	std::string id() const override { return "ConstFreqToConstInterval"; }
 
 	~CFToCI(){};
 };
@@ -87,7 +87,7 @@ protected:
 	                          SpikeSourceArraySignals tar) override;
 
 public:
-	std::string id() const override { return "PoissonToSA"; }
+	std::string id() const override { return "PoissonToSourceArray"; }
 
 	~PoissonToSA(){};
 };
@@ -108,7 +108,7 @@ protected:
 	                          SpikeSourceArraySignals tar) override;
 
 public:
-	std::string id() const override { return "CFToSA"; }
+	std::string id() const override { return "ConstFreqToSourceArray"; }
 
 	~CFToSA(){};
 };
