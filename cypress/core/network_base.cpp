@@ -33,6 +33,7 @@
 #include <cypress/transformations/registry.hpp>
 
 #include <cypress/util/json.hpp>
+#include <cypress/util/logger.hpp>
 
 namespace cypress {
 namespace internal {
@@ -66,6 +67,11 @@ private:
 
 public:
 	/**
+	 * Logger that is being used.
+	 */
+	Logger *logger;
+
+	/**
 	 * Flag indicating whether lossy transformations should be used when
 	 * executing the network.
 	 */
@@ -79,7 +85,8 @@ public:
 	/**
 	 * Default constructor of the NetworkData class.
 	 */
-	NetworkData() : m_runtime({}), m_connections_sorted(true){};
+	NetworkData()
+	    : m_runtime({}), m_connections_sorted(true), logger(&global_logger()){};
 
 	/**
 	 * Creates an independent NetworkData instance.
@@ -170,6 +177,10 @@ NetworkBase::NetworkBase() : m_impl(std::make_shared<internal::NetworkData>())
 }
 
 NetworkBase::~NetworkBase() = default;
+
+Logger &NetworkBase::logger() const { return *m_impl->logger; }
+
+void NetworkBase::logger(Logger &logger) { m_impl->logger = &logger; }
 
 NetworkBase NetworkBase::clone() const
 {

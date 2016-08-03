@@ -58,6 +58,7 @@ class NetworkBase;
 class PopulationBase;
 class PopulationViewBase;
 class NeuronBase;
+class Logger;
 
 template <typename Impl, typename Accessor>
 class PopulationMixin;
@@ -180,6 +181,18 @@ public:
 	 * underlying network.
 	 */
 	~NetworkBase();
+
+	/**
+	 * Returns the logger that should be used to log messages related to this
+	 * network. The "global_logger()" is used per default.
+	 */
+	Logger& logger() const;
+
+	/**
+	 * Sets a new logger that should be used to log messages related to this
+	 * network.
+	 */
+	void logger(Logger &logger);
 
 	/**
 	 * Returns the raw population data associated with the given population
