@@ -40,6 +40,7 @@
 #include <cypress/core/neurons.hpp>
 #include <cypress/core/spike_time_generators.hpp>
 #include <cypress/core/types.hpp>
+#include <cypress/util/logger.hpp>
 
 #endif /* CYPRESS_HPP */
 
