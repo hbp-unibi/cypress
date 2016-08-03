@@ -26,7 +26,7 @@ TEST(spikey_if_cond_exp, IFFH1ToLIF_Simple)
 {
 	Network net_src = Network().add_population<IfFacetsHardware1>("test", 10, IfFacetsHardware1::Parameters{});
 
-	spikey::IFFH1ToLIF trafo;
+	transformations::IFFH1ToLIF trafo;
 	TransformationAuxData aux;
 	NetworkBase net_tar = trafo.transform(net_src, aux);
 }
