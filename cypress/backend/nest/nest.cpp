@@ -108,7 +108,7 @@ void NEST::do_run(NetworkBase &source, float duration) const
 	}
 
 	// Start the NEST child process
-	Process proc("nest", {"--verbosity=WARNING", "-"});
+	Process proc("nest", {"--verbosity=DEBUG", "-"});
 
 	// Serialise the network into it and start the simulation
 	std::signal(SIGPIPE, SIG_IGN);
@@ -116,23 +116,13 @@ void NEST::do_run(NetworkBase &source, float duration) const
 	proc.close_child_stdin();
 
 	// Read the network response and messages
-	std::string log_path = ".cypress_err_nest_XXXXXX";
-	{
-		std::ofstream log_stream(filesystem::tmpfile(log_path));
-		sli::read_response(proc.child_stdout(), source, log_stream);
-	}
+	sli::read_response(proc.child_stdout(), source);
 
 	// Wait for the subprocess to exit
 	if (proc.wait() != 0) {
-		std::ifstream log_stream_in(log_path);
-		Process::generic_pipe(log_stream_in, std::cerr);
 		throw ExecutionError(
-		    std::string("Error while executing the NEST simulation, see " +
-		                log_path + " for the above information."));
+		    std::string("Error while executing the NEST simulation"));
 	}
-	std::ifstream log_stream_in(log_path);
-	Process::generic_pipe(log_stream_in, std::cerr);
-	unlink(log_path.c_str());
 }
 
 std::unordered_set<const NeuronType *> NEST::supported_neuron_types() const

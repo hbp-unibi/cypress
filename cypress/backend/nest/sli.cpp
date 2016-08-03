@@ -20,12 +20,15 @@
 #include <iostream>
 #include <iomanip>
 #include <map>
+#include <regex>
 
-#include <stdlib.h>
+#include <cstdlib>
+#include <ctime>
 
 #include <cypress/backend/nest/sli.hpp>
 #include <cypress/core/neurons.hpp>
 #include <cypress/core/network.hpp>
+#include <cypress/util/logger.hpp>
 
 namespace cypress {
 namespace sli {
@@ -42,6 +45,32 @@ template <typename T>
 float to_seconds(const T &t1, const T &t2)
 {
 	return std::chrono::duration<float>(t2 - t1).count();
+}
+
+/**
+ * Trims a string from the left and right.
+ */
+std::string trim(const std::string &s)
+{
+	auto is_space = [](char c) {
+		return c == ' ' || c == '\t' || c == '\n' || c == '\r';
+	};
+
+	size_t i0 = 0;
+	size_t i1 = s.size();
+	for (size_t i = 0; i < s.size(); i++) {
+		if (!is_space(s[i])) {
+			i0 = i;
+			break;
+		}
+	}
+	for (ssize_t i = s.size() - 1; i >= 0; i--) {
+		if (!is_space(s[i])) {
+			i1 = i + 1;
+			break;
+		}
+	}
+	return s.substr(i0, i1 - i0);
 }
 
 /**
@@ -410,7 +439,7 @@ void write_network(std::ostream &os, const NetworkBase &net, float duration,
 	os << "(##cypress_done) =\n";
 }
 
-void read_response(std::istream &is, NetworkBase &net, std::ostream &errs)
+void read_response(std::istream &is, NetworkBase &net)
 {
 	// States of the internally used state machine
 	constexpr int STATE_DEFAULT = 0;
@@ -419,6 +448,12 @@ void read_response(std::istream &is, NetworkBase &net, std::ostream &errs)
 	constexpr int STATE_DATA_MODALITY = 3;
 	constexpr int STATE_DATA_LEN = 4;
 	constexpr int STATE_DATA = 5;
+
+	// Regular expression used to match the first line of a nest log message
+	static const std::regex nest_log_start_regex(
+	    "^([A-Za-z][A-Za-z][A-Za-z] [0-9][0-9] "
+	    "[0-9][0-9]:[0-9][0-9]:[0-9][0-9]) "
+	    "([^\\[]*)\\[([^\\]]*)\\]:\\s+(.*)$");
 
 	// Variables containing the profiling time points
 	std::chrono::steady_clock::time_point t_setup;
@@ -435,12 +470,32 @@ void read_response(std::istream &is, NetworkBase &net, std::ostream &errs)
 	std::shared_ptr<Matrix<float>> data;
 	size_t data_idx = 0;
 
+	// State variables used to capture NEST log messages
+	bool has_msg = false;
+	Severity msg_severity;
+	std::time_t msg_time;
+	std::string msg_ctx;
+	std::stringstream msg_buf;
+
+	// Function used to dispatch recorded messages
+	auto flush_message = [&] {
+		if (has_msg) {
+			has_msg = false;
+			net.logger().log(msg_severity, msg_time, "nest::" + msg_ctx,
+			                 trim(msg_buf.str()));
+			msg_buf = std::stringstream();
+		}
+	};
+
 	// Go through the NEST output line-by-line, ignore everything that does not
 	// start with "##" while we are in the default state.
 	std::string line;
 	while (std::getline(is, line)) {
 		// Check for special commands
 		if (line.size() >= 2 && line[0] == '#' && line[1] == '#') {
+			// Flush any existing message
+			flush_message();
+
 			// Reset the state
 			state = STATE_DEFAULT;
 
@@ -534,11 +589,50 @@ void read_response(std::istream &is, NetworkBase &net, std::ostream &errs)
 			}
 		}
 		else if (state == STATE_DEFAULT) {
-			if (!line.empty()) {
-				errs << line << std::endl;
+			std::smatch match;
+			if (std::regex_match(line, match, nest_log_start_regex)) {
+				// Flush already pending messages
+				flush_message();
+
+				// We got a message header
+				has_msg = true;
+
+				// Parse the message timestamp
+				// TODO: This will yield wrong results when the simulation is
+				// executed over year boundaries!
+				std::time_t time = std::time(nullptr);
+				std::tm tm;
+				localtime_r(&time, &tm);
+				strptime(std::string(match[1]).c_str(), "%b %d %H:%M:%S", &tm);
+				msg_time = std::mktime(&tm);
+
+				// Fetch the severity
+				msg_severity = Severity::DEBUG;
+				if (match[3] == "Info" || match[3] == "Status") {
+					msg_severity = Severity::INFO;
+				}
+				else if (match[3] == "Warning") {
+					msg_severity = Severity::WARNING;
+				}
+				else if (match[3] == "Error") {
+					msg_severity = Severity::ERROR;
+				}
+				else if (match[3] == "Fatal") {
+					msg_severity = Severity::FATAL_ERROR;
+				}
+				msg_ctx = trim(match[2]);
+				if (!trim(match[4]).empty()) {
+					msg_buf << trim(match[4]) << '\n';
+				}
+			}
+			else if (has_msg) {
+				msg_buf << trim(line) << '\n';
 			}
 		}
 	}
+
+	// Flush any existing message
+	flush_message();
 
 	// Set the network benchmark
 	net.runtime({to_seconds(t_setup, t_done),
