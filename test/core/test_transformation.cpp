@@ -229,7 +229,7 @@ TEST(transformations, construct_neuron_type_transformation_multiple_starts)
 
 TEST(transformations, construct_neuron_type_transformation_prefer_non_lossy)
 {
-	const std::vector<const NeuronType *> unsupported_types{&nt1, &nt2};
+	const std::vector<const NeuronType *> unsupported_types{&nt2, &nt1};
 	const std::unordered_set<const NeuronType *> supported_types{&nt3};
 	const std::vector<std::tuple<TransformationCtor, const NeuronType *,
 	                             const NeuronType *>> transformations{
@@ -240,7 +240,7 @@ TEST(transformations, construct_neuron_type_transformation_prefer_non_lossy)
 	    unsupported_types, supported_types, transformations, true);
 
 	ASSERT_EQ(2U, res.size());
-	EXPECT_EQ("t3", res[0]()->id());
-	EXPECT_EQ("t2", res[1]()->id());
+	EXPECT_EQ("t2", res[0]()->id());
+	EXPECT_EQ("t3", res[1]()->id());
 }
 }
