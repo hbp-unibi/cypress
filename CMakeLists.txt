@@ -113,10 +113,12 @@ add_library(cypress
 	cypress/util/comperator
 	cypress/util/filesystem
 	cypress/util/json
+	cypress/util/logger
 	cypress/util/matrix
 	cypress/util/optional
 	cypress/util/process
 	cypress/util/resource
+	cypress/util/terminal
 )
 
 target_link_libraries(cypress pthread)
