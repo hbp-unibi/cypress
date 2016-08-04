@@ -117,6 +117,7 @@ add_library(cypress
 	cypress/util/matrix
 	cypress/util/optional
 	cypress/util/process
+	cypress/util/range
 	cypress/util/resource
 	cypress/util/terminal
 )
