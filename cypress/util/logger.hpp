@@ -29,9 +29,10 @@
 #define CYPRESS_UTIL_LOGGER_HPP
 
 #include <ctime>
-#include <string>
+#include <cstdint>
 #include <iosfwd>
 #include <memory>
+#include <string>
 
 namespace cypress {
 /*
@@ -42,10 +43,10 @@ class LoggerImpl;
 class LogStreamBackendImpl;
 
 /**
- * The Severity enum holds the severity of a log message. Higher severities are
- * associated with higher values.
+ * The LogSeverity enum holds the LogSeverity of a log message. Higher
+ * severities are associated with higher values.
  */
-enum Severity {
+enum LogSeverity : int32_t {
 	DEBUG = 10,
 	INFO = 20,
 	WARNING = 30,
@@ -63,8 +64,8 @@ public:
 	 * Pure virtual function which is called whenever a new log message should
 	 * be logged.
 	 */
-	virtual void log(Severity lvl, std::time_t time, const std::string &module,
-	                 const std::string &message) = 0;
+	virtual void log(LogSeverity lvl, std::time_t time,
+	                 const std::string &module, const std::string &message) = 0;
 
 	virtual ~LogBackend() {}
 };
@@ -80,7 +81,7 @@ private:
 public:
 	LogStreamBackend(std::ostream &os, bool use_color = false);
 
-	void log(Severity lvl, std::time_t time, const std::string &module,
+	void log(LogSeverity lvl, std::time_t time, const std::string &module,
 	         const std::string &message) override;
 
 	virtual ~LogStreamBackend();
@@ -108,22 +109,22 @@ public:
 	Logger(std::shared_ptr<LogBackend> backend);
 
 	/**
-	 * Sets the minimum severity level that should be logged. The default is
+	 * Sets the minimum LogSeverity level that should be logged. The default is
 	 * Serverity::INFO.
 	 */
-	void min_level(Severity lvl);
+	void min_level(LogSeverity lvl);
 
 	/**
 	 * Returns the current minimum log level.
 	 */
-	Severity min_level();
+	LogSeverity min_level();
 
 	/**
 	 * Sets the backend to the given backend instance.
 	 */
 	void backend(std::shared_ptr<LogBackend> backend);
 
-	void log(Severity lvl, std::time_t time, const std::string &module,
+	void log(LogSeverity lvl, std::time_t time, const std::string &module,
 	         const std::string &message);
 	void debug(const std::string &module, const std::string &message);
 	void info(const std::string &module, const std::string &message);

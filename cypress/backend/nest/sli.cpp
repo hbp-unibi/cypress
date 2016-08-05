@@ -472,7 +472,7 @@ void read_response(std::istream &is, NetworkBase &net)
 
 	// State variables used to capture NEST log messages
 	bool has_msg = false;
-	Severity msg_severity;
+	LogSeverity msg_severity;
 	std::time_t msg_time;
 	std::string msg_ctx;
 	std::stringstream msg_buf;
@@ -607,18 +607,18 @@ void read_response(std::istream &is, NetworkBase &net)
 				msg_time = std::mktime(&tm);
 
 				// Fetch the severity
-				msg_severity = Severity::DEBUG;
+				msg_severity = LogSeverity::DEBUG;
 				if (match[3] == "Info" || match[3] == "Status") {
-					msg_severity = Severity::INFO;
+					msg_severity = LogSeverity::INFO;
 				}
 				else if (match[3] == "Warning") {
-					msg_severity = Severity::WARNING;
+					msg_severity = LogSeverity::WARNING;
 				}
 				else if (match[3] == "Error") {
-					msg_severity = Severity::ERROR;
+					msg_severity = LogSeverity::ERROR;
 				}
 				else if (match[3] == "Fatal") {
-					msg_severity = Severity::FATAL_ERROR;
+					msg_severity = LogSeverity::FATAL_ERROR;
 				}
 				msg_ctx = trim(match[2]);
 				if (!trim(match[4]).empty()) {

@@ -38,7 +38,7 @@ public:
 	{
 	}
 
-	void log(Severity lvl, std::time_t time, const std::string &module,
+	void log(LogSeverity lvl, std::time_t time, const std::string &module,
 	         const std::string &message)
 	{
 		{
@@ -50,16 +50,16 @@ public:
 
 		m_os << " [" << module << "] ";
 
-		if (lvl <= Severity::DEBUG) {
+		if (lvl <= LogSeverity::DEBUG) {
 			m_os << m_terminal.color(Terminal::BLACK, true) << "debug";
 		}
-		else if (lvl <= Severity::INFO) {
+		else if (lvl <= LogSeverity::INFO) {
 			m_os << m_terminal.color(Terminal::BLUE, true) << "info";
 		}
-		else if (lvl <= Severity::WARNING) {
+		else if (lvl <= LogSeverity::WARNING) {
 			m_os << m_terminal.color(Terminal::MAGENTA, true) << "warning";
 		}
-		else if (lvl <= Severity::ERROR) {
+		else if (lvl <= LogSeverity::ERROR) {
 			m_os << m_terminal.color(Terminal::RED, true) << "error";
 		}
 		else {
@@ -80,7 +80,7 @@ LogStreamBackend::LogStreamBackend(std::ostream &os, bool use_color)
 {
 }
 
-void LogStreamBackend::log(Severity lvl, std::time_t time,
+void LogStreamBackend::log(LogSeverity lvl, std::time_t time,
                            const std::string &module,
                            const std::string &message)
 {
@@ -100,7 +100,7 @@ class LoggerImpl {
 private:
 	std::shared_ptr<LogBackend> m_backend;
 	std::mutex m_logger_mtx;
-	Severity m_min_level = Severity::INFO;
+	LogSeverity m_min_level = LogSeverity::INFO;
 
 public:
 	void backend(std::shared_ptr<LogBackend> backend)
@@ -109,19 +109,19 @@ public:
 		m_backend = std::move(backend);
 	}
 
-	void min_level(Severity lvl)
+	void min_level(LogSeverity lvl)
 	{
 		std::lock_guard<std::mutex> lock(m_logger_mtx);
 		m_min_level = lvl;
 	}
 
-	Severity min_level()
+	LogSeverity min_level()
 	{
 		std::lock_guard<std::mutex> lock(m_logger_mtx);
 		return m_min_level;
 	}
 
-	void log(Severity lvl, std::time_t time, const std::string &module,
+	void log(LogSeverity lvl, std::time_t time, const std::string &module,
 	         const std::string &message)
 	{
 		std::lock_guard<std::mutex> lock(m_logger_mtx);
@@ -130,7 +130,7 @@ public:
 		}
 	}
 
-	void log(Severity lvl, const std::string &module,
+	void log(LogSeverity lvl, const std::string &module,
 	         const std::string &message)
 	{
 		log(lvl, time(nullptr), module, message);
@@ -151,16 +151,16 @@ Logger::Logger(std::shared_ptr<LogBackend> backend)
 	m_impl->backend(backend);
 }
 
-void Logger::min_level(Severity lvl) { m_impl->min_level(lvl); }
+void Logger::min_level(LogSeverity lvl) { m_impl->min_level(lvl); }
 
-Severity Logger::min_level() { return m_impl->min_level(); }
+LogSeverity Logger::min_level() { return m_impl->min_level(); }
 
 void Logger::backend(std::shared_ptr<LogBackend> backend)
 {
 	m_impl->backend(backend);
 }
 
-void Logger::log(Severity lvl, std::time_t time, const std::string &module,
+void Logger::log(LogSeverity lvl, std::time_t time, const std::string &module,
                  const std::string &message)
 {
 	m_impl->log(lvl, time, module, message);
@@ -168,27 +168,27 @@ void Logger::log(Severity lvl, std::time_t time, const std::string &module,
 
 void Logger::debug(const std::string &module, const std::string &message)
 {
-	m_impl->log(Severity::DEBUG, module, message);
+	m_impl->log(LogSeverity::DEBUG, module, message);
 }
 
 void Logger::info(const std::string &module, const std::string &message)
 {
-	m_impl->log(Severity::INFO, module, message);
+	m_impl->log(LogSeverity::INFO, module, message);
 }
 
 void Logger::warn(const std::string &module, const std::string &message)
 {
-	m_impl->log(Severity::WARNING, module, message);
+	m_impl->log(LogSeverity::WARNING, module, message);
 }
 
 void Logger::error(const std::string &module, const std::string &message)
 {
-	m_impl->log(Severity::ERROR, module, message);
+	m_impl->log(LogSeverity::ERROR, module, message);
 }
 
 void Logger::fatal_error(const std::string &module, const std::string &message)
 {
-	m_impl->log(Severity::FATAL_ERROR, module, message);
+	m_impl->log(LogSeverity::FATAL_ERROR, module, message);
 }
 
 /*
