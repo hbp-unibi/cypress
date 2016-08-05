@@ -26,7 +26,12 @@ import sys
 
 # Simply read data from stdin and serialise it back
 while True:
-    name, matrix, header = deserialise(sys.stdin)
-    if name is None:
+    block_type, res = deserialise(sys.stdin)
+    if block_type == BLOCK_TYPE_MATRIX:
+        name, matrix, header = res
+        serialise_matrix(sys.stdout, name, matrix, header)
+    elif block_type == BLOCK_TYPE_LOG:
+        time, severity, module, msg = res
+        serialise_log(sys.stdout, time, severity, module, msg)
+    if res is None:
         break
-    serialise(sys.stdout, name, matrix, header)

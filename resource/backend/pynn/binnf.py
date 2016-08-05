@@ -15,7 +15,6 @@
 #
 #   You should have received a copy of the GNU General Public License
 #   along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
 """
 Reader of the binnf serialisation format. Note that this format is not
 standardised and always in sync with the corresponding implementation in CppNAM.
@@ -36,13 +35,13 @@ class BinnfException(Exception):
 BLOCK_START_SEQUENCE = 0x665a8cda
 BLOCK_END_SEQUENCE = 0x420062cb
 BLOCK_TYPE_MATRIX = 0x01
+BLOCK_TYPE_LOG = 0x02
 
 TYPE_INT = 0x00
 TYPE_FLOAT = 0x01
-TYPE_MAP = {
-    TYPE_INT: "int32",
-    TYPE_FLOAT: "float32"
-}
+TYPE_MAP = {TYPE_INT: "int32", TYPE_FLOAT: "float32"}
+
+SEVERITIES = ["DEBUG", "INFO", "WARNING", "ERROR", "FATAL"]
 
 # Helper functions used to determine the length of a storage block
 
@@ -51,6 +50,7 @@ BLOCK_TYPE_LEN = 4
 SIZE_LEN = 4
 TYPE_LEN = 4
 NUMBER_LEN = 4
+DOUBLE_LEN = 8
 
 
 def _str_len(s):
@@ -81,8 +81,16 @@ def _block_len(name, header, matrix):
     """
     Returns the total length of a binnf block in bytes.
     """
-    return (BLOCK_TYPE_LEN + _str_len(name) + _header_len(header)
-            + _matrix_len(matrix))
+    return (BLOCK_TYPE_LEN + _str_len(name) + _header_len(header) +
+            _matrix_len(matrix))
+
+
+def _block_len_log(name, severity, module, msg):
+    """
+    Returns the total length of a binnf block in bytes.
+    """
+    return (BLOCK_TYPE_LEN + DOUBLE_LEN + _str_len(severity) + _str_len(module)
+            + _str_len(msg))
 
 # Serialisation helper functions
 
@@ -91,10 +99,14 @@ def _write_int(fd, i):
     fd.write(struct.pack("i", i))
 
 
+def _write_double(fd, d):
+    fd.write(struct.pack("d", d))
+
+
 def _write_str(fd, s):
     if (len(s) > MAX_STR_SIZE):
-        raise BinnfException("String exceeds string size limit of " + MAX_STR_SIZE
-                             + " bytes.")
+        raise BinnfException("String exceeds string size limit of " +
+                             MAX_STR_SIZE + " bytes.")
     fd.write(struct.pack("i", len(s)))
     fd.write(s)
 
@@ -123,6 +135,13 @@ def _read_int(fd):
     return struct.unpack("i", data)[0]
 
 
+def _read_double(fd):
+    data = fd.read(8)
+    if not data:
+        raise BinnfException("Unexpected end of file")
+    return struct.unpack("d", data)[0]
+
+
 def _read_str(fd):
     data = fd.read(_read_int(fd))
     if not data:
@@ -146,7 +165,7 @@ def header_to_dtype(header):
     return map(lambda x: (x["name"], TYPE_MAP[x["type"]]), header)
 
 
-def serialise(fd, name, header, matrix):
+def serialise_matrix(fd, name, header, matrix):
     """
     Serialises a binnf data block.
 
@@ -192,29 +211,35 @@ def serialise(fd, name, header, matrix):
     _write_int(fd, BLOCK_END_SEQUENCE)
 
 
-def deserialise(fd):
-    name = ""
-    header = []
-    matrix = None
+def serialise_log(fd, time, severity, module, msg):
+    """
+    Serialises a log message and sends it to the receiving side.
 
-    # Read some meta-information, abort if we're at the end of the file
-    if not _synchronise(fd, BLOCK_START_SEQUENCE):
-        return None, None, None
+    :param time: is the Unix timestamp at which the message was recorded
+    :param severity: is the severity level of the message, should be one of
+    """
+    _write_int(fd, BLOCK_START_SEQUENCE)
+    _write_int(fd, _block_len_log(module, msg))
+    _write_int(fd, BLOCK_TYPE_LOG)
 
-    block_len = _read_int(fd)
-    pos0 = _tell(fd)
+    _write_double(fd, time)
+    if not severity in SEVERITIES:
+        raise BinnfException("Invalid log message severity must be one of " +
+                             str(SEVERITIES))
+    _write_str(fd, severity)
+    _write_str(fd, module)
+    _write_str(fd, msg)
 
-    block_type = _read_int(fd)
-    if block_type != BLOCK_TYPE_MATRIX:
-        raise BinnfException("Unexpected block type")
+    _write_int(fd, BLOCK_END_SEQUENCE)
 
+
+def deserialise_matrix(fd):
     # Read the name
     name = _read_str(fd)
 
     # Read the header
     header_len = _read_int(fd)
-    header = map(lambda _: {"name": "", "type": TYPE_INT},
-                 xrange(header_len))
+    header = map(lambda _: {"name": "", "type": TYPE_INT}, xrange(header_len))
     for i in xrange(header_len):
         header[i]["name"] = _read_str(fd)
         header[i]["type"] = _read_int(fd)
@@ -227,8 +252,46 @@ def deserialise(fd):
             "Disecrepancy between matrix number of columns and header")
 
     fmt = header_to_dtype(header)
-    matrix = np.require(np.frombuffer(buffer(fd.read(rows * cols * NUMBER_LEN)),
-                                      dtype=fmt), requirements=["WRITEABLE"])
+    matrix = np.require(
+        np.frombuffer(
+            buffer(fd.read(rows * cols * NUMBER_LEN)), dtype=fmt),
+        requirements=["WRITEABLE"])
+
+    return name, header, matrix
+
+
+def deserialise_log(fd):
+    """
+    Reads a log message from the given file descriptor. A log message consists
+    of a double containing the log timestamp, the severity string, the module
+    string, and the actual message.
+    """
+    time = _read_double(fd)
+    severity = _read_str(fd)
+    module = _read_str(fd)
+    msg = _read_str(fd)
+    return time, severity, module, msg
+
+
+def deserialise(fd):
+    """
+    Deserialises a Binnf block from the sequence. Returns the block type and
+    a tuple containing the actual data
+    """
+    # Read some meta-information, abort if we're at the end of the file
+    if not _synchronise(fd, BLOCK_START_SEQUENCE):
+        return None, None
+
+    block_len = _read_int(fd)
+    pos0 = _tell(fd)
+
+    block_type = _read_int(fd)
+    if block_type == BLOCK_TYPE_MATRIX:
+        res = deserialise_matrix(fd)
+    elif block_type == BLOCK_TYPE_LOG:
+        res = deserialise_matrix(fd)
+    else:
+        raise BinnfException("Unexpected block type")
 
     # Make sure the block size was correct
     pos1 = _tell(fd)
@@ -240,39 +303,39 @@ def deserialise(fd):
     if block_end != BLOCK_END_SEQUENCE:
         raise BinnfException("Block end sequence not found")
 
-    return name, header, matrix
+    return block_type, res
 
 
 def read_network(fd):
     EXPECTED_FIELDS = {
         "populations":
-            {
-                "count": "int32",
-                "type": "int32"
-            },
+        {
+            "count": "int32",
+            "type": "int32"
+        },
         "parameters":
-            {
-                "pid": "int32",
-                "nid": "int32"
-            },
+        {
+            "pid": "int32",
+            "nid": "int32"
+        },
         "target":
-            {
-                "pid": "int32",
-                "nid": "int32"
-            },
+        {
+            "pid": "int32",
+            "nid": "int32"
+        },
         "spike_times":
-            {
-                "times": "float32"
-            },
+        {
+            "times": "float32"
+        },
         "connections":
-            {
-                "pid_src": ("int32", 0),
-                "pid_tar": ("int32", 4),
-                "nid_src": ("int32", 8),
-                "nid_tar": ("int32", 12),
-                "weight": ("float32", 16),
-                "delay": ("float32", 20)
-            }
+        {
+            "pid_src": ("int32", 0),
+            "pid_tar": ("int32", 4),
+            "nid_src": ("int32", 8),
+            "nid_tar": ("int32", 12),
+            "weight": ("float32", 16),
+            "delay": ("float32", 20)
+        }
     }
 
     def validate_matrix(name, matrix):
@@ -283,35 +346,34 @@ def read_network(fd):
         if (name in EXPECTED_FIELDS):
             for name, _type in EXPECTED_FIELDS[name].items():
                 if not (name in fields):
-                    raise BinnfException("Expected mandatory header field \""
-                                         + name + "\" of type \"" + _type + "\"")
+                    raise BinnfException("Expected mandatory header field \"" +
+                                         name + "\" of type \"" + _type + "\"")
                 field = fields[name]
                 type_name = _type[0] if isinstance(_type, tuple) else _type
                 if field[0].name != type_name:
-                    raise BinnfException("Mandatory header field \""
-                                         + name + "\" must by of type " + type_name
-                                         + ", but got " + field[0].name)
+                    raise BinnfException("Mandatory header field \"" + name +
+                                         "\" must by of type " + type_name +
+                                         ", but got " + field[0].name)
                 if isinstance(_type, tuple) and field[1] != _type[1]:
-                    raise BinnfException("Mandatory header field \""
-                                         + name + "\" must be at offset " +
-                                         str(_type[1])
-                                         + ", but is at offset " + str(field[1]))
+                    raise BinnfException("Mandatory header field \"" + name +
+                                         "\" must be at offset " + str(_type[
+                                             1]) + ", but is at offset " + str(
+                                                 field[1]))
 
     # Construct the network descriptor from the binnf data
-    network = {
-        "parameters": [],
-        "spike_times": []
-    }
+    network = {"parameters": [], "spike_times": []}
     target = None
     while True:
         # Deserialise a single input block
-        name, _, matrix = deserialise(fd)
-
-        # "None" is returned as soon as the end of the file is reached
-        if name is None:
+        block_type, res = deserialise(fd)
+        # Abort once the end of the file is reached
+        if block_type is None:
             break
+        elif block_type != BLOCK_TYPE_MATRIX:
+            raise BinnfException("Unexpected Binnf block!")
 
         # Make sure all mandatory matrix fields are present
+        name, _, matrix = res
         validate_matrix(name, matrix)
 
         # Read the data matrices
@@ -347,26 +409,32 @@ def read_network(fd):
     return network
 
 # Headers used during serialisation
-HEADER_DONE = [{"name": "time_prepare", "type": TYPE_FLOAT},
-               {"name": "time_sim", "type": TYPE_FLOAT},
-               {"name": "time_read", "type": TYPE_FLOAT}]
+HEADER_DONE = [{"name": "time_prepare",
+                "type": TYPE_FLOAT}, {"name": "time_sim",
+                                      "type": TYPE_FLOAT},
+               {"name": "time_read",
+                "type": TYPE_FLOAT}]
 HEADER_DONE_DTYPE = header_to_dtype(HEADER_DONE)
 
-HEADER_TARGET = [{"name": "pid", "type": TYPE_INT},
-                 {"name": "nid", "type": TYPE_INT}]
+HEADER_TARGET = [{"name": "pid",
+                  "type": TYPE_INT}, {"name": "nid",
+                                      "type": TYPE_INT}]
 HEADER_TARGET_DTYPE = header_to_dtype(HEADER_TARGET)
 
 HEADER_SPIKE_TIMES = [{"name": "times", "type": TYPE_FLOAT}]
 HEADER_SPIKE_TIMES_DTYPE = header_to_dtype(HEADER_SPIKE_TIMES)
 
-HEADER_TRACE = [{"name": "times", "type": TYPE_FLOAT},
-                {"name": "values", "type": TYPE_FLOAT}]
+HEADER_TRACE = [{"name": "times",
+                 "type": TYPE_FLOAT}, {"name": "values",
+                                       "type": TYPE_FLOAT}]
 HEADER_TRACE_DTYPE = header_to_dtype(HEADER_TRACE)
 
-HEADER_RUNTIMES = [{"name": "total", "type": TYPE_FLOAT},
-                   {"name": "sim", "type": TYPE_FLOAT},
-                   {"name": "initialize", "type": TYPE_FLOAT},
-                   {"name": "finalize", "type": TYPE_FLOAT}]
+HEADER_RUNTIMES = [{"name": "total",
+                    "type": TYPE_FLOAT}, {"name": "sim",
+                                          "type": TYPE_FLOAT},
+                   {"name": "initialize",
+                    "type": TYPE_FLOAT}, {"name": "finalize",
+                                          "type": TYPE_FLOAT}]
 HEADER_RUNTIMES_DTYPE = header_to_dtype(HEADER_RUNTIMES)
 
 
@@ -377,18 +445,28 @@ def write_result(fd, res):
     :param fd: target file descriptor.
     :param res: simulation result.
     """
-    serialise(fd, "done", HEADER_DONE, np.array(
-        [(0, 0, 0)], dtype=HEADER_DONE_DTYPE))
+    serialise_matrix(
+        fd,
+        "done",
+        HEADER_DONE,
+        np.array(
+            [(0, 0, 0)], dtype=HEADER_DONE_DTYPE))
     for pid in xrange(len(res)):
         for signal in res[pid]:
             for nid in xrange(len(res[pid][signal])):
-                serialise(fd, "target", HEADER_TARGET, np.array(
-                    [(pid, nid)], dtype=HEADER_TARGET_DTYPE))
+                serialise_matrix(
+                    fd,
+                    "target",
+                    HEADER_TARGET,
+                    np.array(
+                        [(pid, nid)], dtype=HEADER_TARGET_DTYPE))
                 matrix = res[pid][signal][nid]
                 if signal == "spikes":
-                    serialise(fd, "spike_times", HEADER_SPIKE_TIMES, matrix)
+                    serialise_matrix(fd, "spike_times", HEADER_SPIKE_TIMES,
+                                     matrix)
                 else:
-                    serialise(fd, "trace_" + signal, HEADER_TRACE, matrix)
+                    serialise_matrix(fd, "trace_" + signal, HEADER_TRACE,
+                                     matrix)
 
 
 def write_runtimes(fd, times):
@@ -399,13 +477,17 @@ def write_runtimes(fd, times):
     :param times: object containing "total", "sim", "initialize" and "finalize"
     keys with the runtimes in seconds.
     """
-    serialise(fd, "runtimes", HEADER_RUNTIMES, np.array(
-        [(times["total"],
-          times["sim"],
-          times["initialize"],
-          times["finalize"])], dtype=HEADER_RUNTIMES_DTYPE))
+    serialise_matrix(
+        fd,
+        "runtimes",
+        HEADER_RUNTIMES,
+        np.array(
+            [(times["total"], times["sim"], times["initialize"],
+              times["finalize"])],
+            dtype=HEADER_RUNTIMES_DTYPE))
 
 # Export definitions
 
-__all__ = ["serialise", "deserialise", "read_network", "BinnfException"]
+__all__ = ["serialise_matrix", "serialise_log", "deserialise", "read_network",
+           "BinnfException"]
 
