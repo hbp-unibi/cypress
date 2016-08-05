@@ -41,7 +41,11 @@ TYPE_INT = 0x00
 TYPE_FLOAT = 0x01
 TYPE_MAP = {TYPE_INT: "int32", TYPE_FLOAT: "float32"}
 
-SEVERITIES = ["DEBUG", "INFO", "WARNING", "ERROR", "FATAL"]
+SEV_DEBUG = 10
+SEV_INFO = 20
+SEV_WARNING = 30
+SEV_ERROR = 40
+SEV_FATAL = 50
 
 # Helper functions used to determine the length of a storage block
 
@@ -77,7 +81,7 @@ def _matrix_len(matrix):
     return 2 * SIZE_LEN + matrix.size * matrix.dtype.itemsize
 
 
-def _block_len(name, header, matrix):
+def _matrix_block_len(name, header, matrix):
     """
     Returns the total length of a binnf block in bytes.
     """
@@ -85,11 +89,11 @@ def _block_len(name, header, matrix):
             _matrix_len(matrix))
 
 
-def _block_len_log(name, severity, module, msg):
+def _log_block_len(name, severity, module, msg):
     """
     Returns the total length of a binnf block in bytes.
     """
-    return (BLOCK_TYPE_LEN + DOUBLE_LEN + _str_len(severity) + _str_len(module)
+    return (BLOCK_TYPE_LEN + DOUBLE_LEN + NUMBER_LEN + _str_len(module)
             + _str_len(msg))
 
 # Serialisation helper functions
@@ -177,7 +181,7 @@ def serialise_matrix(fd, name, header, matrix):
 
     # Write the block header
     _write_int(fd, BLOCK_START_SEQUENCE)
-    _write_int(fd, _block_len(name, header, matrix))
+    _write_int(fd, _matrix_block_len(name, header, matrix))
     _write_int(fd, BLOCK_TYPE_MATRIX)
 
     # Write the name string
@@ -217,16 +221,19 @@ def serialise_log(fd, time, severity, module, msg):
 
     :param time: is the Unix timestamp at which the message was recorded
     :param severity: is the severity level of the message, should be one of
+    SEV_DEBUG, SEV_INFO, SEV_WARNING, SEV_ERROR or SEV_FATAL.
+    :param module: is the name of the module the error message originated from
+    :param msg: is the actual message that should be logged.
     """
     _write_int(fd, BLOCK_START_SEQUENCE)
-    _write_int(fd, _block_len_log(module, msg))
+    _write_int(fd, _log_block_len(module, msg))
     _write_int(fd, BLOCK_TYPE_LOG)
 
     _write_double(fd, time)
     if not severity in SEVERITIES:
         raise BinnfException("Invalid log message severity must be one of " +
                              str(SEVERITIES))
-    _write_str(fd, severity)
+    _write_int(fd, severity)
     _write_str(fd, module)
     _write_str(fd, msg)
 
@@ -267,7 +274,7 @@ def deserialise_log(fd):
     string, and the actual message.
     """
     time = _read_double(fd)
-    severity = _read_str(fd)
+    severity = _read_int(fd)
     module = _read_str(fd)
     msg = _read_str(fd)
     return time, severity, module, msg
