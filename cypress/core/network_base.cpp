@@ -404,7 +404,7 @@ void NetworkBase::run(const Backend &backend, float duration)
 {
 	// Automatically deduce the duration if none was given
 	if (duration <= 0) {
-		duration = this->duration();
+		duration = this->duration() + 1000.0;
 	}
 
 	// Run the network through the transformation machinery, make sure all
