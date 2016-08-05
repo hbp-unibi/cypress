@@ -89,7 +89,7 @@ def _matrix_block_len(name, header, matrix):
             _matrix_len(matrix))
 
 
-def _log_block_len(name, severity, module, msg):
+def _log_block_len(module, msg):
     """
     Returns the total length of a binnf block in bytes.
     """
@@ -230,9 +230,6 @@ def serialise_log(fd, time, severity, module, msg):
     _write_int(fd, BLOCK_TYPE_LOG)
 
     _write_double(fd, time)
-    if not severity in SEVERITIES:
-        raise BinnfException("Invalid log message severity must be one of " +
-                             str(SEVERITIES))
     _write_int(fd, severity)
     _write_str(fd, module)
     _write_str(fd, msg)
@@ -296,7 +293,7 @@ def deserialise(fd):
     if block_type == BLOCK_TYPE_MATRIX:
         res = deserialise_matrix(fd)
     elif block_type == BLOCK_TYPE_LOG:
-        res = deserialise_matrix(fd)
+        res = deserialise_log(fd)
     else:
         raise BinnfException("Unexpected block type")
 

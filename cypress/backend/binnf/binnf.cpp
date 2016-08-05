@@ -33,11 +33,13 @@ using SizeType = uint32_t;
 static constexpr uint32_t BLOCK_START_SEQUENCE = 0x665a8cda;
 static constexpr uint32_t BLOCK_END_SEQUENCE = 0x420062cb;
 static constexpr uint32_t BLOCK_TYPE_MATRIX = 0x01;
+static constexpr uint32_t BLOCK_TYPE_LOG = 0x02;
 static constexpr SizeType MAX_STR_SIZE = 1024;
 static constexpr SizeType BLOCK_TYPE_LEN = sizeof(uint32_t);
 static constexpr SizeType SIZE_LEN = sizeof(SizeType);
 static constexpr SizeType TYPE_LEN = sizeof(NumberType);
 static constexpr SizeType NUMBER_LEN = sizeof(Number);
+static constexpr SizeType DOUBLE_LEN = sizeof(double);
 
 SizeType str_len(const std::string &s) { return SIZE_LEN + s.size(); }
 SizeType header_len(const Header &header)
@@ -54,10 +56,17 @@ SizeType matrix_len(size_t rows, size_t cols)
 	return 2 * SIZE_LEN + rows * cols * NUMBER_LEN;
 }
 
-SizeType block_len(const std::string &name, const Header &header, size_t rows)
+SizeType matrix_block_len(const std::string &name, const Header &header,
+                          size_t rows)
 {
 	return BLOCK_TYPE_LEN + str_len(name) + header_len(header) +
 	       matrix_len(rows, header.size());
+}
+
+SizeType log_block_len(const std::string &module, const std::string &msg)
+{
+	return BLOCK_TYPE_LEN + DOUBLE_LEN + NUMBER_LEN + str_len(module) +
+	       str_len(msg);
 }
 
 /* Individual data write methods */
@@ -147,12 +156,13 @@ void read(std::istream &is, Matrix<Number> &matrix)
 
 /* Entire block serialisation method */
 
-void serialise(std::ostream &os, const std::string &name, const Header &header,
-               const Number data[], size_t rows)
+void serialise_matrix(std::ostream &os, const std::string &name,
+                      const Header &header, const Number data[], size_t rows)
 {
 
-	write(os, BLOCK_START_SEQUENCE);           // Write the block start mark
-	write(os, block_len(name, header, rows));  //  Write the total block length
+	write(os, BLOCK_START_SEQUENCE);  // Write the block start mark
+	write(os, matrix_block_len(name, header,
+	                           rows));  //  Write the total block length
 	write(os, BLOCK_TYPE_MATRIX);
 	write(os, name);                     // Write the name of the block
 	write(os, SizeType(header.size()));  // Write the length of the header
@@ -166,19 +176,68 @@ void serialise(std::ostream &os, const std::string &name, const Header &header,
 	write(os, BLOCK_END_SEQUENCE);  // Write the block end mark
 }
 
-void serialise(std::ostream &os, const std::string &name, const Header &header,
-               const Matrix<Number> &matrix)
+void serialise_matrix(std::ostream &os, const std::string &name,
+                      const Header &header, const Matrix<Number> &matrix)
 {
 	assert(matrix.cols() == header.size());
-	serialise(os, name, header, matrix.data(), matrix.rows());
+	serialise_matrix(os, name, header, matrix.data(), matrix.rows());
+}
+
+void serialise_log(std::ostream &os, double time, LogSeverity severity,
+                   const std::string &module, const std::string &msg)
+{
+	write(os, BLOCK_START_SEQUENCE);        // Write the block start mark
+	write(os, log_block_len(module, msg));  //  Write the total block length
+	write(os, BLOCK_TYPE_LOG);
+	write(os, time);
+	write(os, severity);
+	write(os, module);
+	write(os, msg);
+	write(os, BLOCK_END_SEQUENCE);  // Write the block end mark
 }
 
 void serialise(std::ostream &os, const Block &block)
 {
-	serialise(os, block.name, block.header, block.matrix);
+	switch (block.type) {
+		case BlockType::MATRIX:
+			serialise_matrix(os, block.name, block.header, block.matrix);
+			break;
+		case BlockType::LOG:
+			serialise_log(os, block.time, block.severity, block.module,
+			              block.msg);
+			break;
+	}
 }
 
 /* Entire block deserialisation method */
+
+static void deserialise_matrix(Block &res, std::istream &is)
+{
+	read(is, res.name);
+
+	// Read the number of header elements
+	SizeType header_count;
+	read(is, header_count);
+
+	// Read the header elements
+	res.header.names.resize(header_count);
+	res.header.types.resize(header_count);
+	for (size_t i = 0; i < header_count; i++) {
+		read(is, res.header.names[i]);
+		read(is, res.header.types[i]);
+	}
+
+	// Read the matrix
+	read(is, res.matrix);
+}
+
+static void deserialise_log(Block &res, std::istream &is)
+{
+	read(is, res.time);
+	read(is, res.severity);
+	read(is, res.module);
+	read(is, res.msg);
+}
 
 Block deserialise(std::istream &is)
 {
@@ -196,24 +255,20 @@ Block deserialise(std::istream &is)
 	// Fetch the current stream position
 	const std::streampos pos0 = is.tellg();
 
-	uint32_t block_type;
-	read(is, block_type);
-	read(is, res.name);
+	// Read the block type
+	read(is, res.type);
 
-	// Read the number of header elements
-	SizeType header_count;
-	read(is, header_count);
-
-	// Read the header elements
-	res.header.names.resize(header_count);
-	res.header.types.resize(header_count);
-	for (size_t i = 0; i < header_count; i++) {
-		read(is, res.header.names[i]);
-		read(is, res.header.types[i]);
+	// Read either a named matrix or a log message
+	switch (res.type) {
+		case BlockType::MATRIX:
+			deserialise_matrix(res, is);
+			break;
+		case BlockType::LOG:
+			deserialise_log(res, is);
+			break;
+		default:
+			throw BinnfDecodeException("Unknown block type");
 	}
-
-	// Read the matrix
-	read(is, res.matrix);
 
 	// Make sure the block size is correct
 	const std::streampos pos1 = is.tellg();
@@ -227,7 +282,7 @@ Block deserialise(std::istream &is)
 	if (block_end != BLOCK_END_SEQUENCE) {
 		throw BinnfDecodeException("Expected block end");
 	}
-	return std::move(res);
+	return res;
 }
 }
 }

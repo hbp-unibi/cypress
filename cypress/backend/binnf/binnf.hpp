@@ -31,6 +31,7 @@
 #include <iostream>
 
 #include <cypress/util/matrix.hpp>
+#include <cypress/util/logger.hpp>
 
 namespace cypress {
 namespace binnf {
@@ -48,8 +49,8 @@ union Number {
 
 	Number(double d) : f(d) {}
 
-	operator int32_t() const {return i;}
-	operator double() const {return f;}
+	operator int32_t() const { return i; }
+	operator double() const { return f; }
 
 	bool operator==(const Number &o) const { return o.i == i; }
 
@@ -63,6 +64,11 @@ union Number {
  * Enum describing the actual type in the Number enum.
  */
 enum class NumberType : uint32_t { INT = 0, FLOAT = 1 };
+
+/**
+ * Enum describing the type of a block.
+ */
+enum class BlockType : uint32_t { MATRIX = 0x01, LOG = 0x02 };
 
 /**
  * Class describing the columns of a matrix.
@@ -94,15 +100,32 @@ struct Header {
  * Block of data as being written to/read from the serialiser.
  */
 struct Block {
+	BlockType type;
+
 	std::string name;
 	Header header;
 	Matrix<Number> matrix;
+
+	double time;
+	LogSeverity severity;
+	std::string module;
+	std::string msg;
 
 	Block() {}
 
 	Block(const std::string &name, const Header &header,
 	      const Matrix<Number> &matrix)
-	    : name(name), header(header), matrix(matrix)
+	    : type(BlockType::MATRIX), name(name), header(header), matrix(matrix)
+	{
+	}
+
+	Block(double time, LogSeverity severity, const std::string &module,
+	      const std::string &msg)
+	    : type(BlockType::LOG),
+	      time(time),
+	      severity(severity),
+	      module(module),
+	      msg(msg)
 	{
 	}
 
@@ -133,8 +156,8 @@ using Callback = std::function<bool(const std::string &, const Header &,
  * should be serialised.
  * @param rows is the number of data rows.
  */
-void serialise(std::ostream &os, const std::string &name, const Header &header,
-               const Number data[], size_t rows);
+void serialise_matrix(std::ostream &os, const std::string &name,
+                      const Header &header, const Number data[], size_t rows);
 
 /**
  * Serialises a named matrix along with its content and the given header to
@@ -145,12 +168,25 @@ void serialise(std::ostream &os, const std::string &name, const Header &header,
  * @param header is the header describing each column of the matrix.
  * @param matrix is the matrix that should be written to file.
  */
-void serialise(std::ostream &os, const std::string &name, const Header &header,
-               const Matrix<Number> &matrix);
+void serialise_matrix(std::ostream &os, const std::string &name,
+                      const Header &header, const Matrix<Number> &matrix);
 
 /**
- * Serialises a named matrix along with its content and the given header to
- * the given stream as a single data block.
+ * Serialises a log message.
+ *
+ * @param time is the unix timestamp containing the time at which the log
+ * message was issued.
+ * @param severity is the log message severity.
+ * @param module is a string describing the module in which the log message
+ * was issued.
+ * @param msg is the actual log message that should be logged.
+ */
+void serialise_log(std::ostream &os, double time, LogSeverity severity,
+                   const std::string &module, const std::string &msg);
+
+/**
+ * Serialises a block which may either contain a log message or a named
+ * matrix.
  *
  * @param os is the output stream to which the matrix should be written.
  * @param block is the data block that should be written to the given output

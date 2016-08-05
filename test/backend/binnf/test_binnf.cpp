@@ -80,15 +80,18 @@ TEST(binnf, python_communication)
 	Process proc("python", {Resources::PYNN_BINNF_LOOPBACK.open()});
 
 	// Generate a test data block
-	const Block block_in = generate_test_block();
+	const Block block_in_1 = generate_test_block();
+	const Block block_in_2(1234.2, LogSeverity::WARNING, "test", "test message");
 
 	// Send the data block to python
-	serialise(proc.child_stdin(), block_in);
+	serialise(proc.child_stdin(), block_in_1);
+	serialise(proc.child_stdin(), block_in_2);
 	proc.close_child_stdin();
 
 	// Read it back, expect the deserialisation to be successful
 	try {
-		check_equal(block_in, deserialise(proc.child_stdout()));
+		check_equal(block_in_1, deserialise(proc.child_stdout()));
+		check_equal(block_in_2, deserialise(proc.child_stdout()));
 	}
 	catch (BinnfDecodeException) {
 		// Most likely there is an error message

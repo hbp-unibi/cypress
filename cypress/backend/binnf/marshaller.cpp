@@ -113,18 +113,19 @@ static void write_populations(const std::vector<PopulationBase> &populations,
 		}
 	}
 
-	serialise(os, "populations", header, mat);
+	serialise_matrix(os, "populations", header, mat);
 }
 
 /**
  * Constructs and sends the connection matrix to the simulator.
  */
-static void write_connections(
-    const std::vector<ConnectionDescriptor> &descrs, std::ostream &os)
+static void write_connections(const std::vector<ConnectionDescriptor> &descrs,
+                              std::ostream &os)
 {
 	std::vector<Connection> connections = instantiate_connections(descrs);
-	serialise(os, "connections", CONNECTIONS_HEADER,
-	          reinterpret_cast<Number *>(&connections[0]), connections.size());
+	serialise_matrix(os, "connections", CONNECTIONS_HEADER,
+	                 reinterpret_cast<Number *>(&connections[0]),
+	                 connections.size());
 }
 
 static void write_spike_source_array(const PopulationBase &population,
@@ -136,10 +137,10 @@ static void write_spike_source_array(const PopulationBase &population,
 		mat(0, 0) = int32_t(population.pid());
 		mat(0, 1) = int32_t(i);
 
-		serialise(os, "target", TARGET_HEADER, mat);
-		serialise(os, "spike_times", SPIKE_TIMES_HEADER,
-		          reinterpret_cast<const Number *>(params.begin()),
-		          params.size());
+		serialise_matrix(os, "target", TARGET_HEADER, mat);
+		serialise_matrix(os, "spike_times", SPIKE_TIMES_HEADER,
+		                 reinterpret_cast<const Number *>(params.begin()),
+		                 params.size());
 	}
 }
 
@@ -167,7 +168,7 @@ static void write_uniform_parameters(const PopulationBase &population,
 		std::copy(params.begin(), params.end(), mat.begin(i) + 2);
 	}
 
-	serialise(os, "parameters", header, mat);
+	serialise_matrix(os, "parameters", header, mat);
 }
 
 /**
@@ -221,6 +222,15 @@ bool marshall_response(NetworkBase &net, std::istream &is)
 		catch (BinnfDecodeException ex) {
 			// TODO: Log
 			continue;
+		}
+
+		if (block.type == BlockType::LOG) {
+			net.logger().log(block.severity, block.time, block.module,
+			                 block.msg);
+			continue;
+		}
+		else if (block.type != BlockType::MATRIX) {
+			throw BinnfDecodeException("Unsupported block type!");
 		}
 
 		// Handle the block, depending on its name
