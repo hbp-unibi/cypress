@@ -41,6 +41,7 @@
 #include <cypress/core/spike_time_generators.hpp>
 #include <cypress/core/types.hpp>
 #include <cypress/util/logger.hpp>
+#include <cypress/util/range.hpp>
 
 #endif /* CYPRESS_HPP */
 
