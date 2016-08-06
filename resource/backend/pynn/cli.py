@@ -27,12 +27,38 @@ except:
 
 import logging
 
-# Setup the logger
-handler = logging.StreamHandler()
-handler.setFormatter(logging.Formatter("%(name)s:%(levelname)s:%(message)s"))
+
+class BinnfHandler(logging.Handler):
+    """
+    Handler which logs messages to stdout via Binnf
+    """
+
+    def emit(self, record):
+        import time
+        import sys
+        if record.levelno >= logging.CRITICAL:
+            severity = SEV_FATAL
+        elif record.levelno >= logging.ERROR:
+            severity = SEV_ERROR
+        elif record.levelno >= logging.WARNING:
+            severity = SEV_WARNING
+        elif record.levelno >= logging.INFO:
+            severity = SEV_INFO
+        else:
+            severity = SEV_DEBUG
+        serialise_log(
+            sys.stdout,
+            time.time(),
+            severity,
+            record.name,
+            record.msg)
+
+# Log all log messages via Binnf
+logging.getLogger("").addHandler(BinnfHandler())
+
+# Setup the local logger
 logger = logging.getLogger("cypress")
 logger.setLevel(logging.INFO)
-logger.addHandler(handler)
 
 
 def do_run(args):
@@ -59,11 +85,16 @@ def do_run(args):
     network = read_network(in_fd)
 
     # Open the simulator and run the network
-    res, runtimes = Cypress(
-        args.simulator,
-        args.library, setup=json.loads(args.setup)).run(
-        network,
-        duration=args.duration)
+    try:
+        res, runtimes = Cypress(
+            args.simulator,
+            args.library, setup=json.loads(args.setup)).run(
+            network,
+            duration=args.duration)
+    except:
+        import traceback as tb
+        logger.critical(tb.format_exc())
+        raise
 
     # Write the recorded data back to binnf
     write_result(out_fd, res)
