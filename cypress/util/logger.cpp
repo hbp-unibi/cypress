@@ -63,7 +63,7 @@ public:
 			m_os << m_terminal.color(Terminal::RED, true) << "error";
 		}
 		else {
-			m_os << m_terminal.color(Terminal::YELLOW, true) << "fatal error";
+			m_os << m_terminal.color(Terminal::RED, true) << "fatal error";
 		}
 
 		m_os << m_terminal.reset() << ": " << message
