@@ -605,6 +605,16 @@ class Cypress:
         "setup" method of the simulator
         """
 
+        # In case one of the UHEI platforms is used, there will by the pylogging
+        # module, which is a bridge from Python to log4cxx. Tell log4cxx to send
+        # its log messages back to Python.
+        try:
+            import pylogging
+            if hasattr(pylogging, "append_to_logging"):
+                pylogging.append_to_logging("PyNN")
+        except:
+            pass
+
         self.simulator = simulator
         self.version = self._check_version()
         self.sim = self._load_simulator(library)
