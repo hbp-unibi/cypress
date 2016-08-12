@@ -54,12 +54,12 @@ class BinnfHandler(logging.Handler):
             record.msg)
 
 # Log all log messages via Binnf
-logging.getLogger("").addHandler(BinnfHandler())
+root_logger = logging.getLogger("")
+root_logger.addHandler(BinnfHandler())
+root_logger.setLevel(logging.DEBUG)
 
 # Setup the local logger
 logger = logging.getLogger("cypress")
-logger.setLevel(logging.INFO)
-
 
 def do_run(args):
     import sys
