@@ -154,12 +154,10 @@ class Cypress:
         import pylogging
         from pymarocco import PyMarocco
 
-        # Deactivate logging
-#        for domain in ["Default", "marocco", "sthal.HICANNConfigurator.Time"]:
-#            pylogging.set_loglevel(
-#                pylogging.get(domain), pylogging.LogLevel.ERROR)
-        pylogging.set_loglevel(pylogging.get("marocco"), pylogging.LogLevel.DEBUG)
-        pylogging.set_loglevel(pylogging.get("ESS"), pylogging.LogLevel.DEBUG)
+        # Activate logging
+        for domain in ["ESS", "Default", "marocco", "sthal.HICANNConfigurator.Time"]:
+            pylogging.set_loglevel(
+                pylogging.get(domain), pylogging.LogLevel.DEBUG)
 
         # Copy and delete non-standard setup parameters
         neuron_size = setup["neuron_size"] if "neuron_size" in setup else 1
