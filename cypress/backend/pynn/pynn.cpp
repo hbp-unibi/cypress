@@ -34,8 +34,9 @@
 #include <cypress/core/exceptions.hpp>
 #include <cypress/core/network_base.hpp>
 #include <cypress/core/neurons.hpp>
-#include <cypress/util/process.hpp>
 #include <cypress/util/filesystem.hpp>
+#include <cypress/util/logger.hpp>
+#include <cypress/util/process.hpp>
 
 // Enable to get a textual dump of the BiNNF instead of running the simulation
 //#define CYPRESS_DEBUG_BINNF
@@ -384,10 +385,17 @@ void PyNN::do_run(NetworkBase &source, float duration) const
 
 // Wait for the process to be done
 #ifndef CYPRESS_DEBUG_BINNF
+		int res;
 		if ((!binnf::marshall_response(source, proc.child_stdout())) |
-		    (proc.wait() != 0)) {
+		    ((res = proc.wait()) != 0)) {
 			log_thread.join();  // Make sure the logging thread has finished
 
+			// Explicitly state if the process was killed by a signal
+			if (res < 0) {
+				source.logger().warn(
+				    "cypress", "Simulator child process killed by signal " +
+				                   std::to_string(-res));
+			}
 			std::ifstream log_stream_in(log_path);
 			Process::generic_pipe(log_stream_in, std::cerr);
 			throw ExecutionError(
