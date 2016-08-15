@@ -396,11 +396,20 @@ void PyNN::do_run(NetworkBase &source, float duration) const
 				    "cypress", "Simulator child process killed by signal " +
 				                   std::to_string(-res));
 			}
-			std::ifstream log_stream_in(log_path);
-			Process::generic_pipe(log_stream_in, std::cerr);
-			throw ExecutionError(
-			    std::string("Error while executing the simulator, see ") +
-			    log_path + " for the above information.");
+
+			// Only dump stderr if no error message has been logged
+			if (source.logger().count(LogSeverity::ERROR) == 0) {
+				std::ifstream log_stream_in(log_path);
+				Process::generic_pipe(log_stream_in, std::cerr);
+				throw ExecutionError(
+				    std::string("Error while executing the simulator, see ") +
+				    log_path + " for the above information");
+			}
+			else {
+				throw ExecutionError(
+				    std::string("Error while executing the simulator, see ") +
+				    log_path + " for the simulators stderr output");
+			}
 		}
 #endif
 
