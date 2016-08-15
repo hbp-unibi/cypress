@@ -120,6 +120,12 @@ public:
 	LogSeverity min_level();
 
 	/**
+	 * Returns the number of messages that have been captured with at least the
+	 * given level.
+	 */
+	size_t count(LogSeverity lvl = LogSeverity::DEBUG) const;
+
+	/**
 	 * Sets the backend to the given backend instance.
 	 */
 	void backend(std::shared_ptr<LogBackend> backend);

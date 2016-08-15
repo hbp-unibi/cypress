@@ -17,6 +17,7 @@
  */
 
 #include <iostream>
+#include <map>
 #include <mutex>
 
 #include <cypress/util/terminal.hpp>
@@ -101,6 +102,7 @@ private:
 	std::shared_ptr<LogBackend> m_backend;
 	std::mutex m_logger_mtx;
 	LogSeverity m_min_level = LogSeverity::INFO;
+	std::map<LogSeverity, size_t> m_counts;
 
 public:
 	void backend(std::shared_ptr<LogBackend> backend)
@@ -125,6 +127,16 @@ public:
 	         const std::string &message)
 	{
 		std::lock_guard<std::mutex> lock(m_logger_mtx);
+
+		// Update the statistics
+		auto it = m_counts.find(lvl);
+		if (it != m_counts.end()) {
+			it->second++;
+		} else {
+			m_counts.emplace(lvl, 1);
+		}
+
+		// Actually issue the elements
 		if (lvl >= m_min_level) {
 			m_backend->log(lvl, time, module, message);
 		}
@@ -134,6 +146,15 @@ public:
 	         const std::string &message)
 	{
 		log(lvl, time(nullptr), module, message);
+	}
+
+	size_t count(LogSeverity lvl) const {
+		size_t res = 0;
+		auto it = m_counts.lower_bound(lvl);
+		for (; it != m_counts.end(); it++) {
+			res += it->second;
+		}
+		return res;
 	}
 };
 
@@ -154,6 +175,11 @@ Logger::Logger(std::shared_ptr<LogBackend> backend)
 void Logger::min_level(LogSeverity lvl) { m_impl->min_level(lvl); }
 
 LogSeverity Logger::min_level() { return m_impl->min_level(); }
+
+size_t Logger::count(LogSeverity lvl) const
+{
+	return m_impl->count(lvl);
+}
 
 void Logger::backend(std::shared_ptr<LogBackend> backend)
 {
