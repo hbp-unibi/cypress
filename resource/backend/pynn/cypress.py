@@ -25,8 +25,8 @@ allow the description of a network independent of the actual PyNN version.
 # PyNN libraries
 import pyNN
 import pyNN.common
-import numpy as np
 
+import numpy as np
 import time
 
 if __name__ != "__main__":
