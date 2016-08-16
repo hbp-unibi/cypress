@@ -49,7 +49,6 @@ SEV_FATAL = 50
 
 # Helper functions used to determine the length of a storage block
 
-MAX_STR_SIZE = (1 << 16)
 BLOCK_TYPE_LEN = 4
 SIZE_LEN = 4
 TYPE_LEN = 4
@@ -108,9 +107,6 @@ def _write_double(fd, d):
 
 
 def _write_str(fd, s):
-    if (len(s) > MAX_STR_SIZE):
-        raise BinnfException("String exceeds string size limit of " +
-                             str(MAX_STR_SIZE) + " bytes.")
     fd.write(struct.pack("i", len(s)))
     fd.write(s)
 

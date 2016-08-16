@@ -34,7 +34,6 @@ static constexpr uint32_t BLOCK_START_SEQUENCE = 0x665a8cda;
 static constexpr uint32_t BLOCK_END_SEQUENCE = 0x420062cb;
 static constexpr uint32_t BLOCK_TYPE_MATRIX = 0x01;
 static constexpr uint32_t BLOCK_TYPE_LOG = 0x02;
-static constexpr SizeType MAX_STR_SIZE = 1 << 16; // 65k
 static constexpr SizeType BLOCK_TYPE_LEN = sizeof(uint32_t);
 static constexpr SizeType SIZE_LEN = sizeof(SizeType);
 static constexpr SizeType TYPE_LEN = sizeof(NumberType);
@@ -80,9 +79,6 @@ void write(std::ostream &os, const T &t)
 template <>
 void write(std::ostream &os, const std::string &str)
 {
-	if (str.size() > MAX_STR_SIZE) {
-		throw BinnfDecodeException("Maximum string size exceeded");
-	}
 	write(os, SizeType(str.size()));
 	os.write(str.c_str(), str.size());
 }
@@ -123,10 +119,6 @@ void read(std::istream &is, std::string &str)
 	// Read the string size, make sure it is below the maximum string size
 	SizeType size;
 	read(is, size);
-
-	if (size > MAX_STR_SIZE) {
-		throw BinnfDecodeException("Maximum string size exceeded");
-	}
 
 	// Read the actual string content
 	str.resize(size);
