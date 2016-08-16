@@ -72,16 +72,18 @@ std::string tmpfile(std::string &path)
 	std::default_random_engine rng(std::random_device{}());
 	std::uniform_int_distribution<> dist(0, sizeof(ALPHANUM) - 2);
 
+	bool had_dot = false;
 	for (ssize_t i = path.size() - 1; i >= 0; i--) {
 		if (path[i] == 'X') {
 			path[i] = ALPHANUM[dist(rng)];
-		} else {
+		} else if (path[i] == '.') {
+			had_dot = true;
+		} else if (had_dot) {
 			break;
 		}
 	}
 	return path;
 }
-
 }
 }
 
