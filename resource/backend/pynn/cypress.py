@@ -157,7 +157,7 @@ class Cypress:
         # Activate logging
         for domain in ["ESS", "Default", "marocco", "sthal.HICANNConfigurator.Time"]:
             pylogging.set_loglevel(
-                pylogging.get(domain), pylogging.LogLevel.DEBUG)
+                pylogging.get(domain), pylogging.LogLevel.INFO)
 
         # Copy and delete non-standard setup parameters
         neuron_size = setup["neuron_size"] if "neuron_size" in setup else 1
