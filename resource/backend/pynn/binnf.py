@@ -110,7 +110,7 @@ def _write_double(fd, d):
 def _write_str(fd, s):
     if (len(s) > MAX_STR_SIZE):
         raise BinnfException("String exceeds string size limit of " +
-                             MAX_STR_SIZE + " bytes.")
+                             str(MAX_STR_SIZE) + " bytes.")
     fd.write(struct.pack("i", len(s)))
     fd.write(s)
 
