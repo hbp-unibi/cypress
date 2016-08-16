@@ -30,7 +30,8 @@
 
 #include <ctime>
 #include <cstdint>
-#include <iosfwd>
+#include <iostream>
+#include <fstream>
 #include <memory>
 #include <string>
 
@@ -66,7 +67,6 @@ public:
 	 */
 	virtual void log(LogSeverity lvl, std::time_t time,
 	                 const std::string &module, const std::string &message) = 0;
-
 	virtual ~LogBackend() {}
 };
 
@@ -83,8 +83,20 @@ public:
 
 	void log(LogSeverity lvl, std::time_t time, const std::string &module,
 	         const std::string &message) override;
+	~LogStreamBackend() override;
+};
 
-	virtual ~LogStreamBackend();
+/**
+ * Writes a log file to the "logs/" directory including the current date, time,
+ * and a short random string.
+ */
+class LogFileBackend : public LogStreamBackend {
+private:
+	std::ofstream m_stream;
+
+public:
+	LogFileBackend(const std::string &prefix = "cypress");
+	~LogFileBackend() override;
 };
 
 /**
@@ -98,37 +110,46 @@ private:
 
 public:
 	/**
-	 * Default constructor, logs through a LogStreamBackend backend to
-	 * std::cerr.
+	 * Default constructor, adds no backend.
 	 */
 	Logger();
 
 	/**
 	 * Creates a new Logger instance which logs into the given backend.
 	 */
-	Logger(std::shared_ptr<LogBackend> backend);
+	Logger(std::shared_ptr<LogBackend> backend,
+	       LogSeverity lvl = LogSeverity::INFO);
 
 	/**
-	 * Sets the minimum LogSeverity level that should be logged. The default is
-	 * Serverity::INFO.
+	 * Returns the number of attached backends.
 	 */
-	void min_level(LogSeverity lvl);
+	size_t backend_count() const;
 
 	/**
-	 * Returns the current minimum log level.
+	 * Adds another logger backend with the given log level and returns the
+	 * index of the newly added backend.
 	 */
-	LogSeverity min_level();
+	int add_backend(std::shared_ptr<LogBackend> backend,
+	                 LogSeverity lvl = LogSeverity::INFO);
+
+	/**
+	 * Sets the minimum level for the backend with the given index. Negative
+	 * indices allow to access the backend list in reverse order. Per default
+	 * the log level of the last added backend is updated.
+	 */
+	void min_level(LogSeverity lvl, int idx = -1);
+
+	/**
+	 * Returns the log level for the backend with the given index. Negative
+	 * indices allow to access the backend list in reverse order.
+	 */
+	LogSeverity min_level(int idx = -1);
 
 	/**
 	 * Returns the number of messages that have been captured with at least the
 	 * given level.
 	 */
 	size_t count(LogSeverity lvl = LogSeverity::DEBUG) const;
-
-	/**
-	 * Sets the backend to the given backend instance.
-	 */
-	void backend(std::shared_ptr<LogBackend> backend);
 
 	void log(LogSeverity lvl, std::time_t time, const std::string &module,
 	         const std::string &message);

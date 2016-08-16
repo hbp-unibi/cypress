@@ -16,12 +16,19 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <errno.h>
+#include <stdio.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <unistd.h>
+
 #include <iostream>
 #include <map>
 #include <mutex>
 
 #include <cypress/util/terminal.hpp>
 #include <cypress/util/logger.hpp>
+#include <cypress/util/filesystem.hpp>
 
 namespace cypress {
 /*
@@ -67,8 +74,7 @@ public:
 			m_os << m_terminal.color(Terminal::RED, true) << "fatal error";
 		}
 
-		m_os << m_terminal.reset() << ": " << message
-		     << std::endl;
+		m_os << m_terminal.reset() << ": " << message << std::endl;
 	}
 };
 
@@ -94,33 +100,74 @@ LogStreamBackend::~LogStreamBackend()
 }
 
 /*
+ * Class LogFileBackend
+ */
+
+static std::string make_log_filename(const std::string &prefix)
+{
+	static const std::string TAR_DIR = "logs";
+
+	// Create the target directory
+	if (mkdir(TAR_DIR.c_str(), S_IRWXU) == -1 && errno != EEXIST) {
+		throw std::runtime_error("Error while creating logging subdirectory!");
+	}
+
+	// Build and return the filename
+	std::string fn;
+	std::time_t cur_time = time(nullptr);
+	char time_str[41];
+	std::strftime(time_str, 40, "%Y-%m-%d_%H_%M_%S", std::localtime(&cur_time));
+	fn = prefix + "_" + time_str + "_XXXX.log";
+	filesystem::tmpfile(fn);
+	return TAR_DIR + "/" + fn;
+}
+
+LogFileBackend::LogFileBackend(const std::string &prefix)
+    : LogStreamBackend(m_stream, false), m_stream(make_log_filename(prefix))
+{
+}
+
+LogFileBackend::~LogFileBackend() {}
+
+/*
  * Class LoggerImpl
  */
 
 class LoggerImpl {
 private:
-	std::shared_ptr<LogBackend> m_backend;
+	std::vector<std::tuple<std::shared_ptr<LogBackend>, LogSeverity>>
+	    m_backends;
 	std::mutex m_logger_mtx;
 	LogSeverity m_min_level = LogSeverity::INFO;
 	std::map<LogSeverity, size_t> m_counts;
 
+	size_t backend_idx(int idx) const
+	{
+		idx = (idx < 0) ? int(m_backends.size()) + idx : idx;
+		if (idx < 0 || size_t(idx) >= m_backends.size()) {
+			throw std::invalid_argument("Given index out of range");
+		}
+		return idx;
+	}
+
 public:
-	void backend(std::shared_ptr<LogBackend> backend)
+	size_t backend_count() const { return m_backends.size(); }
+
+	int add_backend(std::shared_ptr<LogBackend> backend, LogSeverity lvl)
 	{
 		std::lock_guard<std::mutex> lock(m_logger_mtx);
-		m_backend = std::move(backend);
+		m_backends.emplace_back(std::move(backend), lvl);
+		return m_backends.size() - 1;
 	}
 
-	void min_level(LogSeverity lvl)
+	void min_level(LogSeverity lvl, int idx)
 	{
-		std::lock_guard<std::mutex> lock(m_logger_mtx);
-		m_min_level = lvl;
+		std::get<1>(m_backends[backend_idx(idx)]) = lvl;
 	}
 
-	LogSeverity min_level()
+	LogSeverity min_level(int idx)
 	{
-		std::lock_guard<std::mutex> lock(m_logger_mtx);
-		return m_min_level;
+		return std::get<1>(m_backends[backend_idx(idx)]);
 	}
 
 	void log(LogSeverity lvl, std::time_t time, const std::string &module,
@@ -132,13 +179,16 @@ public:
 		auto it = m_counts.find(lvl);
 		if (it != m_counts.end()) {
 			it->second++;
-		} else {
+		}
+		else {
 			m_counts.emplace(lvl, 1);
 		}
 
 		// Actually issue the elements
-		if (lvl >= m_min_level) {
-			m_backend->log(lvl, time, module, message);
+		for (auto &backend : m_backends) {
+			if (lvl >= std::get<1>(backend)) {
+				std::get<0>(backend)->log(lvl, time, module, message);
+			}
 		}
 	}
 
@@ -148,7 +198,8 @@ public:
 		log(lvl, time(nullptr), module, message);
 	}
 
-	size_t count(LogSeverity lvl) const {
+	size_t count(LogSeverity lvl) const
+	{
 		size_t res = 0;
 		auto it = m_counts.lower_bound(lvl);
 		for (; it != m_counts.end(); it++) {
@@ -162,29 +213,28 @@ public:
  * Class Logger
  */
 
-Logger::Logger() : Logger(std::make_shared<LogStreamBackend>(std::cerr, true))
+Logger::Logger() : m_impl(std::make_unique<LoggerImpl>()) {}
+
+Logger::Logger(std::shared_ptr<LogBackend> backend, LogSeverity lvl) : Logger()
 {
+	add_backend(std::move(backend), lvl);
 }
 
-Logger::Logger(std::shared_ptr<LogBackend> backend)
-    : m_impl(std::make_unique<LoggerImpl>())
+size_t Logger::backend_count() const { return m_impl->backend_count(); }
+
+size_t Logger::count(LogSeverity lvl) const { return m_impl->count(lvl); }
+
+int Logger::add_backend(std::shared_ptr<LogBackend> backend, LogSeverity lvl)
 {
-	m_impl->backend(backend);
+	return m_impl->add_backend(backend, lvl);
 }
 
-void Logger::min_level(LogSeverity lvl) { m_impl->min_level(lvl); }
-
-LogSeverity Logger::min_level() { return m_impl->min_level(); }
-
-size_t Logger::count(LogSeverity lvl) const
+void Logger::min_level(LogSeverity lvl, int idx)
 {
-	return m_impl->count(lvl);
+	return m_impl->min_level(lvl, idx);
 }
 
-void Logger::backend(std::shared_ptr<LogBackend> backend)
-{
-	m_impl->backend(backend);
-}
+LogSeverity Logger::min_level(int idx) { return m_impl->min_level(idx); }
 
 void Logger::log(LogSeverity lvl, std::time_t time, const std::string &module,
                  const std::string &message)
@@ -223,7 +273,18 @@ void Logger::fatal_error(const std::string &module, const std::string &message)
 
 Logger &global_logger()
 {
+	static std::mutex global_logger_mtx;
 	static Logger logger;
+
+	// Add the default backends to the logger if this has not been done yet
+	std::lock_guard<std::mutex> lock(global_logger_mtx);
+	if (logger.backend_count() == 0) {
+		logger.add_backend(std::make_shared<LogFileBackend>(),
+		                   LogSeverity::INFO);
+		logger.add_backend(std::make_shared<LogStreamBackend>(std::cout, true),
+		                   LogSeverity::WARNING);
+	}
 	return logger;
 }
 }
+
