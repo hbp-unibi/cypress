@@ -49,7 +49,7 @@ SEV_FATAL = 50
 
 # Helper functions used to determine the length of a storage block
 
-MAX_STR_SIZE = 1024
+MAX_STR_SIZE = (1 << 16)
 BLOCK_TYPE_LEN = 4
 SIZE_LEN = 4
 TYPE_LEN = 4
