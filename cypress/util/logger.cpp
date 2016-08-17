@@ -25,6 +25,7 @@
 #include <iostream>
 #include <map>
 #include <mutex>
+#include <vector>
 
 #include <cypress/util/terminal.hpp>
 #include <cypress/util/logger.hpp>
