@@ -25,8 +25,8 @@ allow the description of a network independent of the actual PyNN version.
 # PyNN libraries
 import pyNN
 import pyNN.common
-import numpy as np
 
+import numpy as np
 import time
 
 if __name__ != "__main__":
@@ -602,16 +602,6 @@ class Cypress:
         :param setup: structure containing parameters to be passed to the
         "setup" method of the simulator
         """
-
-        # In case one of the UHEI platforms is used, there will by the pylogging
-        # module, which is a bridge from Python to log4cxx. Tell log4cxx to send
-        # its log messages back to Python.
-        try:
-            import pylogging
-            if hasattr(pylogging, "append_to_logging"):
-                pylogging.append_to_logging("PyNN")
-        except:
-            pass
 
         self.simulator = simulator
         self.version = self._check_version()
