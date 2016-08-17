@@ -54,7 +54,7 @@ int main(int argc, const char *argv[])
 	        // Add a population of IfFacetsHardware1 neurons -- those neurons
 	        // are supported by all simulator backends
 	        .add_population<IfFacetsHardware1>(
-	            "target", 4, IfFacetsHardware1Parameters().g_leak(0.01),
+	            "target", 4, IfFacetsHardware1Parameters(),
 	            IfFacetsHardware1Signals().record_spikes())
 	        // Project each neuron in the population "source" onto each neuron
 	        // in the population "target"
