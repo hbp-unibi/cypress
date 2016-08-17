@@ -186,7 +186,7 @@ public:
 	 * Returns the logger that should be used to log messages related to this
 	 * network. The "global_logger()" is used per default.
 	 */
-	Logger& logger() const;
+	Logger &logger() const;
 
 	/**
 	 * Sets a new logger that should be used to log messages related to this
