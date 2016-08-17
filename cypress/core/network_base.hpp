@@ -212,7 +212,8 @@ public:
 	 * @param pid is the index of the population for which a reference at the
 	 * internal data should be returned.
 	 */
-	std::shared_ptr<const PopulationData> population_data(PopulationIndex pid) const;
+	std::shared_ptr<const PopulationData> population_data(
+	    PopulationIndex pid) const;
 
 	/**
 	 * Compares whether two NetworkBase instances point at the same underlying
@@ -237,9 +238,37 @@ public:
 	size_t population_count() const;
 
 	/**
+	 * Returns the number of populations of a certain neuron type.
+	 */
+	size_t population_count(const NeuronType &type) const;
+
+	/**
+	 * Returns the number of populations of a certain neuron type.
+	 */
+	template <typename T>
+	size_t population_count() const
+	{
+		return population_count(T::inst());
+	}
+
+	/**
 	 * Returns the total number of neurons in the network.
 	 */
 	size_t neuron_count() const;
+
+	/**
+	 * Returns the number of neurons of a given type.
+	 */
+	size_t neuron_count(const NeuronType &type) const;
+
+	/**
+	 * Returns the number of neurons of a certain neuron type.
+	 */
+	template <typename T>
+	size_t neuron_count() const
+	{
+		return neuron_count(T::inst());
+	}
 
 	/**
 	 * Returns a PopulationBase instance pointing at the population with the

@@ -220,11 +220,33 @@ size_t NetworkBase::population_count() const
 	return m_impl->populations().size();
 }
 
+size_t NetworkBase::population_count(const NeuronType &type) const
+{
+	size_t res = 0;
+	for (const auto &pop : m_impl->populations()) {
+		if (pop->type() == &type) {
+			res++;
+		}
+	}
+	return res;
+}
+
 size_t NetworkBase::neuron_count() const
 {
 	size_t res = 0;
 	for (const auto &pop : m_impl->populations()) {
 		res += pop->size();
+	}
+	return res;
+}
+
+size_t NetworkBase::neuron_count(const NeuronType &type) const
+{
+	size_t res = 0;
+	for (const auto &pop : m_impl->populations()) {
+		if (pop->type() == &type) {
+			res += pop->size();
+		}
 	}
 	return res;
 }
