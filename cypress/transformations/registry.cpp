@@ -31,6 +31,13 @@ struct Registry {
 		                                                     IfCondExp>(
 		    [] { return std::move(std::make_unique<IFFH1ToLIF>()); });
 
+		// Transformation responsible for fixing Spikey units
+		Transformations::register_general_transformation(
+		    [] { return std::move(std::make_unique<IFFH1UnitScale>()); },
+		    [](const Backend &, const NetworkBase &net) {
+			    return net.population_count<IfFacetsHardware1>() > 0;
+			});
+
 		// Transformation responsible for losslessly converting between constant
 		// frequency and constant interval neurons
 		Transformations::register_neuron_type_transformation<

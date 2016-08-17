@@ -42,6 +42,24 @@ void IFFH1ToLIF::do_transform_signals(const IfFacetsHardware1Signals &src,
 {
 	tar.record_spikes(src.is_recording_spikes()).record_v(src.is_recording_v());
 }
+
+/*
+ * Class IFFH1UnitScale
+ */
+
+NetworkBase IFFH1UnitScale::do_transform(const NetworkBase &src,
+                                         TransformationAuxData &)
+{
+	NetworkBase res = src.clone();
+	for (auto &pop : res.populations()) {
+		if (&pop.type() == &IfFacetsHardware1::inst()) {
+			auto iffh1_pop = Population<IfFacetsHardware1>(pop);
+			iffh1_pop.parameters().g_leak(iffh1_pop.parameters().g_leak() *
+			                              1000.0);  // convert uS to nS
+		}
+	}
+	return res;
+}
 }
 }
 

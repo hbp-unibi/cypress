@@ -50,6 +50,22 @@ public:
 
 	~IFFH1ToLIF(){};
 };
+
+/**
+ * Adapts the Spikey neuron parameter unit scales -- for spikey, g_leak is
+ * measured in nS, whereas it is measured uS in all other simulations. This
+ * transformation takes care of this discrepancy.
+ */
+class IFFH1UnitScale : public Transformation {
+protected:
+	NetworkBase do_transform(const NetworkBase &src,
+	                                 TransformationAuxData &aux) override;
+
+public:
+	std::string id() const override { return "IFFH1UnitScale"; }
+
+	~IFFH1UnitScale(){};
+};
 }
 }
 

@@ -98,7 +98,7 @@ IfFacetsHardware1::IfFacetsHardware1()
     : NeuronTypeBase("IfFacetsHardware1", {"g_leak", "tau_refrac", "v_rest",
                                            "v_thresh", "v_reset", "e_rev_I"},
                      {"uS", "ms", "mV", "mV", "mV", "mV"},
-                     {20.0, 1.0, -75.0, -55.0, -80.0, -80.0}, {"spikes", "v"},
+                     {0.02, 1.0, -75.0, -55.0, -80.0, -80.0}, {"spikes", "v"},
                      {"ms", "mV"}, true, false)
 {
 }
