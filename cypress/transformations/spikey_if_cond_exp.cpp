@@ -21,6 +21,10 @@
 namespace cypress {
 namespace transformations {
 
+/*
+ * Class IFFH1ToLIF
+ */
+
 void IFFH1ToLIF::do_transform_parameters(const IfFacetsHardware1Parameters &src,
                                          IfCondExpParameters tar)
 {
