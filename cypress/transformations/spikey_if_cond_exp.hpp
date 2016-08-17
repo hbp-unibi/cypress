@@ -50,6 +50,28 @@ public:
 
 	~IFFH1ToLIF(){};
 };
+
+/**
+ * Transforms a standard IfCondExp neuron to an IfFacetsHardware1 neuron.
+ */
+class LIFToIFFH1
+    : public NeuronTypeTransformation<IfCondExp, IfFacetsHardware1> {
+protected:
+	void do_transform_parameters(const IfCondExpParameters &src,
+	                             IfFacetsHardware1Parameters tar) override;
+
+	void do_transform_signals(const IfCondExpSignals &src,
+	                          IfFacetsHardware1Signals tar) override;
+
+public:
+	std::string id() const override { return "IfCondExpToIfFacetsHardware1"; }
+
+	TransformationProperties properties() const override
+	{
+		return TransformationProperties{100, true};
+	}
+	~LIFToIFFH1(){};
+};
 }
 }
 

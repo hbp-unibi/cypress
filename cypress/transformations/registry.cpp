@@ -31,6 +31,12 @@ struct Registry {
 		                                                     IfCondExp>(
 		    [] { return std::move(std::make_unique<IFFH1ToLIF>()); });
 
+		// Transformation responsible for lossy transforming standard IfCondExp
+		// neurons to spikey neurons
+		Transformations::register_neuron_type_transformation<IfCondExp,
+		                                                     IfFacetsHardware1>(
+		    [] { return std::move(std::make_unique<LIFToIFFH1>()); });
+
 		// Transformation responsible for losslessly converting between constant
 		// frequency and constant interval neurons
 		Transformations::register_neuron_type_transformation<

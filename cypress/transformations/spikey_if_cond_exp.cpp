@@ -42,6 +42,22 @@ void IFFH1ToLIF::do_transform_signals(const IfFacetsHardware1Signals &src,
 {
 	tar.record_spikes(src.is_recording_spikes()).record_v(src.is_recording_v());
 }
-}
+
+void LIFToIFFH1::do_transform_parameters(const IfCondExpParameters &src,
+                                         IfFacetsHardware1Parameters tar)
+{
+	tar.g_leak(src.g_leak())
+	    .tau_refrac(src.tau_refrac())
+	    .v_rest(src.v_rest())
+	    .v_thresh(src.v_thresh())
+	    .v_reset(src.v_reset())
+	    .e_rev_I(src.e_rev_I());
 }
 
+void LIFToIFFH1::do_transform_signals(const IfCondExpSignals &src,
+                                      IfFacetsHardware1Signals tar)
+{
+	tar.record_spikes(src.is_recording_spikes()).record_v(src.is_recording_v());
+}
+}
+}
