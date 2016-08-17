@@ -25,6 +25,7 @@
 #include <fstream>
 #include <string>
 #include <unordered_set>
+#include <vector>
 
 namespace cypress {
 namespace filesystem {
