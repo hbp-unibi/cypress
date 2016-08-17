@@ -115,11 +115,14 @@ def do_dump(args):
     # Dump the contents of the binnf stream
     while True:
         # Deserialise the input stream
-        name, header, matrix = deserialise(in_fd)
-        if name is None:
+        block_type, res = deserialise(in_fd)
+        if block_type is None:
             return
+        if block_type != BLOCK_TYPE_MATRIX:
+            continue
 
         # Pretty-print the matrix
+        name, header, matrix = res
         sys.stdout.write("== " + name + " ==\n\n")
 
         # Generate the table columns
