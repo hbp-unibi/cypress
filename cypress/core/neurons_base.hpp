@@ -75,6 +75,11 @@ protected:
 	}
 
 public:
+	NeuronType(const NeuronType &) = delete;
+	NeuronType(NeuronType &&) = delete;
+	NeuronType& operator=(const NeuronType &) = delete;
+	NeuronType& operator=(NeuronType &&) = delete;
+
 	/**
 	 * Name of the neuron type.
 	 */
