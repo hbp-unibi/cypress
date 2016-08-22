@@ -36,9 +36,6 @@
 
 using namespace cypress;
 
-// Enable for Spikey. TODO: Implement trafo from IfFacetsHardware1 to LIF
-//#define SPIKEY
-
 /**
  * Parameters of the inhibitory synfire chain.
  */
@@ -50,14 +47,10 @@ struct SynfireCainParameters {
 	 */
 	typename Neuron::Parameters neuron_params;
 
-#ifdef SPIKEY
 	/**
 	 * Synaptic weight of the excitatory connections.
 	 */
-	float w_syn = 0.009;
-#else
-	float w_syn = 0.035;
-#endif
+	float w_syn = 0.015;
 
 	/**
 	 * Synaptic delay.
@@ -219,30 +212,12 @@ int main(int argc, const char *argv[])
 	}
 
 // Some aliases to save keystrokes...
-#ifdef SPIKEY
 	using Neuron = IfFacetsHardware1;
-#else
-	using Neuron = LIF;
-#endif
 	using Parameters = Neuron::Parameters;
 	using Signals = Neuron::Signals;
 
 // Neuron and synfire chain parameters
-#ifdef SPIKEY
 	Parameters neuron_params = Parameters();
-#else
-	Parameters neuron_params = Parameters()
-	                               .cm(0.2)
-	                               .tau_syn_E(2.0)
-	                               .tau_syn_I(2.0)
-	                               .g_leak(0.2)
-	                               .tau_refrac(1.0)
-	                               .v_rest(-75.0)
-	                               .v_thresh(-55.0)
-	                               .v_reset(-80.0)
-	                               .e_rev_I(-80.0)
-	                               .e_rev_E(0.0);
-#endif
 	SynfireCainParameters<Neuron> params{neuron_params};
 
 	// Create the network and the synfire chain
