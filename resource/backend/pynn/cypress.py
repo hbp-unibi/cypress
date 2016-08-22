@@ -564,8 +564,10 @@ class Cypress:
         elif (self.version == 8):
             for data in population.get_data().segments[0].analogsignalarrays:
                 if (data.name == signal):
-                    return [np.array(np.vstack((data.times, data.transpose()[0])).transpose(
-                    ), dtype=np.float32) for i in xrange(population.size)]
+                    return [np.array(
+                        np.vstack(
+                            (data.times, data.transpose()[i])).transpose(),
+                        dtype=np.float32) for i in xrange(population.size)]
         return []
 
     @staticmethod
