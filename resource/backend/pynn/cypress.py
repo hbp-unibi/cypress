@@ -358,9 +358,25 @@ class Cypress:
         for ps in network["parameters"]:
             keys = filter(lambda x: x != "nid" and x != "pid",
                           ps.dtype.fields.keys())
+            has_v_rest = "v_rest" in keys
+
+            def init_param(key, pop, values):
+                if hasattr(pop, "initialize"):
+                    try:
+                        if self.version <= 7:
+                            pop.initialize(key, values)
+                        else:
+                            pop.initialize(**{key: values})
+                        return
+                    except:
+                        pass
+                logger.warning(
+                    "Backend does not support explicit initialization of the membrane potential!")
 
             def block_set_params(pop, begin, end):
                 if ps[begin]["nid"] == ALL_NEURONS:
+                    if has_v_rest:
+                        init_param("v", pop, ps[begin]["v_rest"])
                     if self.simulator == "nmpm1" or self.simulator == "ess":
                         for key in keys:
                             if self.version <= 7:
@@ -374,6 +390,8 @@ class Cypress:
                         else:
                             pop.set(**values)
                 else:
+                    if has_v_rest:
+                        init_param("v", pop, ps[begin:end]["v_rest"].tolist())
                     for key in keys:
                         pop.tset(key, ps[begin:end][key].tolist())
             iterate_pid_blocks(ps, block_set_params)
