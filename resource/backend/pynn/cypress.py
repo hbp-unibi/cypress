@@ -15,7 +15,6 @@
 #
 #   You should have received a copy of the GNU General Public License
 #   along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
 """
 Contains the backend code responsible for mapping the current experiment setup
 to a PyNN 0.7 or 0.8 simulation. Introduces yet another abstraction layer to
@@ -99,8 +98,8 @@ class Cypress:
             return 7
         elif (version[0:3] == '0.8'):
             return 8
-        raise CypressException("Unsupported PyNN version '"
-                               + version + "', supported are PyNN 0.6, 0.7 and 0.8")
+        raise CypressException("Unsupported PyNN version '" + version +
+                               "', supported are PyNN 0.6, 0.7 and 0.8")
 
     @classmethod
     def _load_simulator(cls, library):
@@ -116,8 +115,8 @@ class Cypress:
             import importlib
             return importlib.import_module(library)
         except ImportError:
-            raise CypressException(
-                "Could not find simulator library " + library)
+            raise CypressException("Could not find simulator library " +
+                                   library)
 
     @staticmethod
     def _eval_setup(setup, sim, simulator, version):
@@ -160,7 +159,8 @@ class Cypress:
         from pymarocco import PyMarocco
 
         # Activate logging
-        for domain in ["ESS", "Default", "marocco", "sthal.HICANNConfigurator.Time"]:
+        for domain in ["ESS", "Default", "marocco",
+                       "sthal.HICANNConfigurator.Time"]:
             pylogging.set_loglevel(
                 pylogging.get(domain), pylogging.LogLevel.INFO)
 
@@ -185,10 +185,7 @@ class Cypress:
         sim.setup(marocco=marocco, **setup)
 
         # Return used neuron size
-        return {
-            "neuron_size": neuron_size
-        }
-
+        return {"neuron_size": neuron_size}
 
     def _setup_simulator(self, setup, sim, simulator, version):
         """
@@ -234,15 +231,15 @@ class Cypress:
 
         # Translate the neuron type to the PyNN neuron type
         if (not hasattr(self.sim, type_name)):
-            raise CypressException("Neuron type '" + type_name
-                                   + "' not supported by backend.")
+            raise CypressException("Neuron type '" + type_name +
+                                   "' not supported by backend.")
         type_ = getattr(self.sim, type_name)
         is_source = type_name == TYPE_SOURCE
 
         # Create the population
         params = {}
         if is_source and self.simulator == "nmmc1":
-            params = {"spike_times": []} # sPyNNaker issue #190
+            params = {"spike_times": []}  # sPyNNaker issue #190
         res = self.sim.Population(count, type_, params)
 
         # Increment the neuron counter needed to work around absolute neuron ids
@@ -289,14 +286,15 @@ class Cypress:
             # entry
             count = populations[i]["count"]
             type_name = TYPES[populations[i]["type"]]
-            record = map(lambda x: x[1][7:], filter(lambda x: x[0] == 1,
-                                                    zip(map(lambda key: populations[i][key], record_keys),
-                                                        record_keys)))
+            record = map(lambda x: x[1][7:], filter(lambda x: x[0] == 1, zip(
+                map(lambda key: populations[i][key], record_keys),
+                record_keys)))
             res[i] = {
                 "count": count,
                 "type_name": type_name,
                 "record": record,
-                "obj": self._build_population(int(count), type_name, record)}
+                "obj": self._build_population(int(count), type_name, record)
+            }
         return res
 
     def _set_population_parameters(self, populations, network):
@@ -317,21 +315,20 @@ class Cypress:
             if count != pop.size:
                 if count != 1 or lst[begin]["nid"] != ALL_NEURONS:
                     raise CypressException(
-                        "Parameter count for one population must "
-                        + "equal the number of neurons in the "
-                        + "population")
+                        "Parameter count for one population must " +
+                        "equal the number of neurons in the " + "population")
             if lst[begin]["nid"] == ALL_NEURONS:
                 if count != 1:
                     raise CypressException(
-                        "Only one parameter set may be given per "
-                        + "population if all neuron parameters "
-                        + "should be set.")
+                        "Only one parameter set may be given per " +
+                        "population if all neuron parameters " +
+                        "should be set.")
             else:
                 for j in xrange(count):
                     if lst[begin + j]["nid"] != j:
                         raise CypressException(
-                            "Neuron indices must start at zero "
-                            + "and be sorted.")
+                            "Neuron indices must start at zero " +
+                            "and be sorted.")
             fun(pop, begin, end)
 
         def iterate_pid_blocks(lst, fun):
@@ -343,16 +340,8 @@ class Cypress:
             corresponds to the number of neurons in the pid-th population.
             """
             self._iterate_blocks(
-                lst,
-                lambda x: x["pid"],
-                lambda pid,
-                begin,
-                end: iterate_pid_blocks_callback(
-                    lst,
-                    pid,
-                    begin,
-                    end,
-                    fun))
+                lst, lambda x: x["pid"],
+                lambda pid, begin, end: iterate_pid_blocks_callback(lst, pid, begin, end, fun))
 
         # Iterate over all parameter matrices
         for ps in network["parameters"]:
@@ -384,7 +373,8 @@ class Cypress:
                             else:
                                 pop.set(**{key: ps[begin][key]})
                     else:
-                        values = dict(map(lambda key: (key, ps[begin][key]), keys))
+                        values = dict(
+                            map(lambda key: (key, ps[begin][key]), keys))
                         if self.version <= 7:
                             pop.set(values)
                         else:
@@ -394,6 +384,7 @@ class Cypress:
                         init_param("v", pop, ps[begin:end]["v_rest"].tolist())
                     for key in keys:
                         pop.tset(key, ps[begin:end][key].tolist())
+
             iterate_pid_blocks(ps, block_set_params)
 
         # Iterate over the spike time matrices, fix the spike times
@@ -404,6 +395,7 @@ class Cypress:
             if ts[begin]["nid"] == ALL_NEURONS:
                 values = values * pop.size
             pop.tset("spike_times", values)
+
         iterate_pid_blocks(ts, block_set_times)
 
     def _connect(self, populations, connections):
@@ -419,10 +411,10 @@ class Cypress:
 
         # Get a view of the matrix containing only the listed columns
         cs = connections
-        csv = np.ndarray(cs.shape,
-                         {name: cs.dtype.fields[name] for name in
-                          ["nid_src", "nid_tar", "weight", "delay"]
-                          }, cs, 0, cs.strides)
+        csv = np.ndarray(
+            cs.shape, {name: cs.dtype.fields[name]
+                       for name in ["nid_src", "nid_tar", "weight", "delay"]},
+            cs, 0, cs.strides)
 
         # Fix delays in nest having to be larger than and multiples of the
         # simulation timestep
@@ -435,7 +427,7 @@ class Cypress:
         def create_projection(elem, begin, end):
             # Separate the synaptic connections into inhibitory and excitatory
             # synapses if not on NEST -- use the absolute weight value
-            separate_synapses = self.simulator != "nest" # This is a bug in NEST
+            separate_synapses = self.simulator != "nest"  # This is a bug in NEST
             if separate_synapses:
                 csv[begin:end]["weight"] = np.abs(csv[begin:end]["weight"])
 
@@ -453,10 +445,11 @@ class Cypress:
                 is_excitatory = elem[2]
                 mechanism = "excitatory" if is_excitatory else "inhibitory"
                 for _ in xrange(self.repeat_projections):
-                    self.sim.Projection(source, target, connector,
-                        target=mechanism)
+                    self.sim.Projection(
+                        source, target, connector, target=mechanism)
 
-        self._iterate_blocks(cs, lambda x: (x[0], x[1], x[4] >= 0.0), create_projection)
+        self._iterate_blocks(cs, lambda x: (x[0], x[1], x[4] >= 0.0),
+                             create_projection)
 
     @staticmethod
     def _convert_pyNN7_spikes(spikes, n, idx_offs=0, t_scale=1.0):
@@ -488,8 +481,8 @@ class Cypress:
         Converts a pyNN8 spike train (some custom datastructure), into a list
         of arrays containing the spike times for each neuron individually.
         """
-        return [np.array(spikes[i], dtype=np.float32)
-                for i in xrange(len(spikes))]
+        return [np.array(
+            spikes[i], dtype=np.float32) for i in xrange(len(spikes))]
 
     @staticmethod
     def _convert_pyNN7_signal(data, idx, n):
@@ -500,8 +493,10 @@ class Cypress:
 
         # Create a list containing all timepoints and a mapping from time to
         # index
-        return [np.array(map(lambda row: [row[1], row[idx]], filter(
-            lambda row: row[0] == i, data)), dtype=np.float32) for i in xrange(n)]
+        return [np.array(
+            map(lambda row: [row[1], row[idx]], filter(lambda row: row[0] == i,
+                                                       data)),
+            dtype=np.float32) for i in xrange(n)]
 
     def _fetch_spikey_voltage(self, population):
         """
@@ -524,11 +519,11 @@ class Cypress:
             # instead of per-neuron
             idx_offs = (getattr(population, "__offs")
                         if hasattr(population, "__offs") else 0)
-            return self._convert_pyNN7_spikes(population.getSpikes(),
-                                              population.size, idx_offs=idx_offs)
+            return self._convert_pyNN7_spikes(
+                population.getSpikes(), population.size, idx_offs=idx_offs)
         elif (self.version == 8):
-            return self._convert_pyNN8_spikes(
-                population.get_data().segments[0].spiketrains)
+            return self._convert_pyNN8_spikes(population.get_data().segments[
+                0].spiketrains)
         return []
 
     def _fetch_signal(self, population, signal):
@@ -578,8 +573,8 @@ class Cypress:
         """
         if hasattr(pyNN.common, "DEFAULT_TIME_STEP"):
             return pyNN.common.DEFAULT_TIME_STEP
-        elif (hasattr(pyNN.common, "control")
-                and hasattr(pyNN.common.control, "DEFAULT_TIME_STEP")):
+        elif (hasattr(pyNN.common, "control") and
+              hasattr(pyNN.common.control, "DEFAULT_TIME_STEP")):
             return pyNN.common.control.DEFAULT_TIME_STEP
         return 0.1  # Above values are not defined in PyNN 0.6
 
@@ -638,9 +633,9 @@ class Cypress:
         # Fetch the simulation timestep, work around bugs #123 and #147 in
         # sPyNNaker.
         timestep = self._get_default_time_step()
-        if (hasattr(self.sim, "get_time_step") and not (
-                (self.simulator in self.ANALOGUE_SYSTEMS) or
-                (self.simulator == "nmmc1"))):
+        if (hasattr(self.sim, "get_time_step") and
+                not ((self.simulator in self.ANALOGUE_SYSTEMS) or
+                     (self.simulator == "nmmc1"))):
             timestep = self.sim.get_time_step()
         elif ("timestep" in self.setup):
             timestep = self.setup["timestep"]
@@ -697,8 +692,8 @@ class Cypress:
                 if (signal == SIG_SPIKES):
                     res[i][signal] = self._fetch_spikes(populations[i]["obj"])
                 else:
-                    res[i][signal] = self._fetch_signal(
-                        populations[i]["obj"], signal)
+                    res[i][signal] = self._fetch_signal(populations[i]["obj"],
+                                                        signal)
 
         # End the simulation if this has not been done yet
         if (not (self.simulator in self.PREMATURE_END_SIMULATORS)):
