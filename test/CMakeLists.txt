@@ -85,6 +85,19 @@ target_link_libraries(test_cypress_backend
 add_test(test_cypress_backend test_cypress_backend)
 
 #
+# Integration tests
+#
+
+add_executable(test_cypress_integration
+	integration/test_v_init
+)
+target_link_libraries(test_cypress_integration
+	cypress
+	${GTEST_LIBRARIES}
+)
+add_test(test_cypress_integration test_cypress_integration)
+
+#
 # Transformation tests
 #
 
