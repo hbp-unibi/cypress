@@ -58,8 +58,12 @@ root_logger = logging.getLogger("")
 root_logger.addHandler(BinnfHandler())
 root_logger.setLevel(logging.DEBUG)
 
+pynn_logger = logging.getLogger("PyNN")
+pynn_logger.setLevel(logging.DEBUG)
+
 # Setup the local logger
 logger = logging.getLogger("cypress")
+logger.setLevel(logging.DEBUG)
 
 def do_run(args):
     import sys

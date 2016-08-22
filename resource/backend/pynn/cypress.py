@@ -32,6 +32,11 @@ import time
 if __name__ != "__main__":
     from constants import *
 
+import logging
+logger = logging.getLogger("cypress")
+logger.setLevel(logging.DEBUG)
+
+
 class CypressException(Exception):
     """
     Exception type used within Cypress.
