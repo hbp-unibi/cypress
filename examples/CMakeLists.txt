@@ -36,3 +36,6 @@ target_link_libraries(measure_epsp cypress)
 add_executable(synfire synfire)
 target_link_libraries(synfire cypress)
 
+add_executable(winner_take_all winner_take_all)
+target_link_libraries(winner_take_all cypress)
+
