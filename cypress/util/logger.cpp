@@ -282,7 +282,7 @@ Logger &global_logger()
 	if (logger.backend_count() == 0) {
 		logger.add_backend(std::make_shared<LogFileBackend>(),
 		                   LogSeverity::INFO);
-		logger.add_backend(std::make_shared<LogStreamBackend>(std::cout, true),
+		logger.add_backend(std::make_shared<LogStreamBackend>(std::cerr, true),
 		                   LogSeverity::WARNING);
 	}
 	return logger;
