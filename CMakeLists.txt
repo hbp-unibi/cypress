@@ -59,6 +59,11 @@ include_directories(
 		${CMAKE_BINARY_DIR}
 )
 
+# Add configuration option for setting the width of the floating point values
+set(CYPRESS_REAL_WIDTH 8 CACHE STRING "Width of the floating point values in bytes (one of 4, 8, 10, 16)")
+
+configure_file(cypress/config.h.in cypress/config.h)
+
 # Compile the Python code into a C++ header
 add_custom_command(
 	OUTPUT
