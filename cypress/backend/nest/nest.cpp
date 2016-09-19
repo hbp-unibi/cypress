@@ -99,7 +99,7 @@ NEST::NEST(const Json &setup)
 	}
 }
 
-void NEST::do_run(NetworkBase &source, float duration) const
+void NEST::do_run(NetworkBase &source, Real duration) const
 {
 	if (!installed()) {
 		throw NESTSimulatorNotFound(

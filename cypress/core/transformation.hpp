@@ -41,6 +41,8 @@
 #include <unordered_set>
 #include <vector>
 
+#include <cypress/core/types.hpp>
+
 namespace cypress {
 
 // Forward declarations
@@ -77,7 +79,7 @@ struct TransformationAuxData {
 	 * Contains the network simulation duration. Certain transformations may
 	 * choose to extend the actual simulation duration.
 	 */
-	float duration;
+	Real duration;
 };
 
 /**

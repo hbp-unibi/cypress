@@ -24,7 +24,8 @@ namespace cypress {
 
 TEST(spikey_if_cond_exp, IFFH1ToLIF_Simple)
 {
-	Network net_src = Network().add_population<IfFacetsHardware1>("test", 10, IfFacetsHardware1::Parameters{});
+	Network net_src = Network().add_population<IfFacetsHardware1>(
+	    "test", 10, IfFacetsHardware1::Parameters{});
 
 	transformations::IFFH1ToLIF trafo;
 	TransformationAuxData aux;

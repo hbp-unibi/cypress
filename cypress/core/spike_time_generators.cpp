@@ -24,13 +24,13 @@
 namespace cypress {
 namespace spikes {
 
-std::vector<float> poisson(float t_start, float t_end, float rate)
+std::vector<Real> poisson(Real t_start, Real t_end, Real rate)
 {
-	std::vector<float> result;
+	std::vector<Real> result;
 	if (rate > 0.0) {
 		std::default_random_engine re(std::random_device{}());
-		std::exponential_distribution<float> dist(rate / 1000.0);
-		float t = t_start;
+		std::exponential_distribution<Real> dist(rate / 1000.0);
+		Real t = t_start;
 		while (true) {
 			t += dist(re);
 			if (t < t_end) {
@@ -44,14 +44,14 @@ std::vector<float> poisson(float t_start, float t_end, float rate)
 	return result;
 }
 
-std::vector<float> constant_interval(float t_start, float t_end, float interval,
-                                     float sigma)
+std::vector<Real> constant_interval(Real t_start, Real t_end, Real interval,
+                                    Real sigma)
 {
 	std::default_random_engine re(std::random_device{}());
-	std::normal_distribution<float> distribution(0.0, sigma);
+	std::normal_distribution<Real> distribution(0.0, sigma);
 
 	const size_t n_samples = (t_end - t_start) / interval;
-	std::vector<float> result(n_samples);
+	std::vector<Real> result(n_samples);
 	for (size_t i = 0; i < n_samples; i++) {
 		result[i] = t_start + interval * (i + 1) + distribution(re);
 	}
@@ -59,8 +59,8 @@ std::vector<float> constant_interval(float t_start, float t_end, float interval,
 	return result;
 }
 
-std::vector<float> constant_frequency(float t_start, float t_end,
-                                      float frequency, float sigma)
+std::vector<Real> constant_frequency(Real t_start, Real t_end, Real frequency,
+                                     Real sigma)
 {
 	return constant_interval(t_start, t_end, 1000.0 / frequency, sigma);
 }

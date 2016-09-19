@@ -159,7 +159,7 @@ bool NMPI::check_args(int argc, const char *argv[])
 	return (argc >= 2 && argv[argc - 1] == SERVER_ARG);
 }
 
-void NMPI::do_run(NetworkBase &network, float duration) const
+void NMPI::do_run(NetworkBase &network, Real duration) const
 {
 	m_pynn->run(network, duration);
 }

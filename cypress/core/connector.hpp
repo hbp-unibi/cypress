@@ -43,18 +43,18 @@ struct Synapse {
 	 * is usually measured in micro-siemens. Inhibitory connections are
 	 * indicated by smaller-than-zero connection weights.
 	 */
-	float weight;
+	Real weight;
 
 	/**
 	 * Synaptic delay in milliseconds.
 	 */
-	float delay;
+	Real delay;
 
 	/**
 	 * Constructor of the Synapse structure. Per default initialises all member
 	 * variables with zero.
 	 */
-	Synapse(float weight = 0.0, float delay = 0.0)
+	Synapse(Real weight = 0.0, Real delay = 0.0)
 	    : weight(weight), delay(delay)
 	{
 	}
@@ -101,8 +101,8 @@ struct LocalConnection {
 	 * Constructor of the Connection class. Per default all fields are
 	 * initialised with zero.
 	 */
-	LocalConnection(uint32_t src = 0, uint32_t tar = 0, float weight = 0.0,
-	                float delay = 0.0)
+	LocalConnection(uint32_t src = 0, uint32_t tar = 0, Real weight = 0.0,
+	                Real delay = 0.0)
 	    : src(src), tar(tar), synapse(weight, delay)
 	{
 	}
@@ -144,7 +144,7 @@ struct Connection {
 	 * initialised with zero.
 	 */
 	Connection(uint32_t psrc = 0, uint32_t ptar = 0, uint32_t nsrc = 0,
-	           uint32_t ntar = 0, float weight = 0.0, float delay = 0.0)
+	           uint32_t ntar = 0, Real weight = 0.0, Real delay = 0.0)
 	    : psrc(psrc), ptar(ptar), n(nsrc, ntar, weight, delay)
 	{
 	}
@@ -278,14 +278,14 @@ public:
 	 * @param delay is the synaptic delay that should be used for all
 	 * connections.
 	 */
-	static std::unique_ptr<AllToAllConnector> all_to_all(float weight = 1.0,
-	                                                     float delay = 0.0);
+	static std::unique_ptr<AllToAllConnector> all_to_all(Real weight = 1.0,
+	                                                     Real delay = 0.0);
 
 	/**
 	 * Createa a one-to-one connector and returns a pointer at the connector.
 	 */
-	static std::unique_ptr<OneToOneConnector> one_to_one(float weight = 1.0,
-	                                                     float delay = 0.0);
+	static std::unique_ptr<OneToOneConnector> one_to_one(Real weight = 1.0,
+	                                                     Real delay = 0.0);
 
 	/**
 	 * Create a list connector which creates connections according to the given
@@ -326,7 +326,7 @@ public:
 	 */
 	template <typename F>
 	static std::unique_ptr<UniformFunctorConnector<F>> functor(
-	    const F &cback, float weight, float delay = 0.0);
+	    const F &cback, Real weight, Real delay = 0.0);
 
 	/**
 	 * Connector adapter which ensures connections are only produced with a
@@ -338,7 +338,7 @@ public:
 	 */
 	static std::unique_ptr<
 	    FixedProbabilityConnector<std::default_random_engine>>
-	fixed_probability(std::unique_ptr<Connector> connector, float p = 1.0);
+	fixed_probability(std::unique_ptr<Connector> connector, Real p = 1.0);
 
 	/**
 	 * Connector adapter which ensures connections are only produced with a
@@ -352,7 +352,7 @@ public:
 	 */
 	static std::unique_ptr<
 	    FixedProbabilityConnector<std::default_random_engine>>
-	fixed_probability(std::unique_ptr<Connector> connector, float p,
+	fixed_probability(std::unique_ptr<Connector> connector, Real p,
 	                  size_t seed);
 
 	/**
@@ -365,7 +365,7 @@ public:
 	 * @param delay is the synaptic delay.
 	 */
 	static std::unique_ptr<FixedFanInConnector<std::default_random_engine>>
-	fixed_fan_in(size_t n_fan_in, float weight, float delay = 0.0);
+	fixed_fan_in(size_t n_fan_in, Real weight, Real delay = 0.0);
 
 	/**
 	 * Connector which randomly selects neurons from the source population and
@@ -380,7 +380,7 @@ public:
 	 * random engine.
 	 */
 	static std::unique_ptr<FixedFanInConnector<std::default_random_engine>>
-	fixed_fan_in(size_t n_fan_in, float weight, float delay, size_t seed);
+	fixed_fan_in(size_t n_fan_in, Real weight, Real delay, size_t seed);
 
 	/**
 	 * Connector which randomly selects neurons from the target population and
@@ -392,7 +392,7 @@ public:
 	 * @param delay is the synaptic delay.
 	 */
 	static std::unique_ptr<FixedFanOutConnector<std::default_random_engine>>
-	fixed_fan_out(size_t n_fan_out, float weight, float delay = 0.0);
+	fixed_fan_out(size_t n_fan_out, Real weight, Real delay = 0.0);
 
 	/**
 	 * Connector which randomly selects neurons from the target population and
@@ -407,7 +407,7 @@ public:
 	 * random engine.
 	 */
 	static std::unique_ptr<FixedFanOutConnector<std::default_random_engine>>
-	fixed_fan_out(size_t n_fan_out, float weight, float delay, size_t seed);
+	fixed_fan_out(size_t n_fan_out, Real weight, Real delay, size_t seed);
 };
 
 /**
@@ -548,17 +548,17 @@ std::vector<Connection> instantiate_connections(
  */
 class UniformConnector : public Connector {
 private:
-	float m_weight;
-	float m_delay;
+	Real m_weight;
+	Real m_delay;
 
 public:
-	UniformConnector(float weight = 0.0, float delay = 0.0)
+	UniformConnector(Real weight = 0.0, Real delay = 0.0)
 	    : m_weight(weight), m_delay(delay)
 	{
 	}
 
-	float weight() const { return m_weight; }
-	float delay() const { return m_delay; }
+	Real weight() const { return m_weight; }
+	Real delay() const { return m_delay; }
 };
 
 /**
@@ -678,8 +678,8 @@ private:
 	Callback m_cback;
 
 public:
-	UniformFunctorConnector(const Callback &cback, float weight = 0.0,
-	                        float delay = 0.0)
+	UniformFunctorConnector(const Callback &cback, Real weight = 0.0,
+	                        Real delay = 0.0)
 	    : UniformFunctorConnectorBase(weight, delay), m_cback(cback)
 	{
 	}
@@ -714,10 +714,10 @@ class FixedProbabilityConnector : public FixedProbabilityConnectorBase {
 private:
 	std::unique_ptr<Connector> m_connector;
 	std::shared_ptr<RandomEngine> m_engine;
-	float m_p = 1.0;
+	Real m_p = 1.0;
 
 public:
-	FixedProbabilityConnector(std::unique_ptr<Connector> connector, float p,
+	FixedProbabilityConnector(std::unique_ptr<Connector> connector, Real p,
 	                          std::shared_ptr<RandomEngine> engine)
 	    : m_connector(std::move(connector)), m_engine(std::move(engine)), m_p(p)
 	{
@@ -730,7 +730,7 @@ public:
 	{
 		const size_t first = tar.size();   // Old number of connections
 		m_connector->connect(descr, tar);  // Instantiate the connections
-		std::uniform_real_distribution<float> distr(0.0, 1.0);
+		std::uniform_real_distribution<Real> distr(0.0, 1.0);
 		for (size_t i = first; i < tar.size(); i++) {
 			if (distr(*m_engine) >= m_p) {
 				tar[i].n.synapse.weight = 0.0;  // Invalidate the connection
@@ -782,7 +782,7 @@ protected:
 	}
 
 public:
-	FixedFanConnectorBase(float weight, float delay,
+	FixedFanConnectorBase(Real weight, Real delay,
 	                      std::shared_ptr<RandomEngine> engine)
 	    : UniformConnector(weight, delay), m_engine(std::move(engine))
 	{
@@ -801,7 +801,7 @@ private:
 	size_t m_n_fan_in;
 
 public:
-	FixedFanInConnector(size_t n_fan_in, float weight, float delay,
+	FixedFanInConnector(size_t n_fan_in, Real weight, Real delay,
 	                    std::shared_ptr<RandomEngine> engine)
 	    : Base(weight, delay, std::move(engine)), m_n_fan_in(n_fan_in)
 	{
@@ -845,7 +845,7 @@ private:
 	size_t m_n_fan_out;
 
 public:
-	FixedFanOutConnector(size_t n_fan_out, float weight, float delay,
+	FixedFanOutConnector(size_t n_fan_out, Real weight, Real delay,
 	                     std::shared_ptr<RandomEngine> engine)
 	    : Base(weight, delay, std::move(engine)), m_n_fan_out(n_fan_out)
 	{
@@ -881,14 +881,14 @@ public:
  * Inline methods
  */
 
-inline std::unique_ptr<AllToAllConnector> Connector::all_to_all(float weight,
-                                                                float delay)
+inline std::unique_ptr<AllToAllConnector> Connector::all_to_all(Real weight,
+                                                                Real delay)
 {
 	return std::move(std::make_unique<AllToAllConnector>(weight, delay));
 }
 
-inline std::unique_ptr<OneToOneConnector> Connector::one_to_one(float weight,
-                                                                float delay)
+inline std::unique_ptr<OneToOneConnector> Connector::one_to_one(Real weight,
+                                                                Real delay)
 {
 	return std::move(std::make_unique<OneToOneConnector>(weight, delay));
 }
@@ -913,21 +913,21 @@ inline std::unique_ptr<FunctorConnector<F>> Connector::functor(const F &cback)
 
 template <typename F>
 inline std::unique_ptr<UniformFunctorConnector<F>> Connector::functor(
-    const F &cback, float weight, float delay)
+    const F &cback, Real weight, Real delay)
 {
 	return std::move(
 	    std::make_unique<UniformFunctorConnector<F>>(cback, weight, delay));
 }
 
 inline std::unique_ptr<FixedProbabilityConnector<std::default_random_engine>>
-Connector::fixed_probability(std::unique_ptr<Connector> connector, float p)
+Connector::fixed_probability(std::unique_ptr<Connector> connector, Real p)
 {
 	return std::move(
 	    fixed_probability(std::move(connector), p, std::random_device()()));
 }
 
 inline std::unique_ptr<FixedProbabilityConnector<std::default_random_engine>>
-Connector::fixed_probability(std::unique_ptr<Connector> connector, float p,
+Connector::fixed_probability(std::unique_ptr<Connector> connector, Real p,
                              size_t seed)
 {
 	return std::move(
@@ -937,14 +937,14 @@ Connector::fixed_probability(std::unique_ptr<Connector> connector, float p,
 }
 
 inline std::unique_ptr<FixedFanInConnector<std::default_random_engine>>
-Connector::fixed_fan_in(size_t n_fan_in, float weight, float delay)
+Connector::fixed_fan_in(size_t n_fan_in, Real weight, Real delay)
 {
 	return std::move(
 	    fixed_fan_in(n_fan_in, weight, delay, std::random_device()()));
 }
 
 inline std::unique_ptr<FixedFanInConnector<std::default_random_engine>>
-Connector::fixed_fan_in(size_t n_fan_in, float weight, float delay, size_t seed)
+Connector::fixed_fan_in(size_t n_fan_in, Real weight, Real delay, size_t seed)
 {
 	return std::move(
 	    std::make_unique<FixedFanInConnector<std::default_random_engine>>(
@@ -953,14 +953,14 @@ Connector::fixed_fan_in(size_t n_fan_in, float weight, float delay, size_t seed)
 }
 
 inline std::unique_ptr<FixedFanOutConnector<std::default_random_engine>>
-Connector::fixed_fan_out(size_t n_fan_out, float weight, float delay)
+Connector::fixed_fan_out(size_t n_fan_out, Real weight, Real delay)
 {
 	return std::move(
 	    fixed_fan_out(n_fan_out, weight, delay, std::random_device()()));
 }
 
 inline std::unique_ptr<FixedFanOutConnector<std::default_random_engine>>
-Connector::fixed_fan_out(size_t n_fan_out, float weight, float delay,
+Connector::fixed_fan_out(size_t n_fan_out, Real weight, Real delay,
                          size_t seed)
 {
 	return std::move(

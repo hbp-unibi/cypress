@@ -306,7 +306,7 @@ PyNN::PyNN(const std::string &simulator, const Json &setup)
 
 PyNN::~PyNN() = default;
 
-float PyNN::timestep()
+Real PyNN::timestep()
 {
 	SystemProperties props = PyNNUtil::properties(m_normalised_simulator);
 	if (props.analogue()) {
@@ -324,7 +324,7 @@ std::unordered_set<const NeuronType *> PyNN::supported_neuron_types() const
 	return SUPPORTED_NEURON_TYPE_MAP.find("__default__")->second;
 }
 
-void PyNN::do_run(NetworkBase &source, float duration) const
+void PyNN::do_run(NetworkBase &source, Real duration) const
 {
 	// Find the import that should be used
 	std::vector<bool> available = PYNN_UTIL.has_imports(m_imports);

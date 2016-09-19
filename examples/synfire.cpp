@@ -40,7 +40,7 @@ using namespace cypress;
  * Parameters of the inhibitory synfire chain.
  */
 template <typename Neuron>
-struct SynfireCainParameters {
+struct SynfireChainParameters {
 	/**
 	 * Neuron parameters that should be used for all neurons in the synfire
 	 * chain.
@@ -50,12 +50,12 @@ struct SynfireCainParameters {
 	/**
 	 * Synaptic weight of the excitatory connections.
 	 */
-	float w_syn = 0.015;
+	Real w_syn = 0.015;
 
 	/**
 	 * Synaptic delay.
 	 */
-	float delta_syn = 1.0;
+	Real delta_syn = 1.0;
 
 	/**
 	 * Number of neurons in the regular spiking population.
@@ -88,10 +88,10 @@ struct SynfireCainParameters {
  * specified neuron type.
  */
 template <typename Neuron_>
-class SynfireCain {
+class SynfireChain {
 public:
 	using Neuron = Neuron_;
-	using Parameters = SynfireCainParameters<Neuron_>;
+	using Parameters = SynfireChainParameters<Neuron_>;
 	using Signals = typename Neuron_::Signals;
 
 private:
@@ -102,8 +102,8 @@ private:
 	Population<Neuron> m_fs_pop;
 
 public:
-	SynfireCain(Network net, const Parameters &params = Parameters(),
-	            const Signals &neuron_signals = Signals())
+	SynfireChain(Network net, const Parameters &params = Parameters(),
+	             const Signals &neuron_signals = Signals())
 	    : m_net(net),
 	      m_params(params),
 	      m_rs_pop(m_net, params.length * params.n_rs, params.neuron_params,
@@ -134,12 +134,12 @@ public:
 			}
 		}
 		if (params.loop) {
-			rs_out().connect_to(rs_in(), Connector::fixed_fan_in(
-			                                 params.n_connect, params.w_syn,
-			                                 params.delta_syn));
-			rs_out().connect_to(fs_in(), Connector::fixed_fan_in(
-			                                 params.n_connect, params.w_syn,
-			                                 params.delta_syn));
+			rs_out().connect_to(
+			    rs_in(), Connector::fixed_fan_in(params.n_connect, params.w_syn,
+			                                     params.delta_syn));
+			rs_out().connect_to(
+			    fs_in(), Connector::fixed_fan_in(params.n_connect, params.w_syn,
+			                                     params.delta_syn));
 		}
 	}
 
@@ -174,7 +174,7 @@ static void write_spike_times(const char *fn, const T &obj, F f)
 	for (const auto &a : obj) {
 		bool first = true;
 		auto o = f(a);
-		for (float t : o) {
+		for (Real t : o) {
 			if (!first) {
 				os << ",";
 			}
@@ -185,13 +185,15 @@ static void write_spike_times(const char *fn, const T &obj, F f)
 	}
 }
 
-static const std::vector<std::vector<float>> create_input(
-    size_t n, size_t a = 3, float sigma = 2.0, size_t repeat = 1,
-    float delay = 50.0, float offs = 5.0)
+static const std::vector<std::vector<Real>> create_input(size_t n, size_t a = 3,
+                                                         Real sigma = 2.0,
+                                                         size_t repeat = 1,
+                                                         Real delay = 50.0,
+                                                         Real offs = 5.0)
 {
 	std::default_random_engine re(std::random_device{}());
-	std::normal_distribution<float> distr(0.0, sigma);
-	std::vector<std::vector<float>> res(n);
+	std::normal_distribution<Real> distr(0.0, sigma);
+	std::vector<std::vector<Real>> res(n);
 	for (size_t i = 0; i < n; i++) {
 		res[i].resize(a * repeat);
 		for (size_t j = 0; j < repeat; j++) {
@@ -211,22 +213,22 @@ int main(int argc, const char *argv[])
 		return 1;
 	}
 
-// Some aliases to save keystrokes...
+	// Some aliases to save keystrokes...
 	using Neuron = IfFacetsHardware1;
 	using Parameters = Neuron::Parameters;
 	using Signals = Neuron::Signals;
 
-// Neuron and synfire chain parameters
+	// Neuron and synfire chain parameters
 	Parameters neuron_params = Parameters();
-	SynfireCainParameters<Neuron> params{neuron_params};
+	SynfireChainParameters<Neuron> params{neuron_params};
 
 	// Create the network and the synfire chain
 	Network net;
-	SynfireCain<Neuron> synfire_chain(net, params, Signals().record_spikes());
+	SynfireChain<Neuron> synfire_chain(net, params, Signals().record_spikes());
 
 	// Create the input spikes
-	const size_t a = 3;       // Number of spikes per input burst
-	const float sigma = 2.0;  // Standard deviation of the input spike times
+	const size_t a = 3;      // Number of spikes per input burst
+	const Real sigma = 2.0;  // Standard deviation of the input spike times
 	const auto input_spikes = create_input(params.n_rs, a, sigma);
 
 	// Create the SpikeSourceArray and connect the source population to the
@@ -235,14 +237,12 @@ int main(int argc, const char *argv[])
 	for (size_t i = 0; i < params.n_rs; i++) {
 		source[i].parameters().spike_times(input_spikes[i]);
 	}
-	source.connect_to(
-	    synfire_chain.rs_in(),
-	    Connector::fixed_fan_in(params.n_connect, params.w_syn,
-	                            params.delta_syn));
-	source.connect_to(
-	    synfire_chain.fs_in(),
-	    Connector::fixed_fan_in(params.n_connect, params.w_syn,
-	                            params.delta_syn));
+	source.connect_to(synfire_chain.rs_in(),
+	                  Connector::fixed_fan_in(params.n_connect, params.w_syn,
+	                                          params.delta_syn));
+	source.connect_to(synfire_chain.fs_in(),
+	                  Connector::fixed_fan_in(params.n_connect, params.w_syn,
+	                                          params.delta_syn));
 
 	// Run the simulation
 	std::cout << "Running the simulation..." << std::endl;

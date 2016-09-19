@@ -41,7 +41,7 @@ private:
 	bool m_keep_log;
 	Json m_setup;
 
-	void do_run(NetworkBase &network, float duration) const override;
+	void do_run(NetworkBase &network, Real duration) const override;
 
 public:
 	/**
@@ -75,7 +75,7 @@ public:
 	 *
 	 * @return the simulation timestep in milliseconds.
 	 */
-	float timestep();
+	Real timestep();
 
 	/**
 	 * Returns a set of neuron types which are supported by this backend. Trying

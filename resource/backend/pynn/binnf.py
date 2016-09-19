@@ -37,9 +37,28 @@ BLOCK_END_SEQUENCE = 0x420062cb
 BLOCK_TYPE_MATRIX = 0x01
 BLOCK_TYPE_LOG = 0x02
 
-TYPE_INT = 0x00
-TYPE_FLOAT = 0x01
-TYPE_MAP = {TYPE_INT: "int32", TYPE_FLOAT: "float32"}
+TYPE_INT8 = 0
+TYPE_UINT8 = 1
+TYPE_INT16 = 2
+TYPE_UINT16 = 3
+TYPE_INT32 = 4
+TYPE_UINT32 = 5
+TYPE_FLOAT32 = 6
+TYPE_INT64 = 7
+TYPE_FLOAT64 = 8
+
+TYPE_MAP = {
+    TYPE_INT8: "int8",
+    TYPE_UINT8: "uint8",
+    TYPE_INT16: "int16",
+    TYPE_UINT16: "uint16",
+    TYPE_INT32: "int32",
+    TYPE_UINT32: "uint32",
+    TYPE_FLOAT32: "float32",
+    TYPE_INT64: "int64",
+    TYPE_FLOAT64: "float64"
+}
+INV_TYPE_MAP = {v: k for k, v in TYPE_MAP.iteritems()}
 
 SEV_DEBUG = 10
 SEV_INFO = 20
@@ -52,8 +71,6 @@ SEV_FATAL = 50
 BLOCK_TYPE_LEN = 4
 SIZE_LEN = 4
 TYPE_LEN = 4
-NUMBER_LEN = 4
-DOUBLE_LEN = 8
 
 
 def _str_len(s):
@@ -77,7 +94,7 @@ def _matrix_len(matrix):
     """
     Returns the serialised length of a matrix in bytes.
     """
-    return 2 * SIZE_LEN + matrix.size * matrix.dtype.itemsize
+    return SIZE_LEN + matrix.size * matrix.dtype.itemsize
 
 
 def _matrix_block_len(name, header, matrix):
@@ -92,8 +109,7 @@ def _log_block_len(module, msg):
     """
     Returns the total length of a binnf block in bytes.
     """
-    return (BLOCK_TYPE_LEN + DOUBLE_LEN + NUMBER_LEN + _str_len(module)
-            + _str_len(msg))
+    return (BLOCK_TYPE_LEN + 12 + _str_len(module) + _str_len(msg))
 
 # Serialisation helper functions
 
@@ -162,10 +178,20 @@ def _tell(fd):
 
 
 def header_to_dtype(header):
-    return map(lambda x: (x["name"], TYPE_MAP[x["type"]]), header)
+    return np.dtype(map(lambda x: (x["name"], TYPE_MAP[x["type"]]), header))
 
 
-def serialise_matrix(fd, name, header, matrix):
+def dtype_to_header(dt):
+    """
+    Sorts the fields in the numpy datatype dt by their byte offset and converts
+    them into an array of dictionaries containing the name and type of each
+    entry.
+    """
+    return map(lambda x: {"name": x[0], "type": INV_TYPE_MAP[x[1][0].name]},
+        sorted(dt.fields.items(), key=lambda x: x[1][1]))
+
+
+def serialise_matrix(fd, name, matrix):
     """
     Serialises a binnf data block.
 
@@ -174,6 +200,10 @@ def serialise_matrix(fd, name, header, matrix):
     dictionaries containing "name" and "type" blocks.
     :param matrix: matrix containing the data that should be serialised.
     """
+
+    # Fetch the matrix header from the matrix
+    matrix = np.require(matrix, requirements=["C_CONTIGUOUS"])
+    header = dtype_to_header(matrix.dtype)
 
     # Write the block header
     _write_int(fd, BLOCK_START_SEQUENCE)
@@ -201,7 +231,6 @@ def serialise_matrix(fd, name, header, matrix):
             "Disecrepancy between matrix number of columns and header")
 
     _write_int(fd, rows)
-    _write_int(fd, cols)
     if hasattr(matrix, 'tobytes'):  # only exists since Numpy 1.9
         fd.write(matrix.tobytes())
     else:
@@ -239,24 +268,18 @@ def deserialise_matrix(fd):
 
     # Read the header
     header_len = _read_int(fd)
-    header = map(lambda _: {"name": "", "type": TYPE_INT}, xrange(header_len))
+    header = map(lambda _: {"name": "", "type": 0}, xrange(header_len))
     for i in xrange(header_len):
         header[i]["name"] = _read_str(fd)
         header[i]["type"] = _read_int(fd)
 
     # Read the data
     rows = _read_int(fd)
-    cols = _read_int(fd)
-    if (cols != len(header)):
-        raise BinnfException(
-            "Disecrepancy between matrix number of columns and header")
-
     fmt = header_to_dtype(header)
     matrix = np.require(
         np.frombuffer(
-            buffer(fd.read(rows * cols * NUMBER_LEN)), dtype=fmt),
-        requirements=["WRITEABLE"])
-
+            buffer(fd.read(rows * fmt.itemsize)), dtype=fmt),
+        requirements=["WRITEABLE", "C_CONTIGUOUS"])
     return name, header, matrix
 
 
@@ -308,34 +331,12 @@ def deserialise(fd):
 
 def read_network(fd):
     EXPECTED_FIELDS = {
-        "populations":
-        {
-            "count": "int32",
-            "type": "int32"
-        },
-        "parameters":
-        {
-            "pid": "int32",
-            "nid": "int32"
-        },
-        "target":
-        {
-            "pid": "int32",
-            "nid": "int32"
-        },
-        "spike_times":
-        {
-            "times": "float32"
-        },
+        "populations": ["count", "type"],
+        "parameters": ["pid", "nid"],
+        "target": ["pid", "nid"],
+        "spike_times": ["times"],
         "connections":
-        {
-            "pid_src": ("int32", 0),
-            "pid_tar": ("int32", 4),
-            "nid_src": ("int32", 8),
-            "nid_tar": ("int32", 12),
-            "weight": ("float32", 16),
-            "delay": ("float32", 20)
-        }
+        ["pid_src", "pid_tar", "nid_src", "nid_tar", "weight", "delay"]
     }
 
     def validate_matrix(name, matrix):
@@ -344,21 +345,10 @@ def read_network(fd):
         """
         fields = matrix.dtype.fields
         if (name in EXPECTED_FIELDS):
-            for name, _type in EXPECTED_FIELDS[name].items():
-                if not (name in fields):
+            for n in EXPECTED_FIELDS[name]:
+                if not (n in fields):
                     raise BinnfException("Expected mandatory header field \"" +
                                          name + "\" of type \"" + _type + "\"")
-                field = fields[name]
-                type_name = _type[0] if isinstance(_type, tuple) else _type
-                if field[0].name != type_name:
-                    raise BinnfException("Mandatory header field \"" + name +
-                                         "\" must by of type " + type_name +
-                                         ", but got " + field[0].name)
-                if isinstance(_type, tuple) and field[1] != _type[1]:
-                    raise BinnfException("Mandatory header field \"" + name +
-                                         "\" must be at offset " + str(_type[
-                                             1]) + ", but is at offset " + str(
-                                                 field[1]))
 
     # Construct the network descriptor from the binnf data
     network = {"parameters": [], "spike_times": []}
@@ -409,32 +399,17 @@ def read_network(fd):
     return network
 
 # Headers used during serialisation
-HEADER_DONE = [{"name": "time_prepare",
-                "type": TYPE_FLOAT}, {"name": "time_sim",
-                                      "type": TYPE_FLOAT},
-               {"name": "time_read",
-                "type": TYPE_FLOAT}]
-HEADER_DONE_DTYPE = header_to_dtype(HEADER_DONE)
-
 HEADER_TARGET = [{"name": "pid",
-                  "type": TYPE_INT}, {"name": "nid",
-                                      "type": TYPE_INT}]
+                  "type": TYPE_INT32}, {"name": "nid",
+                                        "type": TYPE_INT32}]
 HEADER_TARGET_DTYPE = header_to_dtype(HEADER_TARGET)
 
-HEADER_SPIKE_TIMES = [{"name": "times", "type": TYPE_FLOAT}]
-HEADER_SPIKE_TIMES_DTYPE = header_to_dtype(HEADER_SPIKE_TIMES)
-
-HEADER_TRACE = [{"name": "times",
-                 "type": TYPE_FLOAT}, {"name": "values",
-                                       "type": TYPE_FLOAT}]
-HEADER_TRACE_DTYPE = header_to_dtype(HEADER_TRACE)
-
 HEADER_RUNTIMES = [{"name": "total",
-                    "type": TYPE_FLOAT}, {"name": "sim",
-                                          "type": TYPE_FLOAT},
+                    "type": TYPE_FLOAT64}, {"name": "sim",
+                                            "type": TYPE_FLOAT64},
                    {"name": "initialize",
-                    "type": TYPE_FLOAT}, {"name": "finalize",
-                                          "type": TYPE_FLOAT}]
+                    "type": TYPE_FLOAT64}, {"name": "finalize",
+                                            "type": TYPE_FLOAT64}]
 HEADER_RUNTIMES_DTYPE = header_to_dtype(HEADER_RUNTIMES)
 
 
@@ -445,28 +420,19 @@ def write_result(fd, res):
     :param fd: target file descriptor.
     :param res: simulation result.
     """
-    serialise_matrix(
-        fd,
-        "done",
-        HEADER_DONE,
-        np.array(
-            [(0, 0, 0)], dtype=HEADER_DONE_DTYPE))
     for pid in xrange(len(res)):
         for signal in res[pid]:
             for nid in xrange(len(res[pid][signal])):
                 serialise_matrix(
                     fd,
                     "target",
-                    HEADER_TARGET,
                     np.array(
                         [(pid, nid)], dtype=HEADER_TARGET_DTYPE))
                 matrix = res[pid][signal][nid]
                 if signal == "spikes":
-                    serialise_matrix(fd, "spike_times", HEADER_SPIKE_TIMES,
-                                     matrix)
+                    serialise_matrix(fd, "spike_times", matrix)
                 else:
-                    serialise_matrix(fd, "trace_" + signal, HEADER_TRACE,
-                                     matrix)
+                    serialise_matrix(fd, "trace_" + signal, matrix)
 
 
 def write_runtimes(fd, times):
@@ -480,7 +446,6 @@ def write_runtimes(fd, times):
     serialise_matrix(
         fd,
         "runtimes",
-        HEADER_RUNTIMES,
         np.array(
             [(times["total"], times["sim"], times["initialize"],
               times["finalize"])],

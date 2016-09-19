@@ -29,18 +29,20 @@
 
 #include <vector>
 
+#include <cypress/core/types.hpp>
+
 namespace cypress {
 namespace spikes {
 
 // TODO: Add support for seeds!
 
-std::vector<float> poisson(float t_start, float t_end, float rate);
+std::vector<Real> poisson(Real t_start, Real t_end, Real rate);
 
-std::vector<float> constant_interval(float t_start, float t_end, float interval,
-                                     float sigma = 0.0);
+std::vector<Real> constant_interval(Real t_start, Real t_end, Real interval,
+                                    Real sigma = 0.0);
 
-std::vector<float> constant_frequency(float t_start, float t_end,
-                                      float frequency, float sigma = 0.0);
+std::vector<Real> constant_frequency(Real t_start, Real t_end, Real frequency,
+                                     Real sigma = 0.0);
 }
 }
 

@@ -425,7 +425,7 @@ std::unordered_set<std::string> &NetworkBase::disabled_trafo_ids()
 	return m_impl->disabled_trafo_ids;
 }
 
-void NetworkBase::run(const Backend &backend, float duration)
+void NetworkBase::run(const Backend &backend, Real duration)
 {
 	// Automatically deduce the duration if none was given
 	if (duration <= 0) {
@@ -448,16 +448,16 @@ void NetworkBase::run(const Backend &backend, float duration)
 	logger().info("cypress", ss.str());
 }
 
-void NetworkBase::run(const std::string &backend_id, float duration, int argc,
+void NetworkBase::run(const std::string &backend_id, Real duration, int argc,
                       const char *argv[])
 {
 	auto backend = make_backend(backend_id, argc, argv);
 	run(*backend, duration);
 }
 
-float NetworkBase::duration() const
+Real NetworkBase::duration() const
 {
-	float res = 0.0;
+	Real res = 0.0;
 	for (const auto &population : populations()) {
 		if (&population.type() == &SpikeSourceArray::inst()) {
 			const NeuronIndex nid_end =

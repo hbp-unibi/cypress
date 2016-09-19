@@ -28,8 +28,8 @@ import sys
 while True:
     block_type, res = deserialise(sys.stdin)
     if block_type == BLOCK_TYPE_MATRIX:
-        name, matrix, header = res
-        serialise_matrix(sys.stdout, name, matrix, header)
+        name, header, matrix = res
+        serialise_matrix(sys.stdout, name, matrix)
     elif block_type == BLOCK_TYPE_LOG:
         time, severity, module, msg = res
         serialise_log(sys.stdout, time, severity, module, msg)

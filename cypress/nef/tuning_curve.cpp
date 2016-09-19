@@ -24,15 +24,14 @@
 namespace cypress {
 namespace nef {
 
-static std::vector<float> generate_test_values(size_t n_samples,
-                                               size_t n_repeat)
+static std::vector<Real> generate_test_values(size_t n_samples, size_t n_repeat)
 {
 	// Fill the list of test values with values in the range from 0.0 to 1.0 in
 	// n_samples steps. Repeat each value n_repeat times.
-	std::vector<float> res(n_samples * n_repeat);
-	const float f = 1.0f / float(n_samples);
+	std::vector<Real> res(n_samples * n_repeat);
+	const Real f = 1.0f / Real(n_samples);
 	for (size_t i = 0; i < n_samples; i++) {
-		const float v = i * f;
+		const Real v = i * f;
 		for (size_t j = 0; j < n_repeat; j++) {
 			res[i * n_repeat + j] = v;
 		}
@@ -45,30 +44,30 @@ static std::vector<float> generate_test_values(size_t n_samples,
 	return res;
 }
 
-static std::vector<float> generate_test_spike_train(
-    const DeltaSigma::DiscreteWindow &wnd, const std::vector<float> &values,
-    float min_spike_interval, float t_wnd)
+static std::vector<Real> generate_test_spike_train(
+    const DeltaSigma::DiscreteWindow &wnd, const std::vector<Real> &values,
+    Real min_spike_interval, Real t_wnd)
 {
 	// Calculate the start and end time of the test signal
-	const float i_t_wnd = 1.0f / t_wnd;
-	const float t0 = 0.0f;
-	const float t1 = t_wnd * values.size();
+	const Real i_t_wnd = 1.0f / t_wnd;
+	const Real t0 = 0.0f;
+	const Real t1 = t_wnd * values.size();
 
 	// Encode the test values as spike train
-	std::vector<float> res =  DeltaSigma::encode([&](float t) -> float {
+	std::vector<Real> res = DeltaSigma::encode([&](Real t) -> Real {
 		return values[std::floor(t * i_t_wnd)];
 	}, wnd, t0, t1, 0.0f, 1.0f, min_spike_interval);
 
-	for (float &v: res) {
-		v *= 1e3; // Convert seconds to milliseconds
+	for (Real &v : res) {
+		v *= 1e3;  // Convert seconds to milliseconds
 	}
 
 	return res;
 }
 
 TuningCurveEvaluator::TuningCurveEvaluator(size_t n_samples, size_t n_repeat,
-                                           float min_spike_interval,
-                                           float response_time, float step)
+                                           Real min_spike_interval,
+                                           Real response_time, Real step)
     : m_n_samples(n_samples),
       m_n_repeat(n_repeat),
       m_wnd(DeltaSigma::DiscreteWindow::create<Window>(min_spike_interval,
@@ -80,28 +79,28 @@ TuningCurveEvaluator::TuningCurveEvaluator(size_t n_samples, size_t n_repeat,
 {
 }
 
-std::vector<std::pair<float, float>>
-    TuningCurveEvaluator::evaluate_output_spike_train(
-        std::vector<float> output_spikes)
+std::vector<std::pair<Real, Real>>
+TuningCurveEvaluator::evaluate_output_spike_train(
+    std::vector<Real> output_spikes)
 {
-	for (float &v: output_spikes) {
-		v *= 1e-3; // Convert milliseconds to seconds
+	for (Real &v : output_spikes) {
+		v *= 1e-3;  // Convert milliseconds to seconds
 	}
 
 	// Decode the output spike train
-	std::vector<float> decoded = DeltaSigma::decode(
+	std::vector<Real> decoded = DeltaSigma::decode(
 	    output_spikes, m_wnd, 0.0f, m_t_wnd * m_test_values.size(), 0.0f, 1.0f);
 
 	// Read the output values for the given test values
-	const float i_step = 1.0f / m_wnd.step();
+	const Real i_step = 1.0f / m_wnd.step();
 	const size_t response_offs = m_t_wnd * 0.5f;
 	const size_t response_len = std::floor((0.5f * m_t_wnd) * i_step) + 1;
-	const float i_response_len = 1.0f / float(response_len);
-	std::vector<std::pair<float, float>> res(m_n_samples);
+	const Real i_response_len = 1.0f / Real(response_len);
+	std::vector<std::pair<Real, Real>> res(m_n_samples);
 
 	for (size_t i = 0; i < m_test_values.size(); i++) {
-		float v_in = m_test_values[i];
-		float v_out = 0.0f;
+		Real v_in = m_test_values[i];
+		Real v_out = 0.0f;
 
 		const size_t j0 = std::round(i * m_t_wnd * i_step) + response_offs;
 		const size_t j1 = j0 + response_len;
@@ -116,7 +115,7 @@ std::vector<std::pair<float, float>>
 	}
 
 	// Average the output values over the number of repetitions
-	const float i_n_repeat = 1.0f / float(m_n_repeat);
+	const Real i_n_repeat = 1.0f / Real(m_n_repeat);
 	for (size_t i = 0; i < m_n_samples; i++) {
 		res[i].second *= i_n_repeat;
 	}

@@ -42,39 +42,41 @@ int main(int argc, const char *argv[])
 		return 1;
 	}
 
+	global_logger().min_level(LogSeverity::INFO);
+
 	auto net =
 	    Network()
 	        // Add a named population of poisson spike sources
-	        .add_population<SpikeSourcePoisson>(
-	            "source", 4, SpikeSourcePoissonParameters()
+	        .add_population<SpikeSourceConstFreq>(
+	            "source", 8, SpikeSourceConstFreqParameters()
 	                             .start(100.0)
-	                             .rate(100.0)
+	                             .rate(1000.0)
 	                             .duration(1000.0),
-	            SpikeSourcePoissonSignals().record_spikes())
+	            SpikeSourceConstFreqSignals().record_spikes())
 	        // Add a population of IfFacetsHardware1 neurons -- those neurons
 	        // are supported by all simulator backends
 	        .add_population<IfFacetsHardware1>(
-	            "target", 4, IfFacetsHardware1Parameters(),
+	            "target", 32, IfFacetsHardware1Parameters().g_leak(0.04),
 	            IfFacetsHardware1Signals().record_spikes())
 	        // Project each neuron in the population "source" onto each neuron
 	        // in the population "target"
-	        .add_connection("source", "target", Connector::one_to_one(0.016))
+	        .add_connection("source", "target", Connector::all_to_all(0.015))
 	        .run(argv[1], 0.0, argc, argv);
 
 	// Print the spike times for each source neuron
-	for (auto neuron : net.population<SpikeSourcePoisson>("source")) {
-		std::cout << "Spike times for source neuron " << neuron.nid()
-		          << std::endl;
-		std::cout << neuron.signals().get_spikes();
-	}
+	/*	for (auto neuron : net.population<SpikeSourcePoisson>("source")) {
+	        std::cout << "Spike times for source neuron " << neuron.nid()
+	                  << std::endl;
+	        std::cout << neuron.signals().get_spikes();
+	    }*/
 
 	std::cout << "---------" << std::endl;
 
 	// Print the spike times for each target neuron
 	for (auto neuron : net.population<IfFacetsHardware1>("target")) {
-		std::cout << "Spike times for target neuron " << neuron.nid()
+		std::cout << "Spike frequency for target neuron " << neuron.nid()
+		          << ", " << neuron.signals().get_spikes().size() / 0.9
 		          << std::endl;
-		std::cout << neuron.signals().get_spikes();
 	}
 
 	return 0;

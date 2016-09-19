@@ -38,8 +38,8 @@ namespace sli {
  * Parameters influencing the simulation.
  */
 struct Params {
-	float timestep = 0.1;
-	float record_interval = 1.0;
+	Real timestep = 0.1;
+	Real record_interval = 1.0;
 };
 
 /**
@@ -50,7 +50,7 @@ struct Params {
  * @param net is the network that should be turned into an SLI script.
  * @param duration is the network simulation time in seconds.
  */
-void write_network(std::ostream &os, const NetworkBase &net, float duration,
+void write_network(std::ostream &os, const NetworkBase &net, Real duration,
                    const Params &params = Params());
 
 /**

@@ -495,7 +495,7 @@ public:
 	 * zero is given, the simulation time is automatically chosen.
 	 * @return a reference at this network for method chaining.
 	 */
-	Network &run(const Backend &backend, float duration = 0.0)
+	Network &run(const Backend &backend, Real duration = 0.0)
 	{
 		NetworkBase::run(backend, duration);
 		return *this;
@@ -522,7 +522,7 @@ public:
 	 * zero is given, the simulation time is automatically chosen.
 	 * @return a reference at this network for method chaining.
 	 */
-	Network &run(const std::string &backend_id, float duration = 0.0,
+	Network &run(const std::string &backend_id, Real duration = 0.0,
 	             int argc = 0, const char *argv[] = nullptr)
 	{
 		NetworkBase::run(backend_id, duration, argc, argv);

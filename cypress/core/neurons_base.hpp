@@ -59,7 +59,7 @@ protected:
 	NeuronType(const std::string &name,
 	           const std::vector<std::string> &parameter_names,
 	           const std::vector<std::string> &parameter_units,
-	           const std::vector<float> &parameter_defaults,
+	           const std::vector<Real> &parameter_defaults,
 	           const std::vector<std::string> &signal_names,
 	           const std::vector<std::string> &signal_units,
 	           bool conductance_based, bool spike_source)
@@ -98,7 +98,7 @@ public:
 	/**
 	 * Contains default values for the neuron parameters.
 	 */
-	const std::vector<float> parameter_defaults;
+	const std::vector<Real> parameter_defaults;
 
 	/**
 	 * Names of the signals that can be recorded from this neuron.
@@ -153,17 +153,17 @@ protected:
 	/**
 	 * Constructor allowing to set the neuron parameters to the given values.
 	 */
-	NeuronParameters(std::initializer_list<float> parameters)
+	NeuronParameters(std::initializer_list<Real> parameters)
 	{
 		for (auto &p : write_parameters()) {
-			p = std::vector<float>(parameters);
+			p = std::vector<Real>(parameters);
 		}
 	}
 
 	/**
 	 * Constructor allowing to set the neuron parameters to the given values.
 	 */
-	NeuronParameters(const std::vector<float> &parameters)
+	NeuronParameters(const std::vector<Real> &parameters)
 	{
 		for (auto &p : write_parameters()) {
 			p = parameters;
@@ -184,7 +184,7 @@ public:
 	/**
 	 * Returns a read-only reference at the parameter vector.
 	 */
-	const std::vector<float> &parameters() const { return read_parameters(); }
+	const std::vector<Real> &parameters() const { return read_parameters(); }
 
 	/**
 	 * Sets the parameter with the given index to the specified value.
@@ -192,7 +192,7 @@ public:
 	 * @param idx is the parameter that should be updated.
 	 * @param value is the value the parameter should be set to.
 	 */
-	void set(size_t idx, float value)
+	void set(size_t idx, Real value)
 	{
 		for (auto &p : write_parameters()) {
 			p[idx] = value;
@@ -203,17 +203,17 @@ public:
 	 * Returns a read-only reference at the i-th element in the parameter
 	 * vector.
 	 */
-	float operator[](size_t i) const { return read_parameters()[i]; }
+	Real operator[](size_t i) const { return read_parameters()[i]; }
 
 	/**
 	 * Returns an iterator allowing to iterate over the parameter vector.
 	 */
-	const float *begin() const { return &read_parameters().front(); }
+	const Real *begin() const { return &read_parameters().front(); }
 
 	/**
 	 * Returns an iterator allowing to iterate over the parameter vector.
 	 */
-	const float *end() const { return &read_parameters().back() + 1; }
+	const Real *end() const { return &read_parameters().back() + 1; }
 
 	/**
 	 * Returns the size of the parameter vector. Aborts if the population is
@@ -273,7 +273,7 @@ public:
 	/**
 	 * Constructor allowing to set the neuron parameters to the given values.
 	 */
-	ConstantSizeNeuronParametersBase(const std::vector<float> &parameters)
+	ConstantSizeNeuronParametersBase(const std::vector<Real> &parameters)
 	    : NeuronParametersBase<Impl, Type>(parameters)
 	{
 		if (parameters.size() != Size) {
@@ -345,7 +345,7 @@ public:
 	/**
 	 * Allows to set the data for the i-th data entry.
 	 */
-	void data(size_t i, std::shared_ptr<Matrix<float>> matrix)
+	void data(size_t i, std::shared_ptr<Matrix<Real>> matrix)
 	{
 		for (auto &p : write_data()) {
 			p[i] = matrix;
@@ -360,10 +360,10 @@ public:
 	 * @param i is the signal index for which the data should be returned.
 	 * @return a reference at the data matrix.
 	 */
-	std::shared_ptr<Matrix<float>> data_ptr(size_t i) const
+	std::shared_ptr<Matrix<Real>> data_ptr(size_t i) const
 	{
-		static std::shared_ptr<Matrix<float>> empty =
-		    std::make_shared<Matrix<float>>();
+		static std::shared_ptr<Matrix<Real>> empty =
+		    std::make_shared<Matrix<Real>>();
 		auto res = const_cast<NeuronSignals *>(this)->read_data()[i];
 		if (!res) {
 			if (!is_recording(i)) {
@@ -382,7 +382,7 @@ public:
 	 * @param i is the signal index for which the data should be returned.
 	 * @return a reference at the data matrix.
 	 */
-	const Matrix<float> &data(size_t i) const { return *data_ptr(i); }
+	const Matrix<Real> &data(size_t i) const { return *data_ptr(i); }
 
 	/**
 	 * Returns the number of signals.

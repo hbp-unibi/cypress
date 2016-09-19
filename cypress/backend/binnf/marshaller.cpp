@@ -26,29 +26,29 @@
 #include <cypress/core/network_base.hpp>
 #include <cypress/core/network_base_objects.hpp>
 #include <cypress/core/neurons.hpp>
+#include <cypress/core/types.hpp>
 #include <cypress/util/matrix.hpp>
 
 namespace cypress {
 namespace binnf {
 
-static const auto INT = NumberType::INT;
-static const auto FLOAT = NumberType::FLOAT;
-
-static const Header TARGET_HEADER = {{"pid", "nid"}, {INT, INT}};
-static const Header SPIKE_TIMES_HEADER = {{"times"}, {FLOAT}};
-static const Header CONNECTIONS_HEADER = {
-    {"pid_src", "pid_tar", "nid_src", "nid_tar", "weight", "delay"},
-    {INT, INT, INT, INT, FLOAT, FLOAT}};
-static const int32_t ALL_NEURONS = std::numeric_limits<int32_t>::max();
-
-static const std::map<const NeuronType *, int32_t> NEURON_TYPE_ID_MAP{
-    {{&SpikeSourceArray::inst(), 0},
-     {&IfCondExp::inst(), 1},
-     {&EifCondExpIsfaIsta::inst(), 2},
-     {&IfFacetsHardware1::inst(), 3}}};
+// Use 32 bit integers as default integer width in Binnf.
+static const NumberType INT = NumberType::INT32;
+// Either use 32 or 64 bit floats depending on the CMake user setting
+#if CYPRESS_REAL_WIDTH == 4
+static const NumberType FLOAT = NumberType::FLOAT32;
+#else
+static const NumberType FLOAT = NumberType::FLOAT64;
+#endif
 
 static int32_t binnf_type_id(const NeuronType &type)
 {
+	static const std::map<const NeuronType *, int32_t> NEURON_TYPE_ID_MAP{
+	    {{&SpikeSourceArray::inst(), 0},
+	     {&IfCondExp::inst(), 1},
+	     {&EifCondExpIsfaIsta::inst(), 2},
+	     {&IfFacetsHardware1::inst(), 3}}};
+
 	auto it = NEURON_TYPE_ID_MAP.find(&type);
 	if (it != NEURON_TYPE_ID_MAP.end()) {
 		return it->second;
@@ -67,7 +67,8 @@ static int32_t binnf_type_id(const NeuronType &type)
 static void write_populations(const std::vector<PopulationBase> &populations,
                               std::ostream &os)
 {
-	Header header = {{"count", "type"}, {INT, INT}};
+	std::vector<std::string> names{"count", "type"};
+	std::vector<NumberType> types{INT, INT};
 
 	// Fetch all signals available in the populations
 	std::unordered_set<std::string> signals;
@@ -79,15 +80,15 @@ static void write_populations(const std::vector<PopulationBase> &populations,
 
 	// Add the signals to the header
 	for (auto const &signal : signals) {
-		header.names.emplace_back(std::string("record_") + signal);
-		header.types.emplace_back(INT);
+		names.emplace_back(std::string("record_") + signal);
+		types.emplace_back(INT);
 	}
 
 	// Fill the populations matrix
-	Matrix<Number> mat(populations.size(), header.size());
+	Block block("populations", {names, types}, populations.size());
 	for (size_t i = 0; i < populations.size(); i++) {
-		mat(i, 0) = int32_t(populations[i].size());
-		mat(i, 1) = int32_t(binnf_type_id(populations[i].type()));
+		block.set(i, 0, populations[i].size());
+		block.set(i, 1, binnf_type_id(populations[i].type()));
 		size_t j = 2;
 		for (auto const &signal : signals) {
 			// Lookup the signal index for this population
@@ -109,11 +110,11 @@ static void write_populations(const std::vector<PopulationBase> &populations,
 					}
 				}
 			}
-			mat(i, j++) = record;
+			block.set(i, j++, record);
 		}
 	}
 
-	serialise_matrix(os, "populations", header, mat);
+	serialise(os, block);
 }
 
 /**
@@ -122,36 +123,56 @@ static void write_populations(const std::vector<PopulationBase> &populations,
 static void write_connections(const std::vector<ConnectionDescriptor> &descrs,
                               std::ostream &os)
 {
+	static const Header CONNECTIONS_HEADER = {
+	    {"pid_src", "pid_tar", "nid_src", "nid_tar", "weight", "delay"},
+	    {INT, INT, INT, INT, FLOAT, FLOAT}};
+
 	std::vector<Connection> connections = instantiate_connections(descrs);
 	serialise_matrix(os, "connections", CONNECTIONS_HEADER,
-	                 reinterpret_cast<Number *>(&connections[0]),
+	                 reinterpret_cast<uint8_t *>(&connections[0]),
 	                 connections.size());
+}
+
+static void write_target(PopulationIndex pid, NeuronIndex nid, std::ostream &os)
+{
+	static const Header TARGET_HEADER = {{"pid", "nid"}, {INT, INT}};
+
+	Block block("target", TARGET_HEADER, 1);
+	block.set(0, 0, pid);
+	block.set(0, 1, nid);
+	serialise(os, block);
 }
 
 static void write_spike_source_array(const PopulationBase &population,
                                      std::ostream &os)
 {
-	for (size_t i = 0; i < population.size(); i++) {
-		const auto &params = population[i].parameters();
-		Matrix<Number> mat(1, 2);
-		mat(0, 0) = int32_t(population.pid());
-		mat(0, 1) = int32_t(i);
+	static const Header SPIKE_TIMES_HEADER = {{"times"}, {FLOAT}};
 
-		serialise_matrix(os, "target", TARGET_HEADER, mat);
-		serialise_matrix(os, "spike_times", SPIKE_TIMES_HEADER,
-		                 reinterpret_cast<const Number *>(params.begin()),
-		                 params.size());
+	for (size_t i = 0; i < population.size(); i++) {
+		// Send the target header
+		write_target(population.pid(), i, os);
+
+		// Send the actual spike times
+		const auto &params = population[i].parameters();
+		Block block("spike_times", SPIKE_TIMES_HEADER, params.size());
+		for (size_t j = 0; j < params.size(); j++) {
+			block.set(j, 0, params[j]);
+		}
+		serialise(os, block);
 	}
 }
 
 static void write_uniform_parameters(const PopulationBase &population,
                                      std::ostream &os)
 {
+	static const int32_t ALL_NEURONS = std::numeric_limits<int32_t>::max();
+
 	// Assemble the parameter header
-	Header header = {{"pid", "nid"}, {INT, INT}};
+	std::vector<std::string> names{"pid", "nid"};
+	std::vector<NumberType> types{INT, INT};
 	for (const auto &name : population.type().parameter_names) {
-		header.names.emplace_back(name);
-		header.types.emplace_back(FLOAT);
+		names.emplace_back(name);
+		types.emplace_back(FLOAT);
 	}
 
 	// In case the population is homogeneous, just send one entry in
@@ -159,16 +180,19 @@ static void write_uniform_parameters(const PopulationBase &population,
 	// population
 	const bool homogeneous = population.homogeneous_parameters();
 	const size_t n_rows = homogeneous ? 1 : population.size();
-	Matrix<Number> mat(n_rows, header.size());
+
+	// Assemble the block containing the parameters
+	Block block("parameters", {names, types}, n_rows);
 	for (size_t i = 0; i < n_rows; i++) {
-		mat(i, 0) = int32_t(population.pid());
-		mat(i, 1) = int32_t(homogeneous ? ALL_NEURONS : i);
+		block.set(i, 0, population.pid());
+		block.set(i, 1, homogeneous ? ALL_NEURONS : i);
 
 		const auto &params = population[i].parameters();
-		std::copy(params.begin(), params.end(), mat.begin(i) + 2);
+		for (size_t j = 0; j < params.size(); j++) {
+			block.set(i, j + 2, params[j]);
+		}
 	}
-
-	serialise_matrix(os, "parameters", header, mat);
+	serialise(os, block);
 }
 
 /**
@@ -217,87 +241,98 @@ bool marshall_response(NetworkBase &net, std::istream &is)
 		// stream is reached, skip faulty blocks
 		try {
 			block = deserialise(is);
+			if (block.type == BlockType::INVALID) {
+				return had_block; // We're at the end of the stream
+			}
 			had_block = true;
+
+			if (block.type == BlockType::LOG) {
+				net.logger().log(block.severity, block.time, block.module,
+				                 block.msg);
+				continue;
+			}
+			else if (block.type != BlockType::MATRIX) {
+				throw BinnfDecodeException("Unsupported block type!");
+			}
+
+			// Handle the block, depending on its name
+			if (block.name == "target") {
+				const size_t pid_col = block.colidx("pid");
+				const size_t nid_col = block.colidx("nid");
+				if (block.rows() != 1) {
+					throw BinnfDecodeException(
+					    "Invalid target block row count");
+				}
+				tar_pid = block.get_int(0, pid_col);
+				tar_nid = block.get_int(0, nid_col);
+				if (tar_pid >= ssize_t(net.population_count()) ||
+				    tar_nid >= ssize_t(net.population(tar_pid).size())) {
+					throw BinnfDecodeException("Invalid target neuron");
+				}
+				has_target = true;
+			}
+			else if (block.name == "spike_times") {
+				if (!has_target) {
+					throw BinnfDecodeException("No target neuron set");
+				}
+				if (block.cols() != 1 || block.colidx("times") != 0) {
+					throw BinnfDecodeException(
+					    "Invalid spike_times column count");
+				}
+				auto neuron = net[tar_pid][tar_nid];
+				auto idx = neuron.type().signal_index("spikes");
+				if (idx.valid() && neuron.signals().is_recording(idx.value())) {
+					auto data = std::make_shared<Matrix<Real>>(
+					        block.rows(), 1);
+					for (size_t i = 0; i < block.rows(); i++) {
+						(*data)(i, 0) = block.get_float(i, 0);
+					}
+					neuron.signals().data(idx.value(), std::move(data));
+				}
+				has_target = false;
+			}
+			else if (block.name.size() > 6 &&
+			         block.name.substr(0, 6) == "trace_") {
+				if (!has_target) {
+					throw BinnfDecodeException("No target neuron set");
+				}
+				if (block.cols() != 2 || block.colidx("times") != 0 ||
+				    block.colidx("values") != 1) {
+					throw BinnfDecodeException("Invalid trace data layout!");
+				}
+				const std::string signal =
+				    block.name.substr(6, block.name.size() - 6);
+				auto neuron = net[tar_pid][tar_nid];
+				auto idx = neuron.type().signal_index(signal);
+				if (idx.valid() && neuron.signals().is_recording(idx.value())) {
+					auto data = std::make_shared<Matrix<Real>>(
+					        block.rows(), 2);
+					for (size_t i = 0; i < block.rows(); i++) {
+						(*data)(i, 0) = block.get_float(i, 0);
+						(*data)(i, 1) = block.get_float(i, 1);
+					}
+					neuron.signals().data(idx.value(), std::move(data));
+				}
+			}
+			else if (block.name == "runtimes") {
+				const size_t total_col = block.colidx("total");
+				const size_t sim_col = block.colidx("sim");
+				const size_t initialize_col = block.colidx("initialize");
+				const size_t finalize_col = block.colidx("finalize");
+
+				net.runtime({block.get_float(0, total_col),
+				             block.get_float(0, sim_col),
+				             block.get_float(0, initialize_col),
+				             block.get_float(0, finalize_col)});
+
+				has_target = false;
+			}
 		}
-		catch (BinnfDecodeException ex) {
-			// TODO: Log
+		catch (BinnfDecodeException &ex) {
+			net.logger().error(
+			    "cypress",
+			    std::string("Error while parsing BiNNF: ") + ex.what());
 			continue;
-		}
-
-		if (block.type == BlockType::LOG) {
-			net.logger().log(block.severity, block.time, block.module,
-			                 block.msg);
-			continue;
-		}
-		else if (block.type != BlockType::MATRIX) {
-			throw BinnfDecodeException("Unsupported block type!");
-		}
-
-		// Handle the block, depending on its name
-		if (block.name == "target") {
-			const size_t pid_col = block.colidx("pid");
-			const size_t nid_col = block.colidx("nid");
-			if (block.matrix.rows() != 1) {
-				throw BinnfDecodeException("Invalid target block row count");
-			}
-			tar_pid = block.matrix(0, pid_col);
-			tar_nid = block.matrix(0, nid_col);
-			if (tar_pid >= ssize_t(net.population_count()) ||
-			    tar_nid >= ssize_t(net.population(tar_pid).size())) {
-				throw BinnfDecodeException("Invalid target neuron");
-			}
-			has_target = true;
-		}
-		else if (block.name == "spike_times") {
-			if (!has_target) {
-				throw BinnfDecodeException("No target neuron set");
-			}
-			if (block.matrix.cols() != 1 || block.colidx("times") != 0) {
-				throw BinnfDecodeException("Invalid spike_times column count");
-			}
-			auto neuron = net[tar_pid][tar_nid];
-			auto idx = neuron.type().signal_index("spikes");
-			if (idx.valid() && neuron.signals().is_recording(idx.value())) {
-				neuron.signals().data(
-				    idx.value(),
-				    std::make_shared<Matrix<float>>(
-				        block.matrix.rows(), 1,
-				        reinterpret_cast<float *>(block.matrix.begin())));
-			}
-			has_target = false;
-		}
-		else if (block.name.size() > 6 && block.name.substr(0, 6) == "trace_") {
-			if (!has_target) {
-				throw BinnfDecodeException("No target neuron set");
-			}
-			if (block.matrix.cols() != 2 || block.colidx("times") != 0 ||
-			    block.colidx("values") != 1) {
-				throw BinnfDecodeException("Invalid trace data layout!");
-			}
-			const std::string signal =
-			    block.name.substr(6, block.name.size() - 6);
-			auto neuron = net[tar_pid][tar_nid];
-			auto idx = neuron.type().signal_index(signal);
-			if (idx.valid() && neuron.signals().is_recording(idx.value())) {
-				neuron.signals().data(
-				    idx.value(),
-				    std::make_shared<Matrix<float>>(
-				        block.matrix.rows(), 2,
-				        reinterpret_cast<float *>(block.matrix.begin())));
-			}
-		}
-		else if (block.name == "runtimes") {
-			const size_t total_col = block.colidx("total");
-			const size_t sim_col = block.colidx("sim");
-			const size_t initialize_col = block.colidx("initialize");
-			const size_t finalize_col = block.colidx("finalize");
-
-			net.runtime({block.matrix(0, total_col).f,
-			             block.matrix(0, sim_col).f,
-			             block.matrix(0, initialize_col).f,
-			             block.matrix(0, finalize_col).f});
-
-			has_target = false;
 		}
 	}
 	return had_block;

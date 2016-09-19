@@ -96,7 +96,7 @@ public:
 	/**
 	 * Type used to represent the parameters of a single neuron.
 	 */
-	using ParameterType = std::vector<float>;
+	using ParameterType = std::vector<Real>;
 
 	/**
 	 * Type used to represent the record flags of a single neuron.
@@ -107,7 +107,7 @@ public:
 	 * Type used to represent the data matrices containing the recorded data for
 	 * a single neuron, each vector enetry corresponds to a signal.
 	 */
-	using DataType = std::vector<std::shared_ptr<Matrix<float>>>;
+	using DataType = std::vector<std::shared_ptr<Matrix<Real>>>;
 
 private:
 	/**

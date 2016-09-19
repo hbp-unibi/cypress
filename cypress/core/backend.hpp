@@ -33,6 +33,8 @@
 #include <string>
 #include <unordered_set>
 
+#include <cypress/core/types.hpp>
+
 namespace cypress {
 
 /*
@@ -50,7 +52,7 @@ protected:
 	/**
 	 * Abstract method which has to be implemented by the backend.
 	 */
-	virtual void do_run(NetworkBase &network, float duration) const = 0;
+	virtual void do_run(NetworkBase &network, Real duration) const = 0;
 
 public:
 	/**
@@ -61,7 +63,7 @@ public:
 	 * @param duration is the duration for which the network should be
 	 * simulated.
 	 */
-	void run(NetworkBase &network, float duration = 0.0) const;
+	void run(NetworkBase &network, Real duration = 0.0) const;
 
 	/**
 	 * Returns a set of neuron types which are supported by this backend. Trying

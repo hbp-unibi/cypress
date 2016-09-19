@@ -24,13 +24,13 @@
 using namespace cypress;
 
 template <typename Population>
-static float avg_fire_rate(const Population &pop, float duration)
+static Real avg_fire_rate(const Population &pop, Real duration)
 {
-	float avg_rate = 0.0;
+	Real avg_rate = 0.0;
 	for (auto neuron : pop) {
 		avg_rate += neuron.signals().get_spikes().size();
 	}
-	return avg_rate / float(pop.size()) / (duration * 1e-3);
+	return avg_rate / Real(pop.size()) / (duration * 1e-3);
 }
 
 int main(int argc, const char *argv[])
@@ -45,12 +45,12 @@ int main(int argc, const char *argv[])
 
 	static const size_t n_src = 8;
 	static const size_t n_tar = 8;
-	static const float f = 25.0;           // Hz
-	static const float duration = 1000.0;  // ms
+	static const Real f = 25.0;           // Hz
+	static const Real duration = 1000.0;  // ms
 
 	// Sweep over w_syn_inh and w_syn_exc, create the network and run it
-	for (float w_syn_exc = 0.0; w_syn_exc < 0.016; w_syn_exc += 0.002) {
-		for (float w_syn_inh = 0.0; w_syn_inh < 0.016; w_syn_inh += 0.002) {
+	for (Real w_syn_exc = 0.0; w_syn_exc < 0.016; w_syn_exc += 0.002) {
+		for (Real w_syn_inh = 0.0; w_syn_inh < 0.016; w_syn_inh += 0.002) {
 			Network net =
 			    Network()
 			        .add_population<SpikeSourceConstFreq>(

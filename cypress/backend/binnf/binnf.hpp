@@ -32,79 +32,115 @@
 
 #include <cypress/util/matrix.hpp>
 #include <cypress/util/logger.hpp>
+#include <cypress/core/types.hpp>
 
 namespace cypress {
 namespace binnf {
 /**
- * The Number union represents a number which either is a 32-bit integer or
- * a 32-bit float.
+ * Enum describing the actual type in the Number enum.
  */
-union Number {
-	int32_t i;
-	float f;
-
-	Number() : i(0){};
-
-	Number(int32_t i) : i(i) {}
-
-	Number(double d) : f(d) {}
-
-	operator int32_t() const { return i; }
-	operator double() const { return f; }
-
-	bool operator==(const Number &o) const { return o.i == i; }
-
-	friend std::ostream &operator<<(std::ostream &os, const Number &n)
-	{
-		return os << "(" << n.i << "/" << n.f << ")";
-	}
+enum class NumberType : uint32_t {
+	INT8 = 0,
+	UINT8 = 1,
+	INT16 = 2,
+	UINT16 = 3,
+	INT32 = 4,
+	UINT32 = 5,
+	FLOAT32 = 6,
+	INT64 = 7,
+	FLOAT64 = 8
 };
 
 /**
- * Enum describing the actual type in the Number enum.
+ * Size of each number type in bytes.
  */
-enum class NumberType : uint32_t { INT = 0, FLOAT = 1 };
+static const int NUMBER_SIZE[] = {1, 1, 2, 2, 4, 4, 4, 8, 8};
 
 /**
  * Enum describing the type of a block.
  */
-enum class BlockType : uint32_t { MATRIX = 0x01, LOG = 0x02 };
+enum class BlockType : uint32_t { INVALID = 0x00, MATRIX = 0x01, LOG = 0x02 };
 
 /**
  * Class describing the columns of a matrix.
  */
 struct Header {
+private:
 	/**
 	 * Names of the individual matrix columns.
 	 */
-	std::vector<std::string> names;
+	std::vector<std::string> m_names;
 
 	/**
 	 * Type stored in the individual matrix columns.
 	 */
-	std::vector<NumberType> types;
+	std::vector<NumberType> m_types;
 
+	/**
+	 * Byte offsets for each column.
+	 */
+	std::vector<uint32_t> m_offs;
+
+public:
 	Header() {}
 
 	Header(const std::vector<std::string> &names,
 	       const std::vector<NumberType> &types)
-	    : names(names), types(types)
+	    : m_names(names), m_types(types), m_offs(m_types.size() + 1)
 	{
-		assert(names.size() == types.size());
+		assert(m_names.size() == m_types.size());
+		size_t offs = 0;
+		for (size_t i = 0; i < m_types.size(); i++) {
+			offs += NUMBER_SIZE[int(m_types[i])];
+			m_offs[i + 1] = offs;
+		}
 	}
 
-	size_t size() const { return names.size(); }
+	/**
+	 * Returns the name of the i-th column.
+	 */
+	const std::string &name(size_t i) const { return m_names[i]; }
+
+	/**
+	 * Returns the type of the i-th column.
+	 */
+	NumberType type(size_t i) const { return m_types[i]; }
+
+	/**
+	 * Returns the number of columns in the header.
+	 */
+	size_t size() const { return m_names.size(); }
+
+	/**
+	 * Returns the size of a row in bytes.
+	 */
+	size_t stride() const { return m_offs.back(); }
+
+	/**
+	 * Returns the offset of the i-th column
+	 */
+	size_t offs(size_t i) const { return m_offs[i]; }
+
+	/**
+	 * Returns the index of the column with the given name.
+	 */
+	size_t colidx(const std::string &name) const
+	{
+		return std::find(m_names.begin(), m_names.end(), name) -
+		       m_names.begin();
+	}
 };
 
 /**
  * Block of data as being written to/read from the serialiser.
  */
 struct Block {
-	BlockType type;
+
+	BlockType type = BlockType::INVALID;
 
 	std::string name;
 	Header header;
-	Matrix<Number> matrix;
+	Matrix<uint8_t> matrix;
 
 	double time;
 	LogSeverity severity;
@@ -113,9 +149,20 @@ struct Block {
 
 	Block() {}
 
-	Block(const std::string &name, const Header &header,
-	      const Matrix<Number> &matrix)
-	    : type(BlockType::MATRIX), name(name), header(header), matrix(matrix)
+	Block(const std::string &name, const Header &header, size_t rows)
+	    : type(BlockType::MATRIX),
+	      name(name),
+	      header(header),
+	      matrix(rows, header.stride())
+	{
+	}
+
+	Block(const std::string &name, const Header &header, const uint8_t *data,
+	      size_t rows)
+	    : type(BlockType::MATRIX),
+	      name(name),
+	      header(header),
+	      matrix(rows, header.stride(), data)
 	{
 	}
 
@@ -129,21 +176,101 @@ struct Block {
 	{
 	}
 
-	size_t colidx(const std::string &name) const
+	template <typename T>
+	void set(size_t row, size_t col, T v)
 	{
-		return std::find(header.names.begin(), header.names.end(), name) -
-		       header.names.begin();
+		const size_t stride = header.stride();
+		const size_t offs = header.offs(col);
+		switch (header.type(col)) {
+			case NumberType::INT8:
+				*((int8_t *)&matrix[row * stride + offs]) = v;
+				break;
+			case NumberType::UINT8:
+				*((uint8_t *)&matrix[row * stride + offs]) = v;
+				break;
+			case NumberType::INT16:
+				*((int16_t *)&matrix[row * stride + offs]) = v;
+				break;
+			case NumberType::UINT16:
+				*((uint16_t *)&matrix[row * stride + offs]) = v;
+				break;
+			case NumberType::INT32:
+				*((int32_t *)&matrix[row * stride + offs]) = v;
+				break;
+			case NumberType::UINT32:
+				*((uint32_t *)&matrix[row * stride + offs]) = v;
+				break;
+			case NumberType::FLOAT32:
+				*((float *)&matrix[row * stride + offs]) = v;
+				break;
+			case NumberType::INT64:
+				*((int64_t *)&matrix[row * stride + offs]) = v;
+				break;
+			case NumberType::FLOAT64:
+				*((double *)&matrix[row * stride + offs]) = v;
+				break;
+			default:
+				throw std::invalid_argument("Invalid number type");
+		}
 	}
 
-	size_t size() const { return header.size(); }
-};
+	template <typename T>
+	void get(size_t row, size_t col, T &v) const
+	{
+		const size_t stride = header.stride();
+		const size_t offs = header.offs(col);
+		switch (header.type(col)) {
+			case NumberType::INT8:
+				v = *((int8_t *)&matrix[row * stride + offs]);
+				break;
+			case NumberType::UINT8:
+				v = *((uint8_t *)&matrix[row * stride + offs]);
+				break;
+			case NumberType::INT16:
+				v = *((int16_t *)&matrix[row * stride + offs]);
+				break;
+			case NumberType::UINT16:
+				v = *((uint16_t *)&matrix[row * stride + offs]);
+				break;
+			case NumberType::INT32:
+				v = *((int32_t *)&matrix[row * stride + offs]);
+				break;
+			case NumberType::UINT32:
+				v = *((uint32_t *)&matrix[row * stride + offs]);
+				break;
+			case NumberType::FLOAT32:
+				v = *((float *)&matrix[row * stride + offs]);
+				break;
+			case NumberType::INT64:
+				v = *((int64_t *)&matrix[row * stride + offs]);
+				break;
+			case NumberType::FLOAT64:
+				v = *((double *)&matrix[row * stride + offs]);
+				break;
+			default:
+				throw std::invalid_argument("Invalid number type");
+		}
+	}
 
-/**
- * Callback function type being called whenever the "deserialise" function
- * finds and deserialises a data block.
- */
-using Callback = std::function<bool(const std::string &, const Header &,
-                                    const Matrix<Number> &)>;
+	int64_t get_int(size_t row, size_t col) const
+	{
+		int64_t v;
+		get(row, col, v);
+		return v;
+	}
+
+	Real get_float(size_t row, size_t col) const
+	{
+		Real v;
+		get(row, col, v);
+		return v;
+	}
+
+	size_t colidx(const std::string &name) const { return header.colidx(name); }
+
+	size_t rows() const { return matrix.rows(); }
+	size_t cols() const { return header.size(); }
+};
 
 /**
  * Serialises a named matrix along with its content and the given header to
@@ -154,22 +281,11 @@ using Callback = std::function<bool(const std::string &, const Header &,
  * @param header is the header describing each column of the matrix.
  * @param data is a pointer at a continuous data block containing the data that
  * should be serialised.
- * @param rows is the number of data rows.
+ * @param rows is the number of data rows. The size of a single row is
+ * determined from the header.
  */
 void serialise_matrix(std::ostream &os, const std::string &name,
-                      const Header &header, const Number data[], size_t rows);
-
-/**
- * Serialises a named matrix along with its content and the given header to
- * the given stream as a single data block.
- *
- * @param os is the output stream to which the matrix should be written.
- * @param name is the name of the block that should be written.
- * @param header is the header describing each column of the matrix.
- * @param matrix is the matrix that should be written to file.
- */
-void serialise_matrix(std::ostream &os, const std::string &name,
-                      const Header &header, const Matrix<Number> &matrix);
+                      const Header &header, const uint8_t *data, size_t rows);
 
 /**
  * Serialises a log message.

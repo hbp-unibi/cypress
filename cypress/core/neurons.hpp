@@ -46,14 +46,14 @@
  */
 #define NAMED_PARAMETER(NAME, IDX)            \
 	static constexpr size_t idx_##NAME = IDX; \
-	auto &NAME(float x)                       \
+	auto &NAME(Real x)                       \
 	{                                         \
 		for (auto &p : write_parameters()) {  \
 			p[IDX] = x;                       \
 		}                                     \
 		return *this;                         \
 	}                                         \
-	float NAME() const { return read_parameters()[IDX]; }
+	Real NAME() const { return read_parameters()[IDX]; }
 
 /**
  * Macro used for defining a named signal associated with a named signal.
@@ -129,7 +129,7 @@ public:
 	 * Constructor allowing to specify an arbitrary number of spike times from
 	 * a vector.
 	 */
-	SpikeSourceArrayParameters(const std::vector<float> &spike_times)
+	SpikeSourceArrayParameters(const std::vector<Real> &spike_times)
 	    : NeuronParametersBase(spike_times)
 	{
 	}
@@ -137,15 +137,15 @@ public:
 	/**
 	 * Constructor allowing to specify an arbitrary number of spike times.
 	 */
-	SpikeSourceArrayParameters(std::initializer_list<float> spike_times)
+	SpikeSourceArrayParameters(std::initializer_list<Real> spike_times)
 	    : NeuronParametersBase(spike_times)
 	{
 	}
 
-	const std::vector<float> &spike_times() const { return read_parameters(); }
+	const std::vector<Real> &spike_times() const { return read_parameters(); }
 
 	SpikeSourceArrayParameters &spike_times(
-	    const std::vector<float> &spike_times)
+	    const std::vector<Real> &spike_times)
 	{
 		for (auto &p : write_parameters()) {
 			p = spike_times;
@@ -354,8 +354,8 @@ public:
 	NAMED_PARAMETER(e_rev_I, 9);
 	NAMED_PARAMETER(i_offset, 10);
 
-	auto &g_leak(float x) { return tau_m(cm() / x); }
-	float g_leak() const { return cm() / tau_m(); }
+	auto &g_leak(Real x) { return tau_m(cm() / x); }
+	Real g_leak() const { return cm() / tau_m(); }
 };
 
 class IfCondExpSignals final
@@ -408,20 +408,20 @@ public:
 	NAMED_PARAMETER(v_reset, 4);
 	NAMED_PARAMETER(e_rev_I, 5);
 
-	float cm() const { return 0.2; }
-	float e_rev_E() const { return 0.0; }
-	float tau_syn_E() const
+	Real cm() const { return 0.2; }
+	Real e_rev_E() const { return 0.0; }
+	Real tau_syn_E() const
 	{
 		return 2.0;  // This is just a guess
 	}
-	float tau_syn_I() const
+	Real tau_syn_I() const
 	{
 		return 2.0;  // This is just a guess
 	}
-	float i_offset() const { return 0.0; }
+	Real i_offset() const { return 0.0; }
 
-	auto &tau_m(float x) { return g_leak(cm() / x); }
-	float tau_m() const { return cm() / g_leak(); }
+	auto &tau_m(Real x) { return g_leak(cm() / x); }
+	Real tau_m() const { return cm() / g_leak(); }
 };
 
 class IfFacetsHardware1Signals final
@@ -483,8 +483,8 @@ public:
 	NAMED_PARAMETER(b, 13);
 	NAMED_PARAMETER(delta_T, 14);
 
-	auto &g_leak(float x) { return tau_m(cm() / x); }
-	float g_leak() const { return cm() / tau_m(); }
+	auto &g_leak(Real x) { return tau_m(cm() / x); }
+	Real g_leak() const { return cm() / tau_m(); }
 };
 
 class EifCondExpIsfaIstaSignals final

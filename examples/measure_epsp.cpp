@@ -41,8 +41,8 @@ int main(int argc, const char *argv[])
 
 	// Sweep over the w and g_leak parameters and store all networks in the
 	// network pool
-	for (float w : linspace(0.001, 0.015, 7)) {
-		for (float g_leak : linspace(0.001, 0.02, 5)) {
+	for (Real w : linspace(0.001, 0.015, 7)) {
+		for (Real g_leak : linspace(0.001, 0.02, 5)) {
 			auto net =
 			    Network()
 			        .add_population<SpikeSourceArray>("source", 1, {50.0})

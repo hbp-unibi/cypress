@@ -95,7 +95,7 @@ private:
 	/**
 	 * This method just forwards the given data to the backend instance.
 	 */
-	void do_run(NetworkBase &network, float duration) const override;
+	void do_run(NetworkBase &network, Real duration) const override;
 
 public:
 	/**

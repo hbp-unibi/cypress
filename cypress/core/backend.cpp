@@ -21,14 +21,14 @@
 
 namespace cypress {
 
-static constexpr float AUTO_TIME_EXTENSION = 1000.0;
+static constexpr Real AUTO_TIME_EXTENSION = 1000.0;
 
 Backend::~Backend()
 {
 	// Do nothing here
 }
 
-void Backend::run(NetworkBase &network, float duration) const
+void Backend::run(NetworkBase &network, Real duration) const
 {
 	if (duration <= 0.0) {
 		duration =

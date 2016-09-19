@@ -31,10 +31,10 @@ namespace cypress {
 namespace {
 using namespace std::chrono;
 
-static void sleep(float delay)
+static void sleep(Real delay)
 {
 	if (delay > 0.0) {
-		std::chrono::duration<float> p =
+		std::chrono::duration<Real> p =
 		    std::chrono::milliseconds(size_t(1000.0 * delay));
 		std::this_thread::sleep_for(p);
 	}
@@ -46,7 +46,7 @@ static void sleep(float delay)
  */
 class PowerOffManager {
 private:
-	static constexpr float TIMEOUT =
+	static constexpr Real TIMEOUT =
 	    10.0;  // Switch off after ten seconds of inactivity
 
 	using Time = steady_clock::time_point;
@@ -170,10 +170,10 @@ PowerManagementBackend::~PowerManagementBackend()
 	// Do nothing here
 }
 
-void PowerManagementBackend::do_run(NetworkBase &network, float duration) const
+void PowerManagementBackend::do_run(NetworkBase &network, Real duration) const
 {
 	static PowerOffManager power_off_manager;
-	const float delay = 4.0;
+	const Real delay = 4.0;
 	std::string dev_name = m_backend->name();  // Get the device name
 
 	// Do not switch off the given device

@@ -28,25 +28,27 @@
 namespace cypress {
 namespace binnf {
 
-static Block generate_test_block()
+static Block generate_test_matrix_block()
 {
 	std::string name = "test_matrix";
-	Header header = {{"col1", "col2", "col3"},
-	                 {NumberType::INT, NumberType::FLOAT, NumberType::INT}};
-	Matrix<Number> matrix(100, 3);
-	for (size_t i = 0; i < matrix.rows(); i++) {
-		for (size_t j = 0; j < matrix.cols(); j++) {
-			switch (header.types[j]) {
-				case NumberType::INT:
-					matrix(i, j).i = i * (j + 1);
-					break;
-				case NumberType::FLOAT:
-					matrix(i, j).f = i * (j + 1);
-					break;
-			}
+	Header header = {
+	    {"col0", "col1", "col2", "col3", "col4", "col5", "col6", "col7",
+	     "col8"},
+	    {NumberType::INT8, NumberType::UINT8, NumberType::INT16,
+	     NumberType::UINT16, NumberType::INT32, NumberType::UINT32,
+	     NumberType::FLOAT32, NumberType::INT64, NumberType::FLOAT64}};
+	Block block("test_matrix", header, 100);
+	for (size_t i = 0; i < block.rows(); i++) {
+		for (size_t j = 0; j < block.cols(); j++) {
+			block.set(i, j, i * (j + 1));
 		}
 	}
-	return Block(name, header, matrix);
+	return block;
+}
+
+static Block generate_test_log_block()
+{
+	return Block(1234.2, LogSeverity::WARNING, "test", "test message");
 }
 
 static void check_equal(const Block &b1, const Block &b2)
@@ -55,23 +57,26 @@ static void check_equal(const Block &b1, const Block &b2)
 	EXPECT_EQ(b1.matrix, b2.matrix);
 	EXPECT_EQ(b1.header.size(), b2.header.size());
 	for (size_t i = 0; i < b2.header.size(); i++) {
-		EXPECT_EQ(b1.header.names[i], b2.header.names[i]);
-		EXPECT_EQ(b1.header.types[i], b2.header.types[i]);
+		EXPECT_EQ(b1.header.name(i), b2.header.name(i));
+		EXPECT_EQ(b1.header.type(i), b2.header.type(i));
 	}
+}
+
+static void check_serialise_deserialise(const Block &block)
+{
+	std::stringstream ss;
+
+	// Write the test data to the memory stream
+	serialise(ss, block);
+
+	// Read it back, make sure input and output data are equal
+	check_equal(block, deserialise(ss));
 }
 
 TEST(binnf, read_write)
 {
-	std::stringstream ss;
-
-	// Generate a test data block
-	const Block block_in = generate_test_block();
-
-	// Write the test data to the memory stream
-	serialise(ss, block_in);
-
-	// Read it back, make sure input and output data are equal
-	check_equal(block_in, deserialise(ss));
+	check_serialise_deserialise(generate_test_matrix_block());
+	check_serialise_deserialise(generate_test_log_block());
 }
 
 TEST(binnf, python_communication)
@@ -80,20 +85,32 @@ TEST(binnf, python_communication)
 	Process proc("python", {Resources::PYNN_BINNF_LOOPBACK.open()});
 
 	// Generate a test data block
-	const Block block_in_1 = generate_test_block();
-	const Block block_in_2(1234.2, LogSeverity::WARNING, "test", "test message");
+	const Block block_in_1 = generate_test_matrix_block();
+	const Block block_in_2 = generate_test_log_block();
 
 	// Send the data block to python
 	serialise(proc.child_stdin(), block_in_1);
 	serialise(proc.child_stdin(), block_in_2);
+	serialise(proc.child_stdin(), block_in_2);
+	serialise(proc.child_stdin(), block_in_1);
+	serialise(proc.child_stdin(), block_in_2);
+	serialise(proc.child_stdin(), block_in_2);
+	serialise(proc.child_stdin(), block_in_1);
+	serialise(proc.child_stdin(), block_in_1);
 	proc.close_child_stdin();
 
 	// Read it back, expect the deserialisation to be successful
 	try {
 		check_equal(block_in_1, deserialise(proc.child_stdout()));
 		check_equal(block_in_2, deserialise(proc.child_stdout()));
+		check_equal(block_in_2, deserialise(proc.child_stdout()));
+		check_equal(block_in_1, deserialise(proc.child_stdout()));
+		check_equal(block_in_2, deserialise(proc.child_stdout()));
+		check_equal(block_in_2, deserialise(proc.child_stdout()));
+		check_equal(block_in_1, deserialise(proc.child_stdout()));
+		check_equal(block_in_1, deserialise(proc.child_stdout()));
 	}
-	catch (BinnfDecodeException) {
+	catch (BinnfDecodeException &e) {
 		// Most likely there is an error message
 		char buf[4096];
 		while (proc.child_stderr().good()) {

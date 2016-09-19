@@ -49,7 +49,7 @@ class NEST : public Backend {
 private:
 	sli::Params m_params;
 
-	void do_run(NetworkBase &network, float duration) const override;
+	void do_run(NetworkBase &network, Real duration) const override;
 
 public:
 	/**

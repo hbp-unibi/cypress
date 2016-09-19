@@ -29,6 +29,7 @@
 
 #include <vector>
 
+#include <cypress/core/types.hpp>
 #include <cypress/nef/delta_sigma.hpp>
 
 namespace cypress {
@@ -43,10 +44,10 @@ private:
 
 	DeltaSigma::DiscreteWindow m_wnd;
 
-	float m_t_wnd;
+	Real m_t_wnd;
 
-	std::vector<float> m_test_values;
-	std::vector<float> m_test_spike_train;
+	std::vector<Real> m_test_values;
+	std::vector<Real> m_test_spike_train;
 
 public:
 	static constexpr size_t DEFAULT_N_SAMPLES = 100;
@@ -55,19 +56,19 @@ public:
 	TuningCurveEvaluator(
 	    size_t n_samples = DEFAULT_N_SAMPLES,
 	    size_t n_repeat = DEFAULT_N_REPEAT,
-	    float min_spike_interval = DeltaSigma::DEFAULT_MIN_SPIKE_INTERVAL,
-	    float response_time = DeltaSigma::DEFAULT_RESPONSE_TIME,
-	    float step = DeltaSigma::DEFAULT_STEP);
+	    Real min_spike_interval = DeltaSigma::DEFAULT_MIN_SPIKE_INTERVAL,
+	    Real response_time = DeltaSigma::DEFAULT_RESPONSE_TIME,
+	    Real step = DeltaSigma::DEFAULT_STEP);
 
-	const std::vector<float> &input_spike_train() const
+	const std::vector<Real> &input_spike_train() const
 	{
 		return m_test_spike_train;
 	}
 
-	std::vector<std::pair<float, float>> evaluate_output_spike_train(
-	    std::vector<float> output_spikes);
+	std::vector<std::pair<Real, Real>> evaluate_output_spike_train(
+	    std::vector<Real> output_spikes);
 
-	float input_spike_train_len() const
+	Real input_spike_train_len() const
 	{
 		return m_t_wnd * m_test_values.size() * 1e3;
 	}

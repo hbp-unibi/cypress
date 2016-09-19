@@ -35,13 +35,13 @@ int main(int argc, const char *argv[])
 	using Signals = Neuron::Signals;
 
 	// General parameters for the experiment
-	const size_t n_samples = 100;          // Sample points on the tuning curve
-	const size_t n_repeat = 100;           // Repetitions for each sample
-	const size_t n_population = 32;        // Number of neurons
-	const float min_spike_interval = 5.0;  // ms
-	const float exc_synaptic_weight = 0.004;       // uS
-	const float exc_bias_synaptic_weight = 0.015;  // uS
-	const float inh_synaptic_weight = -0.015;      // uS
+	const size_t n_samples = 100;         // Sample points on the tuning curve
+	const size_t n_repeat = 100;          // Repetitions for each sample
+	const size_t n_population = 32;       // Number of neurons
+	const Real min_spike_interval = 5.0;  // ms
+	const Real exc_synaptic_weight = 0.004;       // uS
+	const Real exc_bias_synaptic_weight = 0.015;  // uS
+	const Real inh_synaptic_weight = -0.015;      // uS
 
 	// Neuron parameters
 	Parameters params = Parameters()
@@ -64,8 +64,8 @@ int main(int argc, const char *argv[])
 	Population<SpikeSourceArray> pop_src(net, 8, evaluator.input_spike_train());
 
 	// Bias source population
-	const float len = evaluator.input_spike_train_len();
-	std::vector<float> bias_spikes =
+	const Real len = evaluator.input_spike_train_len();
+	std::vector<Real> bias_spikes =
 	    spikes::constant_interval(0.0, len, min_spike_interval);
 	Population<SpikeSourceArray> pop_src_bias(net, 1, bias_spikes);
 
@@ -95,10 +95,10 @@ int main(int argc, const char *argv[])
 
 	// Evaluate the neurons, create a result matrix containing the tuning curve
 	// of each neuron in the population as column
-	Matrix<float> result(n_samples, n_population + 1);
+	Matrix<Real> result(n_samples, n_population + 1);
 	for (auto neuron : pop_tar) {
 		// Calculate the tuning curve for this neuron in the population
-		std::vector<std::pair<float, float>> res =
+		std::vector<std::pair<Real, Real>> res =
 		    evaluator.evaluate_output_spike_train(
 		        neuron.signals().get_spikes());
 

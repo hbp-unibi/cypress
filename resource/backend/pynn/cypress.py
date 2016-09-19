@@ -471,8 +471,8 @@ class Cypress:
 
         # Make sure the resulting lists are sorted by time
         for i in xrange(n):
-            res[i] = np.array(res[i], dtype=np.float32)
             res[i].sort()
+            res[i] = np.array(zip(res[i]), dtype=[("times", np.float64)])
         return res
 
     @staticmethod
@@ -482,7 +482,8 @@ class Cypress:
         of arrays containing the spike times for each neuron individually.
         """
         return [np.array(
-            spikes[i], dtype=np.float32) for i in xrange(len(spikes))]
+            zip(spikes[i]), dtype=[("times", np.float64)])
+                for i in xrange(len(spikes))]
 
     @staticmethod
     def _convert_pyNN7_signal(data, idx, n):
@@ -494,9 +495,14 @@ class Cypress:
         # Create a list containing all timepoints and a mapping from time to
         # index
         return [np.array(
-            map(lambda row: [row[1], row[idx]], filter(lambda row: row[0] == i,
+            map(lambda row: (row[1], row[idx]), filter(lambda row: row[0] == i,
                                                        data)),
-            dtype=np.float32) for i in xrange(n)]
+            dtype=[("times", np.float64), ("values", np.float64)]) for i in xrange(n)]
+
+    @staticmethod
+    def _convert_pyNN8_signal(times, values, size):
+        return [np.array(zip(times, values[:, i]),
+            dtype=[("times", np.float64), ("values", np.float64)]) for i in xrange(size)]
 
     def _fetch_spikey_voltage(self, population):
         """
@@ -504,7 +510,9 @@ class Cypress:
         """
         vs = self.sim.membraneOutput
         ts = self.sim.timeMembraneOutput
-        return [np.array(np.vstack((ts, vs)).transpose(), dtype=np.float32)]
+        return [np.array(
+            zip(ts, vs), dtype=[("times", np.float64), ("values", np.float64)])
+                ]
 
     def _fetch_spikes(self, population):
         """
@@ -559,10 +567,8 @@ class Cypress:
         elif (self.version == 8):
             for data in population.get_data().segments[0].analogsignalarrays:
                 if (data.name == signal):
-                    return [np.array(
-                        np.vstack(
-                            (data.times, data.transpose()[i])).transpose(),
-                        dtype=np.float32) for i in xrange(population.size)]
+                    return self._convert_pyNN8_signal(data.times,
+                        data, population.size)
         return []
 
     @staticmethod

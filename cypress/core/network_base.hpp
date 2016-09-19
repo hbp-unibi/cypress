@@ -76,24 +76,24 @@ struct NetworkRuntime {
 	/**
 	 * Total runtime -- sum of the three other times.
 	 */
-	float total;
+	Real total;
 
 	/**
 	 * Raw simulation time. This may include setup and finalization time
 	 * required by the hardware timer.
 	 */
-	float sim;
+	Real sim;
 
 	/**
 	 * Initialization time. Time required to construct the network.
 	 */
-	float initialize;
+	Real initialize;
 
 	/**
 	 * Finalization time. Time required to retrieve the results from the
 	 * driver.
 	 */
-	float finalize;
+	Real finalize;
 };
 
 /**
@@ -386,7 +386,7 @@ public:
 	 * @param duration is the simulation-time. If a value smaller or equal to
 	 * zero is given, the simulation time is automatically chosen.
 	 */
-	void run(const Backend &backend, float duration = 0.0);
+	void run(const Backend &backend, Real duration = 0.0);
 
 	/**
 	 * Executes the network on the given backend and stores the results in the
@@ -403,7 +403,7 @@ public:
 	 * @param duration is the simulation-time. If a value smaller or equal to
 	 * zero is given, the simulation time is automatically chosen.
 	 */
-	void run(const std::string &backend_id, float duration = 0.0, int argc = 0,
+	void run(const std::string &backend_id, Real duration = 0.0, int argc = 0,
 	         const char *argv[] = nullptr);
 
 	/**
@@ -412,7 +412,7 @@ public:
 	 *
 	 * @return the duration of the network in milliseconds.
 	 */
-	float duration() const;
+	Real duration() const;
 
 	/**
 	 * Returns information about the network runtime. Behaviour is undefined if

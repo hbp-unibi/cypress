@@ -32,6 +32,8 @@
 #include <cstddef>
 #include <vector>
 
+#include <cypress/core/types.hpp>
+
 namespace cypress {
 namespace nef {
 
@@ -41,10 +43,10 @@ namespace nef {
  */
 class DeltaSigma {
 public:
-	static constexpr float DEFAULT_RESPONSE_TIME = 50e-3;
-	static constexpr float DEFAULT_STEP = 1e-4;
-	static constexpr float DEFAULT_EPS = 1e-6;
-	static constexpr float DEFAULT_MIN_SPIKE_INTERVAL = 1e-3;
+	static constexpr Real DEFAULT_RESPONSE_TIME = 50e-3;
+	static constexpr Real DEFAULT_STEP = 1e-4;
+	static constexpr Real DEFAULT_EPS = 1e-6;
+	static constexpr Real DEFAULT_MIN_SPIKE_INTERVAL = 1e-3;
 
 	/**
 	 * Function representing a Gaussian window normalised to a range from zero
@@ -61,14 +63,14 @@ public:
 		 * @param x is the position at which the window function should be
 		 * evaluated.
 		 */
-		static constexpr float value(float x) { return std::exp(-x * x); }
+		static constexpr Real value(Real x) { return std::exp(-x * x); }
 
 		/**
 		 * Returns the value of x for which until the value of the window
 		 * function reaches "epsilon". Multiply the result with the standard
 		 * deviation to get values for standard-deviations other than one.
 		 */
-		static constexpr float limit(float eps = 1e-6f)
+		static constexpr Real limit(Real eps = 1e-6f)
 		{
 			return std::sqrt(-std::log(eps));
 		}
@@ -86,7 +88,7 @@ public:
 		 * @param x is the position at which the window function should be
 		 * evaluated.
 		 */
-		static constexpr float value(float x)
+		static constexpr Real value(Real x)
 		{
 			return x < 0.0f ? 0.0f : std::exp(-x);
 		}
@@ -96,10 +98,7 @@ public:
 		 * function reaches "epsilon". Multiply the result with the standard
 		 * deviation to get values for standard-deviations other than one.
 		 */
-		static constexpr float limit(float eps = 1e-6f)
-		{
-			return -std::log(eps);
-		}
+		static constexpr Real limit(Real eps = 1e-6f) { return -std::log(eps); }
 	};
 
 	/**
@@ -107,15 +106,15 @@ public:
 	 */
 	class DiscreteWindow {
 	private:
-		float m_alpha;
-		float m_sigma;
-		float m_step;
-		float m_integral;
-		float m_integral_to_zero;
-		std::vector<float> m_values;
+		Real m_alpha;
+		Real m_sigma;
+		Real m_step;
+		Real m_integral;
+		Real m_integral_to_zero;
+		std::vector<Real> m_values;
 
-		DiscreteWindow(float alpha, float sigma, float step, float integral,
-		               float integral_to_zero, std::vector<float> &&values)
+		DiscreteWindow(Real alpha, Real sigma, Real step, Real integral,
+		               Real integral_to_zero, std::vector<Real> &&values)
 		    : m_alpha(alpha),
 		      m_sigma(sigma),
 		      m_step(step),
@@ -126,19 +125,19 @@ public:
 		}
 
 		template <typename Window>
-		static std::pair<float, float> calculate_alpha_and_response_time(
-		    float spike_interval, float sigma, float step, float eps,
-		    float p = 0.05f);
+		static std::pair<Real, Real> calculate_alpha_and_response_time(
+		    Real spike_interval, Real sigma, Real step, Real eps,
+		    Real p = 0.05f);
 
 		/**
 		 * Selects the parameters alpha and sigma depending on the given window
 		 * function, the minimum spike interval and the desired response time.
 		 */
 		template <typename Window>
-		static std::pair<float, float> choose_params(
-		    float min_spike_interval = DEFAULT_MIN_SPIKE_INTERVAL,
-		    float response_time = DEFAULT_RESPONSE_TIME,
-		    float step = DEFAULT_STEP, float eps = DEFAULT_EPS);
+		static std::pair<Real, Real> choose_params(
+		    Real min_spike_interval = DEFAULT_MIN_SPIKE_INTERVAL,
+		    Real response_time = DEFAULT_RESPONSE_TIME,
+		    Real step = DEFAULT_STEP, Real eps = DEFAULT_EPS);
 
 	public:
 		/**
@@ -153,9 +152,9 @@ public:
 		 * sampled.
 		 */
 		template <typename Window>
-		static DiscreteWindow create_manual(float alpha, float sigma,
-		                                    float step = DEFAULT_STEP,
-		                                    float eps = DEFAULT_EPS);
+		static DiscreteWindow create_manual(Real alpha, Real sigma,
+		                                    Real step = DEFAULT_STEP,
+		                                    Real eps = DEFAULT_EPS);
 
 		/**
 		 * Creates a DiscreteWindow with automatically chosen parameters
@@ -173,24 +172,24 @@ public:
 		 */
 		template <typename Window>
 		static DiscreteWindow create(
-		    float min_spike_interval = DEFAULT_MIN_SPIKE_INTERVAL,
-		    float response_time = DEFAULT_RESPONSE_TIME,
-		    float step = DEFAULT_STEP, float eps = DEFAULT_EPS);
+		    Real min_spike_interval = DEFAULT_MIN_SPIKE_INTERVAL,
+		    Real response_time = DEFAULT_RESPONSE_TIME,
+		    Real step = DEFAULT_STEP, Real eps = DEFAULT_EPS);
 
 		/**
 		 * Returns the used scaling factor.
 		 */
-		float alpha() const { return m_alpha; }
+		Real alpha() const { return m_alpha; }
 
 		/**
 		 * Returns the used standard deviation/width of the window.
 		 */
-		float sigma() const { return m_sigma; }
+		Real sigma() const { return m_sigma; }
 
 		/**
 		 * Returns the sample interval.
 		 */
-		float step() const { return m_step; }
+		Real step() const { return m_step; }
 
 		/**
 		 * Returns the integral of the window function from minus infinity to
@@ -199,20 +198,20 @@ public:
 		 * values
 		 * for standard-deviations other than one.
 		 */
-		float integral() const { return m_integral; }
+		Real integral() const { return m_integral; }
 
 		/**
 		 * Returns the integral of the window function from minus infinity to
 		 * zero.
 		 */
-		float integral_to_zero() const { return m_integral_to_zero; }
+		Real integral_to_zero() const { return m_integral_to_zero; }
 
 		/**
 		 * Returns the number of samples until the value of the window function
 		 * reaches "epsilon". Multiply the result with the standard deviation to
 		 * get values for standard-deviations other than one.
 		 */
-		float limit(float eps = DEFAULT_EPS) const
+		Real limit(Real eps = DEFAULT_EPS) const
 		{
 			return std::sqrt(-std::log(eps));
 		}
@@ -225,7 +224,7 @@ public:
 		/**
 		 * Returns the value of the i-th sample.
 		 */
-		float operator[](size_t i) const { return m_values[i]; }
+		Real operator[](size_t i) const { return m_values[i]; }
 
 		/**
 		 * Returns a constant iterator allowing to access the first sample.
@@ -255,10 +254,10 @@ public:
 	 * @param min_val is the minimum value occuring in the list of values.
 	 * @param max_val is the maximum value occuring in the list of values.
 	 */
-	static std::vector<float> encode(
-	    const std::vector<float> &values, const DiscreteWindow &window,
-	    float t0, float min_val = -1.0, float max_val = 1.0,
-	    float min_spike_interval = DEFAULT_MIN_SPIKE_INTERVAL);
+	static std::vector<Real> encode(
+	    const std::vector<Real> &values, const DiscreteWindow &window, Real t0,
+	    Real min_val = -1.0, Real max_val = 1.0,
+	    Real min_spike_interval = DEFAULT_MIN_SPIKE_INTERVAL);
 
 	/**
 	 * Encodes a time-series of continuous-valued function as a time-series of
@@ -277,13 +276,13 @@ public:
 	 * @param max_val is the maximum value occuring in the list of values.
 	 */
 	template <typename Fun>
-	static std::vector<float> encode(
-	    const Fun &f, const DiscreteWindow &window, float t0, float t1,
-	    float min_val = -1.0, float max_val = 1.0,
-	    float min_spike_interval = DEFAULT_MIN_SPIKE_INTERVAL)
+	static std::vector<Real> encode(
+	    const Fun &f, const DiscreteWindow &window, Real t0, Real t1,
+	    Real min_val = -1.0, Real max_val = 1.0,
+	    Real min_spike_interval = DEFAULT_MIN_SPIKE_INTERVAL)
 	{
 		const size_t n_samples = std::ceil(t1 - t0) / window.step();
-		std::vector<float> values(n_samples);
+		std::vector<Real> values(n_samples);
 		for (size_t i = 0; i < n_samples; i++) {
 			values[i] = f(t0 + i * window.step());
 		}
@@ -303,10 +302,10 @@ public:
 	 * @param t1 is the time the last timestamp in the result vector should
 	 * correspond to.
 	 */
-	static std::vector<float> decode(const std::vector<float> &spikes,
-	                                 const DiscreteWindow &window, float t0,
-	                                 float t1, float min_val = -1.0,
-	                                 float max_val = 1.0);
+	static std::vector<Real> decode(const std::vector<Real> &spikes,
+	                                const DiscreteWindow &window, Real t0,
+	                                Real t1, Real min_val = -1.0,
+	                                Real max_val = 1.0);
 };
 }
 }

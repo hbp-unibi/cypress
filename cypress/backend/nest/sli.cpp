@@ -42,9 +42,9 @@ namespace {
  * @return the duration in seconds.
  */
 template <typename T>
-float to_seconds(const T &t1, const T &t2)
+Real to_seconds(const T &t1, const T &t2)
 {
-	return std::chrono::duration<float>(t2 - t1).count();
+	return std::chrono::duration<Real>(t2 - t1).count();
 }
 
 /**
@@ -76,11 +76,11 @@ std::string trim(const std::string &s)
 /**
  * Allows to serialise a vector of floats as SLI array.
  */
-std::ostream &operator<<(std::ostream &os, const std::vector<float> &ls)
+std::ostream &operator<<(std::ostream &os, const std::vector<Real> &ls)
 {
 	bool first = true;
 	os << "[";
-	for (float f : ls) {
+	for (Real f : ls) {
 		if (!first) {
 			os << " ";
 		}
@@ -397,11 +397,11 @@ void write_readback_cmds(std::ostream &os,
 	}
 }
 
-std::shared_ptr<Matrix<float>> fetch_data_matrix(PopulationBase pop,
+std::shared_ptr<Matrix<Real>> fetch_data_matrix(PopulationBase pop,
                                                  NeuronIndex nid, size_t len,
                                                  int modality)
 {
-	auto res = std::make_shared<Matrix<float>>(
+	auto res = std::make_shared<Matrix<Real>>(
 	    len, modality == MODALITY_SPIKES ? 1 : 2);
 	if (&pop.type() == &SpikeSourceArray::inst() &&
 	    modality != MODALITY_SPIKES) {
@@ -412,7 +412,7 @@ std::shared_ptr<Matrix<float>> fetch_data_matrix(PopulationBase pop,
 }
 }
 
-void write_network(std::ostream &os, const NetworkBase &net, float duration,
+void write_network(std::ostream &os, const NetworkBase &net, Real duration,
                    const Params &params)
 {
 	std::map<size_t, size_t> pop_gid_map;
@@ -467,7 +467,7 @@ void read_response(std::istream &is, NetworkBase &net)
 	NeuronIndex nid = 0;
 	int modality = 0;
 	size_t len = 0;
-	std::shared_ptr<Matrix<float>> data;
+	std::shared_ptr<Matrix<Real>> data;
 	size_t data_idx = 0;
 
 	// State variables used to capture NEST log messages
