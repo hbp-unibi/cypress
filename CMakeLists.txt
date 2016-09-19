@@ -137,6 +137,10 @@ install(
 	FILES_MATCHING PATTERN "*.hpp"
 )
 install(
+	FILES ${CMAKE_BINARY_DIR}/cypress/config.h
+	DESTINATION include
+)
+install(
 	DIRECTORY ${CMAKE_BINARY_DIR}/include/cypress
 	DESTINATION include
 	FILES_MATCHING PATTERN "*.hpp"
