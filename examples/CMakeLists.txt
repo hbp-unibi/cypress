@@ -30,6 +30,9 @@ target_link_libraries(inhibitory_synapses cypress)
 add_executable(measure_epsp measure_epsp)
 target_link_libraries(measure_epsp cypress)
 
+add_executable(record_membrane_potential record_membrane_potential)
+target_link_libraries(record_membrane_potential cypress)
+
 add_executable(synfire synfire)
 target_link_libraries(synfire cypress)
 
