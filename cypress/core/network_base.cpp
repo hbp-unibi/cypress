@@ -87,7 +87,10 @@ public:
 	 * Default constructor of the NetworkData class.
 	 */
 	NetworkData()
-	    : m_runtime({}), m_connections_sorted(true), logger(&global_logger()){};
+	    : m_runtime({}),
+	      m_connections_sorted(true),
+	      logger(&global_logger()),
+	      use_lossy_trafos(true){};
 
 	/**
 	 * Creates an independent NetworkData instance.
