@@ -160,7 +160,7 @@ public:
 	 * @param data is a pointer at a pre-existing data region from which the
 	 * data will be copied.
 	 */
-	Matrix(size_t rows, size_t cols, T* data)
+	Matrix(size_t rows, size_t cols, const T* data)
 	    : m_buf(new T[rows * cols]), m_rows(rows), m_cols(cols)
 	{
 		std::copy(data, data + (rows * cols), begin());
