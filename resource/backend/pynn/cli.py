@@ -51,7 +51,7 @@ class BinnfHandler(logging.Handler):
             time.time(),
             severity,
             record.name,
-            record.msg)
+            str(record.msg))
 
 # Log all log messages via Binnf
 root_logger = logging.getLogger("")
