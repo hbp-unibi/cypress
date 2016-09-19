@@ -97,9 +97,12 @@ bool synchronise(std::istream &is, uint32_t marker)
 {
 	uint32_t sync = 0;
 	uint8_t c = 0;
-	while (is.good() && sync != marker) {
+	while (sync != marker) {
 		is.read((char *)&c, 1);
-		sync = (sync >> 8) | (c << 24);  // Requires a little endian machine
+		if (is.gcount() == 0) {
+			return false;
+		}
+		sync = (sync >> 8) | (c << 24);
 	}
 	return sync == marker;
 }
