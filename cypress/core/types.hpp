@@ -23,7 +23,7 @@
 
 #include <cstdint>
 
-#include <config.h>
+#include <cypress/config.h>
 
 namespace cypress {
 
