@@ -138,7 +138,7 @@ install(
 )
 install(
 	FILES ${CMAKE_BINARY_DIR}/cypress/config.h
-	DESTINATION include
+	DESTINATION include/cypress
 )
 install(
 	DIRECTORY ${CMAKE_BINARY_DIR}/include/cypress
