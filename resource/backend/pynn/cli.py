@@ -174,7 +174,7 @@ sp_run.add_argument(
     type=str,
     help="JSON-encoded setup. Values starting with '$' are evaluated using the "
     + "exec() command with access to the simulator instance (named 'sim').",
-    default={})
+    default="{}")
 sp_run.add_argument(
     "--duration",
     type=float,
