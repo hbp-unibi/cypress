@@ -105,6 +105,14 @@ TEST(process, signal)
 	EXPECT_EQ(-9, proc.exitcode());
 }
 
+TEST(process, signal2)
+{
+	using namespace std::chrono_literals;
+
+	Process proc("python", {"-c", "import os; os.kill(os.getpid(), 11)"});
+	EXPECT_EQ(-11, proc.wait());
+}
+
 TEST(process, parallel)
 {
 	// This test must not deadlock
