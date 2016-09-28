@@ -165,8 +165,11 @@ class Cypress:
                 pylogging.get(domain), pylogging.LogLevel.INFO)
 
         # Copy and delete non-standard setup parameters
-        neuron_size = setup["neuron_size"] if "neuron_size" in setup else 1
-        del setup["neuron_size"]
+        if "neuron_size" in setup:
+            neuron_size = setup["neuron_size"]
+            del setup["neuron_size"]
+        else:
+            neuron_size = 2
 
         marocco = PyMarocco()
         marocco.neuron_placement.default_neuron_size(neuron_size)
