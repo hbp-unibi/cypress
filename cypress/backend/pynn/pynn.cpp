@@ -392,7 +392,7 @@ void PyNN::do_run(NetworkBase &source, Real duration) const
 
 			// Explicitly state if the process was killed by a signal
 			if (res < 0) {
-				source.logger().warn(
+				source.logger().error(
 				    "cypress", "Simulator child process killed by signal " +
 				                   std::to_string(-res));
 			}
