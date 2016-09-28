@@ -26,16 +26,17 @@ except:
     pass
 
 import logging
-
+import sys
 
 class BinnfHandler(logging.Handler):
     """
     Handler which logs messages to stdout via Binnf
     """
 
+    out_fd = sys.stdout
+
     def emit(self, record):
         import time
-        import sys
         if record.levelno >= logging.CRITICAL:
             severity = SEV_FATAL
         elif record.levelno >= logging.ERROR:
@@ -47,15 +48,16 @@ class BinnfHandler(logging.Handler):
         else:
             severity = SEV_DEBUG
         serialise_log(
-            sys.stdout,
+            self.out_fd,
             time.time(),
             severity,
             record.name,
             str(record.msg))
 
 # Log all log messages via Binnf
+handler = BinnfHandler()
 root_logger = logging.getLogger("")
-root_logger.addHandler(BinnfHandler())
+root_logger.addHandler(handler)
 root_logger.setLevel(logging.DEBUG)
 
 pynn_logger = logging.getLogger("PyNN")
@@ -66,9 +68,16 @@ logger = logging.getLogger("cypress")
 logger.setLevel(logging.DEBUG)
 
 def do_run(args):
-    import sys
     import json
 
+    # Fetch the input/output file
+    in_filename = getattr(args, "in")
+    in_fd = sys.stdin if in_filename == '-' else open(in_filename, "rb")
+    out_filename = getattr(args, "out")
+    out_fd = sys.stdout if out_filename == '-' else open(out_filename, "rb")
+
+    # Set the logger handler output file and issue a first log message
+    handler.out_fd = out_fd
     logger.info(
         "Running simulation with the following parameters: simulator=" +
         args.simulator +
@@ -78,12 +87,6 @@ def do_run(args):
         args.setup +
         " duration=" +
         str(args.duration))
-
-    # Fetch the input/output file
-    in_filename = getattr(args, "in")
-    in_fd = sys.stdin if in_filename == '-' else open(in_filename, "rb")
-    out_filename = getattr(args, "out")
-    out_fd = sys.stdout if out_filename == '-' else open(out_filename, "rb")
 
     # Read the input data
     network = read_network(in_fd)
