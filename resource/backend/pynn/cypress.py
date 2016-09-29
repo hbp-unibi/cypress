@@ -170,25 +170,39 @@ class Cypress:
             del setup["neuron_size"]
         else:
             neuron_size = 2
-
         marocco = PyMarocco()
         marocco.neuron_placement.default_neuron_size(neuron_size)
         marocco.neuron_placement.restrict_rightmost_neuron_blocks(True)
         marocco.neuron_placement.minimize_number_of_sending_repeaters(False)
+        # Temporal (?) fix for the usage of a special HICANN chip
+        hicann = None
         if simulator == "ess":
             marocco.backend = PyMarocco.ESS
             marocco.calib_backend = PyMarocco.Default
         else:
             marocco.backend = PyMarocco.Hardware
             marocco.calib_backend = PyMarocco.XML
-            marocco.calib_path = "/wang/data/calibration/wafer_0"
+            
+            # Temporal
+            from pyhalbe.Coordinate import Wafer, HICANNOnWafer, Enum
+            #marocco.calib_path = "/wang/data/calibration/wafer_0"
+            marocco.calib_path = "/wang/data/calibration/review_2016"
+            marocco.persist = "results.bin"
+            marocco.hicann_configurator = PyMarocco.HICANNv4Configurator
+            marocco.default_wafer = Wafer(33)
+            hicann = HICANNOnWafer(Enum(367)) # choose hicann
+            marocco.analog_enum = 0
+            marocco.hicann_enum = hicann.id().value()
+            marocco.wafer_cfg = "wafer.bin"   # configuration
+            marocco.roqt = "example.roqt"     # visualization
+            
 
         # Pass the marocco object and the actual setup to the simulation setup
         # method
         sim.setup(marocco=marocco, **setup)
 
         # Return used neuron size
-        return {"neuron_size": neuron_size}
+        return {"neuron_size": neuron_size, "marocco": marocco, "hicann": hicann}
 
     def _setup_simulator(self, setup, sim, simulator, version):
         """
@@ -244,6 +258,11 @@ class Cypress:
         if is_source and self.simulator == "nmmc1":
             params = {"spike_times": []}  # sPyNNaker issue #190
         res = self.sim.Population(count, type_, params)
+        
+        # Temporal (?) fix for the usage of a special HICANN chip
+        if self.simulator == "nmpm1" and not (self.backend_data["hicann"] is None):
+            self.backend_data["marocco"].manual_placement.on_hicann(res, self.backend_data["hicann"]);
+        
 
         # Increment the neuron counter needed to work around absolute neuron ids
         # in PyNN 0.6, store the neuron index in the created population
