@@ -36,9 +36,9 @@ class NeuronType;
 
 /**
  * Used internally to specify a range between two iterators which itself
- * can be used in a range-based for loop.
+ * can be used in a range-based for-loop.
  *
- * @tparam iterator is the iterator type that is being used.
+ * @tparam Iterator is the iterator type that is being used.
  */
 template <typename Iterator>
 struct IterableRange {
@@ -250,19 +250,19 @@ public:
 	 * vector size should be returned.
 	 * @param nid1 is the index of the last-plus-one neuron for which the
 	 * record vector size should be returned.
-	 * @return the number of entires in the record array.
+	 * @return the number of entries in the record array.
 	 */
 	size_t get_record_size(NeuronIndex nid0, NeuronIndex nid1) const;
 
 	/**
-	 * Returns the size of the record vector. Throws an exception if the
+	 * Returns the size of the data vector. Throws an exception if the
 	 * neurons in the given range do not share parameters of the same size.
 	 *
-	 * @param nid0 is the index of the first neuron for which the record data
+	 * @param nid0 is the index of the first neuron for which the data
 	 * size should be returned.
 	 * @param nid1 is the index of the last-plus-one neuron for which the
 	 * data vector size should be returned.
-	 * @return the number of entires in the data array.
+	 * @return the number of entries in the data array.
 	 */
 	size_t get_data_size(NeuronIndex nid0, NeuronIndex nid1) const;
 

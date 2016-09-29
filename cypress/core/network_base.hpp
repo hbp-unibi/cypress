@@ -137,7 +137,6 @@ protected:
 	 * population that is going to be connected.
 	 * @param connector is a connector which is used to construct the actual
 	 * neuron-to-neuron connections on demand.
-	 * @return a reference at this object for simple method chaining.
 	 */
 	void connect(PopulationIndex pid_src, NeuronIndex nid_src0,
 	             NeuronIndex nid_src1, PopulationIndex pid_tar,

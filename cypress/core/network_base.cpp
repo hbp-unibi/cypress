@@ -113,7 +113,7 @@ public:
 	}
 
 	/**
-	 * Returns the indices fo the populations which match the given search
+	 * Returns the indices for the populations which match the given search
 	 * criteria.
 	 */
 	std::vector<PopulationIndex> populations(const std::string &name,

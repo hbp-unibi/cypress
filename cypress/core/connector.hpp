@@ -268,9 +268,6 @@ public:
 	virtual std::string name() const = 0;
 
 	/**
-	 * Virtual destructor of the connector.
-	 */
-	/**
 	 * Creates an all-to-all connector and returns a pointer at the connector.
 	 *
 	 * @param weight is the synaptic weight that should be used for all
