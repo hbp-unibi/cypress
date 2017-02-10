@@ -163,7 +163,10 @@ def run(filename, args):
 def cleanup():
     # Remove extracted files -- we're only interested in newly created files
     for file in files:
-        os.unlink(file)
+        try:
+            os.unlink(file)
+        except:
+            pass
 
     # Create a tar.bz2 of the target folder containing all the output
     tarname = os.path.basename(dir)
