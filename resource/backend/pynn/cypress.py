@@ -178,16 +178,20 @@ class Cypress:
                 pylogging.append_to_logging("PyNN")
         except:
             pass
+        marocco = PyMarocco()
 
         # Copy and delete non-standard setup parameters
+
+        # Setting of the virtual neuron size referring to the number of
+        # circuits (DenMems) connected to represent a single neuron
         if "neuron_size" in setup:
-            neuron_size = setup["neuron_size"]
+            marocco.neuron_placement.default_neuron_size(setup["neuron_size"])
             del setup["neuron_size"]
         else:
-            neuron_size = 2
+            marocco.neuron_placement.default_neuron_size(2)
+        logger.warn("Using a virtual neuron size of " +
+                    str(marocco.neuron_placement.default_neuron_size()))
 
-        marocco = PyMarocco()
-        marocco.neuron_placement.default_neuron_size(neuron_size)
         marocco.neuron_placement.restrict_rightmost_neuron_blocks(True)
         marocco.neuron_placement.minimize_number_of_sending_repeaters(False)
         if simulator == "ess":
