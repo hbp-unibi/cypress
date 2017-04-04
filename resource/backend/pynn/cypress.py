@@ -192,11 +192,44 @@ class Cypress:
         logger.warn("Using a virtual neuron size of " +
                     str(marocco.neuron_placement.default_neuron_size()))
 
-        marocco.neuron_placement.restrict_rightmost_neuron_blocks(True)
         marocco.neuron_placement.minimize_number_of_sending_repeaters(False)
+        # Two possibilities for choosing the HW Capacitance. This is unrelated
+        # to biological capacitance (everything will be scaled automatically),
+        # but changes the range of hardware parameters, especially weights.
+        if "big_capacitor" in setup:
+            logger.warn("Using big capacitors")
+            marocco.param_trafo.use_big_capacitors = True
+            del setup["big_capacitor"]
+        else:
+            marocco.param_trafo.use_big_capacitors = False
+            logger.warn("Using small capacitors")
+
+        # In the mapping process, bandwidth of input can be considered.
+        # consider_firing_rate will estimate the firing rate either of the
+        # SpikeSourcePoission Rate or the average rate between first and last
+        # spike of the SpikeSourceArray. In addition, mapping can be forced to
+        # use only a percentage of the bandwidth: setting
+        # bandwidth_utilization(par) with a value of par < 1.0 will reduce the
+        # seemingly available bandwidth for mapping by par.
+        if "bandwidth" in setup:
+            logger.warn("Marocco bandwidth_utilization is set to " +
+                        str(setup["bandwidth"]))
+            marocco.input_placement.consider_firing_rate(True)
+            marocco.input_placement.bandwidth_utilization(
+                float(setup["bandwidth"]))
+            del setup["bandwidth"]
+
         if simulator == "ess":
             marocco.backend = PyMarocco.ESS
-            marocco.calib_backend = PyMarocco.Default
+            marocco.experiment_time_offset = 5.e-7
+            if "calib_path" in setup:
+                # Use custom calibration in both mapping and ESS!
+                logger.warn("Using custom calibration at " +
+                            str(setup["calib_path"]))
+                marocco.calib_backend = PyMarocco.XML
+                marocco.calib_path = str(setup["calib_path"])
+                marocco.ess_config.calib_path = str(setup["calib_path"])
+                del setup["calib_path"]
         else:
             marocco.backend = PyMarocco.Hardware
             marocco.calib_backend = PyMarocco.XML
