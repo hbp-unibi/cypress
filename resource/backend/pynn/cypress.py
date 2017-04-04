@@ -188,7 +188,7 @@ class Cypress:
         sim.setup(marocco=marocco, **setup)
 
         # Return used neuron size
-        return {"neuron_size": neuron_size}
+        return {}
 
     def _setup_simulator(self, setup, sim, simulator, version):
         """
@@ -217,7 +217,6 @@ class Cypress:
         # simulators
         if (simulator == "nmpm1" or simulator == "ess"):
             self.backend_data = self._setup_nmpm1(setup, sim, simulator)
-            self.repeat_projections = self.backend_data["neuron_size"]
         else:
             sim.setup(**setup)
         return setup
@@ -442,14 +441,12 @@ class Cypress:
             target = populations[elem[1]]["obj"]
 
             if not separate_synapses:
-                for _ in xrange(self.repeat_projections):
-                    self.sim.Projection(source, target, connector)
+                self.sim.Projection(source, target, connector)
             else:
                 is_excitatory = elem[2]
                 mechanism = "excitatory" if is_excitatory else "inhibitory"
-                for _ in xrange(self.repeat_projections):
-                    self.sim.Projection(
-                        source, target, connector, target=mechanism)
+                self.sim.Projection(
+                    source, target, connector, target=mechanism)
 
         self._iterate_blocks(cs, lambda x: (x[0], x[1], x[4] >= 0.0),
                              create_projection)
@@ -486,7 +483,7 @@ class Cypress:
         """
         return [np.array(
             zip(spikes[i]), dtype=[("times", np.float64)])
-                for i in xrange(len(spikes))]
+            for i in xrange(len(spikes))]
 
     @staticmethod
     def _convert_pyNN7_signal(data, idx, n):
@@ -505,7 +502,7 @@ class Cypress:
     @staticmethod
     def _convert_pyNN8_signal(times, values, size):
         return [np.array(zip(times, values[:, i]),
-            dtype=[("times", np.float64), ("values", np.float64)]) for i in xrange(size)]
+                         dtype=[("times", np.float64), ("values", np.float64)]) for i in xrange(size)]
 
     def _fetch_spikey_voltage(self, population):
         """
@@ -515,7 +512,7 @@ class Cypress:
         ts = self.sim.timeMembraneOutput
         return [np.array(
             zip(ts, vs), dtype=[("times", np.float64), ("values", np.float64)])
-                ]
+        ]
 
     def _fetch_spikes(self, population):
         """
@@ -571,7 +568,7 @@ class Cypress:
             for data in population.get_data().segments[0].analogsignalarrays:
                 if (data.name == signal):
                     return self._convert_pyNN8_signal(data.times,
-                        data, population.size)
+                                                      data, population.size)
         return []
 
     @staticmethod
@@ -606,9 +603,6 @@ class Cypress:
     # Currently loaded pyNN version (as an integer, either 7 or 8 for 0.7 and
     # 0.8 respectively)
     version = 0
-
-    # Number of times the connections must be repeated -- required for NMPM1
-    repeat_projections = 1
 
     # Number of times the output potential has been recorded -- some platforms
     # only support a limited number of voltage recordings. Only valid for
@@ -718,4 +712,3 @@ class Cypress:
         }
 
         return res, runtimes
-
