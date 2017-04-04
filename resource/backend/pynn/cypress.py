@@ -159,10 +159,25 @@ class Cypress:
         from pymarocco import PyMarocco
 
         # Activate logging
-        for domain in ["ESS", "Default", "marocco",
-                       "sthal.HICANNConfigurator.Time"]:
-            pylogging.set_loglevel(
-                pylogging.get(domain), pylogging.LogLevel.INFO)
+        from pysthal.command_line_util import init_logger
+        init_logger("INFO", [
+            ("ESS", "INFO"),
+            ("marocco", "INFO"),
+            ("calibtic", "INFO"),
+            ("sthal", "WARN")
+        ])
+        # Log everything to file
+        # pylogging.log_to_file("log_back.txt", pylogging.LogLevel.DEBUG)
+
+        # In case one of the UHEI platforms is used, there will by the pylogging
+        # module, which is a bridge from Python to log4cxx. Tell log4cxx to send
+        # its log messages back to Python.
+        try:
+            import pylogging
+            if hasattr(pylogging, "append_to_logging"):
+                pylogging.append_to_logging("PyNN")
+        except:
+            pass
 
         # Copy and delete non-standard setup parameters
         if "neuron_size" in setup:
