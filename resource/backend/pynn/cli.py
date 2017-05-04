@@ -17,6 +17,8 @@
 #   You should have received a copy of the GNU General Public License
 #   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+
+
 # Required as the Python code is usually concatenated into a single file and
 # embedded in the Cypress C++ library.
 try:
@@ -68,13 +70,28 @@ logger = logging.getLogger("cypress")
 logger.setLevel(logging.DEBUG)
 
 def do_run(args):
-    import json
+    import os,json
 
     # Fetch the input/output file
     in_filename = getattr(args, "in")
     in_fd = sys.stdin if in_filename == '-' else open(in_filename, "rb")
+
     out_filename = getattr(args, "out")
-    out_fd = sys.stdout if out_filename == '-' else open(out_filename, "rb")
+    if out_filename != '-':
+        # If file does not exist, create fifo
+        if not os.path.isfile(out_filename):
+            os.mkfifo(out_filename, 0666)
+        # Redirect stdout, so that it cannot be closed by other subprocesses
+        os.close(1)
+        os.open(out_filename, os.O_WRONLY)
+    out_fd = sys.stdout
+    err_path = getattr(args, "err")
+    if err_path != '-':
+        if not os.path.isfile(err_path):
+            os.mkfifo(err_path, 0666)
+        # Redirect stdout, so that it cannot be closed by other subprocesses
+        os.close(2)
+        os.open(err_path, os.O_WRONLY)
 
     # Set the logger handler output file and issue a first log message
     handler.out_fd = out_fd
@@ -87,10 +104,9 @@ def do_run(args):
         args.setup +
         " duration=" +
         str(args.duration))
-
+    
     # Read the input data
     network = read_network(in_fd)
-
     # Open the simulator and run the network
     try:
         res, runtimes = Cypress(
@@ -111,6 +127,8 @@ def do_run(args):
 def do_dump(args):
     import numpy as np
     import sys
+    f = open('debug_msg34.txt', 'w')
+    f.write( "dunmp\n")
 
     # Set some numpy print options
     np.set_printoptions(precision=3, suppress=True)
@@ -192,6 +210,11 @@ sp_run.add_argument(
     type=str,
     default="-",
     help="Output binnf filename, use \"-\" for stdout")
+sp_run.add_argument(
+    "--err",
+    type=str,
+    default="-",
+    help="Output error filename, use \"-\" for stderr")
 sp_run.set_defaults(func=do_run)
 
 # Options for the "dump" subcommand

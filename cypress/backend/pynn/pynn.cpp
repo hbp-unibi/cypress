@@ -17,15 +17,17 @@
  */
 
 #include <algorithm>
-#include <future>
 #include <fstream>
-#include <string>
+#include <future>
 #include <sstream>
+#include <string>
 #include <thread>
-#include <vector>
 #include <unordered_map>
 #include <unordered_set>
+#include <vector>
 
+#include <sys/stat.h>
+#include <sys/types.h>
 #include <unistd.h>
 
 #include <cypress/backend/binnf/marshaller.hpp>
@@ -324,6 +326,25 @@ std::unordered_set<const NeuronType *> PyNN::supported_neuron_types() const
 	return SUPPORTED_NEURON_TYPE_MAP.find("__default__")->second;
 }
 
+namespace {
+/**
+ * Helper function to put writing of network description into a seperate thread
+ */
+void pipe_write_helper(std::string file, NetworkBase &source)
+{
+	std::filebuf fb_in;
+	fb_in.open(file, std::ios::out);
+	std::ostream data_in(&fb_in);
+	if (data_in.good() == false) {
+		throw ExecutionError("Error in pipe to python");
+	}
+	// Send the network description to the simulator, inject the connection
+	// transformation to rewrite the connections
+	binnf::marshall_network(source, data_in);
+	fb_in.close();
+}
+}
+
 void PyNN::do_run(NetworkBase &source, Real duration) const
 {
 	// Find the import that should be used
@@ -356,10 +377,26 @@ void PyNN::do_run(NetworkBase &source, Real duration) const
 	// Run the PyNN python backend
 	{
 #ifndef CYPRESS_DEBUG_BINNF
+		// Generate file names for temporary files
+		filesystem::tmpfile(log_path);
+		std::string in_path = std::string().append(log_path).append("_stdin");
+		std::string out_path = std::string().append(log_path).append("_stdout");
+		std::string err_path = std::string().append(log_path).append("_stderr");
+
+		// Make sure we can create the files
+		if (mkfifo(in_path.c_str(), 0666) != 0) {
+			throw ExecutionError("Error while creating named pipe");
+		}
+
 		std::vector<std::string> params(
 		    {Resources::PYNN_INTERFACE.open(), "run", "--simulator",
 		     m_normalised_simulator, "--library", import, "--setup",
-		     m_setup.dump(), "--duration", std::to_string(duration)});
+		     m_setup.dump(), "--duration", std::to_string(duration), "--in",
+		     in_path, "--out", out_path, "--err", err_path});
+
+		// Get reade to write network description to fifo. This blocks untile
+		// python process starts reading
+		std::thread data_in(pipe_write_helper, in_path, std::ref(source));
 #else
 		std::vector<std::string> params(
 		    {Resources::PYNN_INTERFACE.open(), "dump"});
@@ -368,28 +405,58 @@ void PyNN::do_run(NetworkBase &source, Real duration) const
 
 // Attach the error log
 #ifndef CYPRESS_DEBUG_BINNF
-		std::ofstream log_stream(filesystem::tmpfile(log_path));
-		std::thread log_thread(Process::generic_pipe,
-		                       std::ref(proc.child_stderr()),
+		std::ofstream log_stream(log_path);
+		// These processes are only meant to cover the first milliseconds before
+		// all communication is switched to named pipes (fifos). This is usefull
+		// when changing the python side and the script aborts before switching
+		std::thread log_thread_beg(Process::generic_pipe,
+		                           std::ref(proc.child_stdout()),
+		                           std::ref(std::cout));
+		std::thread err_thread_beg(Process::generic_pipe,
+		                           std::ref(proc.child_stderr()),
+		                           std::ref(std::cerr));
+
+		// Open fifos for output and error of python process. Wait until files
+		// are created, than open it for reading
+		std::filebuf fb_out, fb_err;
+		while (true) {
+			if (fb_out.open(out_path, std::ios::in)) {
+				break;
+			}
+			usleep(3000);
+		}
+		std::istream std_out(&fb_out);
+		while (true) {
+			if (fb_err.open(err_path, std::ios::in)) {
+				break;
+			}
+			usleep(3000);
+		}
+		std::istream std_err(&fb_err);
+
+		// Continiously track std_err of python process
+		std::thread log_thread(Process::generic_pipe, std::ref(std_err),
 		                       std::ref(log_stream));
 #else
 		std::thread log_thread(Process::generic_pipe,
 		                       std::ref(proc.child_stdout()),
 		                       std::ref(std::cout));
-#endif
-
-		// Send the network description to the simulator, inject the connection
-		// transformation to rewrite the connections
+		// Send the network description to the simulator
 		binnf::marshall_network(source, proc.child_stdin());
-		proc.close_child_stdin();
-
-// Wait for the process to be done
+#endif
 #ifndef CYPRESS_DEBUG_BINNF
+		data_in.join();  // Wait until python has read the description
+		proc.close_child_stdin();
 		int res;
-		if ((!binnf::marshall_response(source, proc.child_stdout())) |
+		if ((!binnf::marshall_response(source, std_out)) |
 		    ((res = proc.wait()) != 0)) {
 			log_thread.join();  // Make sure the logging thread has finished
+			log_thread_beg.join();
+			err_thread_beg.join();
 
+			unlink(in_path.c_str());  // Remove all fifos in case of error
+			unlink(out_path.c_str());
+			unlink(err_path.c_str());
 			// Explicitly state if the process was killed by a signal
 			if (res < 0) {
 				source.logger().error(
@@ -411,12 +478,17 @@ void PyNN::do_run(NetworkBase &source, Real duration) const
 				    log_path + " for the simulators stderr output");
 			}
 		}
-#endif
-
+		log_thread_beg.join();  // Make sure the logging thread has finished
+		log_thread.join();
+		err_thread_beg.join();
+		unlink(in_path.c_str());  // Remove all fifos in case of error
+		unlink(out_path.c_str());
+		unlink(err_path.c_str());
+#else
 		// Make sure the logging thread has finished
 		log_thread.join();
+#endif
 	}
-
 	// Remove the log file
 	if (!m_keep_log) {
 		unlink(log_path.c_str());
