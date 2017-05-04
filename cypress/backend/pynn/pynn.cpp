@@ -449,8 +449,8 @@ void PyNN::do_run(NetworkBase &source, Real duration) const
 		// Continiously track std_err of python process
 		std::thread log_thread(Process::generic_pipe, std::ref(std_err),
 		                       std::ref(log_stream));
-		std::thread out_thread(Process::generic_pipe, std::ref(std_out),
-		                       std::ref(std::cout));
+		std::thread out_thread(binnf::marshall_log, std::ref(source.logger()),
+		                       std::ref(std_out));
 #else
 		std::thread log_thread(Process::generic_pipe,
 		                       std::ref(proc.child_stdout()),

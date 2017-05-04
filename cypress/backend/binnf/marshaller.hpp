@@ -40,6 +40,7 @@ namespace cypress {
  */
 class NetworkBase;
 class Connection;
+class Logger;
 
 namespace binnf {
 /**
@@ -63,6 +64,12 @@ void marshall_network(NetworkBase &net, std::ostream &os);
  * @return true if valid result data was received from the simulator
  */
 bool marshall_response(NetworkBase &net, std::istream &is);
+
+/**
+ * Similar to marshall_network, but only looking for log messages. Requires a
+ * reference to a logger instead of a network_base
+ */
+bool marshall_log(Logger &logger, std::istream &is);
 }
 }
 
