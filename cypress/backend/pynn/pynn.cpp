@@ -382,6 +382,7 @@ void PyNN::do_run(NetworkBase &source, Real duration) const
 		std::string in_path = std::string().append(log_path).append("_stdin");
 		std::string out_path = std::string().append(log_path).append("_stdout");
 		std::string err_path = std::string().append(log_path).append("_stderr");
+		std::string res_path = std::string().append(log_path).append("_res");
 
 		// Make sure we can create the files
 		if (mkfifo(in_path.c_str(), 0666) != 0) {
@@ -392,7 +393,8 @@ void PyNN::do_run(NetworkBase &source, Real duration) const
 		    {Resources::PYNN_INTERFACE.open(), "run", "--simulator",
 		     m_normalised_simulator, "--library", import, "--setup",
 		     m_setup.dump(), "--duration", std::to_string(duration), "--in",
-		     in_path, "--out", out_path, "--err", err_path});
+		     in_path, "--out", res_path, "--stdout", out_path, "--err",
+		     err_path});
 
 		// Get reade to write network description to fifo. This blocks untile
 		// python process starts reading
@@ -418,7 +420,7 @@ void PyNN::do_run(NetworkBase &source, Real duration) const
 
 		// Open fifos for output and error of python process. Wait until files
 		// are created, than open it for reading
-		std::filebuf fb_out, fb_err;
+		std::filebuf fb_out, fb_err, fb_res;
 		while (true) {
 			if (fb_out.open(out_path, std::ios::in)) {
 				break;
@@ -433,10 +435,19 @@ void PyNN::do_run(NetworkBase &source, Real duration) const
 			usleep(3000);
 		}
 		std::istream std_err(&fb_err);
+		while (true) {
+			if (fb_res.open(res_path, std::ios::in)) {
+				break;
+			}
+			usleep(3000);
+		}
+		std::istream std_res(&fb_res);
 
 		// Continiously track std_err of python process
 		std::thread log_thread(Process::generic_pipe, std::ref(std_err),
 		                       std::ref(log_stream));
+		std::thread out_thread(Process::generic_pipe, std::ref(std_out),
+		                       std::ref(std::cout));
 #else
 		std::thread log_thread(Process::generic_pipe,
 		                       std::ref(proc.child_stdout()),
@@ -448,15 +459,17 @@ void PyNN::do_run(NetworkBase &source, Real duration) const
 		data_in.join();  // Wait until python has read the description
 		proc.close_child_stdin();
 		int res;
-		if ((!binnf::marshall_response(source, std_out)) |
+		if ((!binnf::marshall_response(source, std_res)) |
 		    ((res = proc.wait()) != 0)) {
 			log_thread.join();  // Make sure the logging thread has finished
 			log_thread_beg.join();
+			out_thread.join();
 			err_thread_beg.join();
 
 			unlink(in_path.c_str());  // Remove all fifos in case of error
 			unlink(out_path.c_str());
 			unlink(err_path.c_str());
+            unlink(res_path.c_str());
 			// Explicitly state if the process was killed by a signal
 			if (res < 0) {
 				source.logger().error(
@@ -481,9 +494,11 @@ void PyNN::do_run(NetworkBase &source, Real duration) const
 		log_thread_beg.join();  // Make sure the logging thread has finished
 		log_thread.join();
 		err_thread_beg.join();
-		unlink(in_path.c_str());  // Remove all fifos in case of error
+		out_thread.join();
+		unlink(in_path.c_str());  // Remove all fifos
 		unlink(out_path.c_str());
 		unlink(err_path.c_str());
+        unlink(res_path.c_str());
 #else
 		// Make sure the logging thread has finished
 		log_thread.join();

@@ -76,15 +76,15 @@ def do_run(args):
     in_filename = getattr(args, "in")
     in_fd = sys.stdin if in_filename == '-' else open(in_filename, "rb")
 
-    out_filename = getattr(args, "out")
-    if out_filename != '-':
+    stdout_filename = getattr(args, "stdout")
+    if stdout_filename != '-':
         # If file does not exist, create fifo
-        if not os.path.isfile(out_filename):
-            os.mkfifo(out_filename, 0666)
+        if not os.path.isfile(stdout_filename):
+            os.mkfifo(stdout_filename, 0666)
         # Redirect stdout, so that it cannot be closed by other subprocesses
         os.close(1)
-        os.open(out_filename, os.O_WRONLY)
-    out_fd = sys.stdout
+        os.open(stdout_filename, os.O_WRONLY)
+    
     err_path = getattr(args, "err")
     if err_path != '-':
         if not os.path.isfile(err_path):
@@ -92,9 +92,16 @@ def do_run(args):
         # Redirect stdout, so that it cannot be closed by other subprocesses
         os.close(2)
         os.open(err_path, os.O_WRONLY)
+        
+    out_filename = getattr(args, "out")
+    out_fd = sys.stdout
+    if out_filename != '-':
+        if not os.path.isfile(out_filename):
+            os.mkfifo(out_filename, 0666)
+        out_fd = open(out_filename, "wb")
 
     # Set the logger handler output file and issue a first log message
-    handler.out_fd = out_fd
+    handler.out_fd = sys.stdout
     logger.info(
         "Running simulation with the following parameters: simulator=" +
         args.simulator +
@@ -215,6 +222,11 @@ sp_run.add_argument(
     type=str,
     default="-",
     help="Output error filename, use \"-\" for stderr")
+sp_run.add_argument(
+    "--stdout",
+    type=str,
+    default="-",
+    help="StdOutput filename, use \"-\" for stdout")
 sp_run.set_defaults(func=do_run)
 
 # Options for the "dump" subcommand
