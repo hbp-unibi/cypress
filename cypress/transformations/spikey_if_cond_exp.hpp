@@ -69,7 +69,10 @@ public:
 
 	TransformationProperties properties() const override
 	{
-		return TransformationProperties{100, true};
+		TransformationProperties res;
+		res.cost = 100;
+		res.lossy = true;
+		return res;
 	}
 	~LIFToIFFH1(){};
 };

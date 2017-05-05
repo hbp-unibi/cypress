@@ -483,7 +483,7 @@ void read_response(std::istream &is, NetworkBase &net)
 			has_msg = false;
 			net.logger().log(msg_severity, msg_time, "nest::" + msg_ctx,
 			                 trim(msg_buf.str()));
-			msg_buf = std::stringstream();
+			msg_buf.str("");
 		}
 	};
 

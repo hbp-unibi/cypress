@@ -354,17 +354,14 @@ std::map<std::string, std::string> fifo_filenames(const std::string log_path)
 	return res;
 }
 
-std::filebuf open_fifo_to_read(std::string file_name)
+void open_fifo_to_read(std::string file_name, std::filebuf& res)
 {
-	std::filebuf res;
 	while (true) {
 		if (res.open(file_name, std::ios::in)) {
 			break;
 		}
 		usleep(3000);
 	}
-	return res;
-}
 }
 
 void PyNN::do_run(NetworkBase &source, Real duration) const
@@ -439,11 +436,12 @@ void PyNN::do_run(NetworkBase &source, Real duration) const
 
 		// Open fifos for output and error of python process. Wait until files
 		// are created, than open it for reading
-		auto fb_out = open_fifo_to_read(fifos["out"]);
+		std::filebuf fb_out, fb_err,fb_res;
+		open_fifo_to_read(fifos["out"], fb_out);
 		std::istream std_out(&fb_out);
-		auto fb_err = open_fifo_to_read(fifos["err"]);
+		open_fifo_to_read(fifos["err"],fb_err);
 		std::istream std_err(&fb_err);
-		auto fb_res = open_fifo_to_read(fifos["res"]);
+		open_fifo_to_read(fifos["res"],fb_res);
 		std::istream std_res(&fb_res);
 
 		// Continiously track std_err of python process
