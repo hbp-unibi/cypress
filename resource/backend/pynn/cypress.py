@@ -160,20 +160,37 @@ class Cypress:
         
         pylogging.reset()
         # Activate logging
-        for domain in ["ESS", "Default", "marocco",
-                       "sthal.HICANNConfigurator.Time"]:
-            pylogging.set_loglevel(
-                pylogging.get(domain), pylogging.LogLevel.DEBUG)
-        pylogging.set_loglevel(pylogging.get("Calibtic"), pylogging.LogLevel.DEBUG) 
+        from pysthal.command_line_util import init_logger
+        init_logger("INFO", [
+            ("ESS", "INFO"),
+            ("marocco", "INFO"),
+            ("calibtic", "INFO"),
+            ("sthal", "WARN")
+        ])
+        # Log everything to file
+        # pylogging.log_to_file("log_back.txt", pylogging.LogLevel.DEBUG)
+
+        # In case one of the UHEI platforms is used, there will by the pylogging
+        # module, which is a bridge from Python to log4cxx. Tell log4cxx to send
+        # its log messages back to Python.
+        try:
+            import pylogging
+            if hasattr(pylogging, "append_to_logging"):
+                pylogging.append_to_logging("PyNN")
+        except:
+            pass
+        marocco = PyMarocco()
 
         # Copy and delete non-standard setup parameters
+
+        # Setting of the virtual neuron size referring to the number of
+        # circuits (DenMems) connected to represent a single neuron
         if "neuron_size" in setup:
-            neuron_size = setup["neuron_size"]
+            marocco.neuron_placement.default_neuron_size(setup["neuron_size"])
             del setup["neuron_size"]
         else:
-            neuron_size = 4
+            marocco.neuron_placement.default_neuron_size(4)
         marocco = PyMarocco()
-        marocco.neuron_placement.default_neuron_size(neuron_size)
         
         # TODO: Are these still needed?
         marocco.neuron_placement.restrict_rightmost_neuron_blocks(True)
@@ -182,9 +199,44 @@ class Cypress:
         # Temporal (?) fix for the usage of a special HICANN chip
         hicann = None
         runtime = None
+
+        # Two possibilities for choosing the HW Capacitance. This is unrelated
+        # to biological capacitance (everything will be scaled automatically),
+        # but changes the range of hardware parameters, especially weights.
+        if "big_capacitor" in setup:
+            logger.warn("Using big capacitors")
+            marocco.param_trafo.use_big_capacitors = True
+            del setup["big_capacitor"]
+        else:
+            marocco.param_trafo.use_big_capacitors = False
+            logger.warn("Using small capacitors")
+
+        # In the mapping process, bandwidth of input can be considered.
+        # consider_firing_rate will estimate the firing rate either of the
+        # SpikeSourcePoission Rate or the average rate between first and last
+        # spike of the SpikeSourceArray. In addition, mapping can be forced to
+        # use only a percentage of the bandwidth: setting
+        # bandwidth_utilization(par) with a value of par < 1.0 will reduce the
+        # seemingly available bandwidth for mapping by par.
+        if "bandwidth" in setup:
+            logger.warn("Marocco bandwidth_utilization is set to " +
+                        str(setup["bandwidth"]))
+            marocco.input_placement.consider_firing_rate(True)
+            marocco.input_placement.bandwidth_utilization(
+                float(setup["bandwidth"]))
+            del setup["bandwidth"]
+
         if simulator == "ess":
             marocco.backend = PyMarocco.ESS
-            marocco.calib_backend = PyMarocco.Default
+            marocco.experiment_time_offset = 5.e-7
+            if "calib_path" in setup:
+                # Use custom calibration in both mapping and ESS!
+                logger.warn("Using custom calibration at " +
+                            str(setup["calib_path"]))
+                marocco.calib_backend = PyMarocco.XML
+                marocco.calib_path = str(setup["calib_path"])
+                marocco.ess_config.calib_path = str(setup["calib_path"])
+                del setup["calib_path"]
         else:
             import pyhalbe.Coordinate as C
             from pymarocco import Defects
@@ -193,11 +245,6 @@ class Cypress:
             from pymarocco.results import Marocco
             from pysthal.command_line_util import init_logger
             
-            init_logger("WARN", [
-                ("guidebook", "DEBUG"),
-                #("marocco", "TRACE"),
-                #("calibtic", "DEBUG"),
-]           )
             
             
             marocco.merger_routing.strategy(marocco.merger_routing.one_to_one)
@@ -210,21 +257,14 @@ class Cypress:
             marocco.defects.path = marocco.calib_path = "/wang/data/calibration/ITL_2016"
             marocco.defects.backend = Defects.XML
             marocco.default_wafer = C.Wafer(33)
-            marocco.param_trafo.use_big_capacitors = True
-            marocco.input_placement.consider_firing_rate(True)
-            marocco.input_placement.bandwidth_utilization(0.8)
 
             runtime = Runtime(marocco.default_wafer)  
             setup["marocco_runtime"] = runtime
 
             
-            # Temporal
-            #from pyhalbe.Coordinate import Wafer, HICANNOnWafer, Enum
-            #marocco.calib_path = "/wang/data/calibration/wafer_0"
-            #marocco.calib_path = "/wang/data/calibration/review_2016"
             #marocco.persist = "results.bin"
             #marocco.hicann_configurator = PyMarocco.HICANNv4Configurator
-            #hicann = C.HICANNOnWafer(C.Enum(367)) # choose hicann
+            hicann = C.HICANNOnWafer(C.Enum(367)) # choose hicann
             #marocco.analog_enum = 0
             #marocco.hicann_enum = hicann.id().value()
             #marocco.wafer_cfg = "wafer.bin"   # configuration
@@ -235,19 +275,9 @@ class Cypress:
         # method
         sim.setup(marocco=marocco, **setup)
         
-        # TEMPORAL FIX OF LOGGING!
-        # In case one of the UHEI platforms is used, there will by the pylogging
-        # module, which is a bridge from Python to log4cxx. Tell log4cxx to send
-        # its log messages back to Python.
-        try:
-            import pylogging
-            if hasattr(pylogging, "append_to_logging"):
-                pylogging.append_to_logging("PyNN")
-        except:
-            pass
-
         # Return used neuron size
-        return {"neuron_size": neuron_size, "marocco": marocco, "hicann": hicann, "runtime" : runtime}
+
+        return {"marocco": marocco, "hicann": hicann, "runtime" : runtime}
 
     def _setup_simulator(self, setup, sim, simulator, version):
         """
@@ -276,7 +306,6 @@ class Cypress:
         # simulators
         if (simulator == "nmpm1" or simulator == "ess"):
             self.backend_data = self._setup_nmpm1(setup, sim, simulator)
-            self.repeat_projections = self.backend_data["neuron_size"]
         else:
             sim.setup(**setup)
         return setup
@@ -506,14 +535,12 @@ class Cypress:
             target = populations[elem[1]]["obj"]
 
             if not separate_synapses:
-                for _ in xrange(self.repeat_projections):
-                    self.sim.Projection(source, target, connector)
+                self.sim.Projection(source, target, connector)
             else:
                 is_excitatory = elem[2]
                 mechanism = "excitatory" if is_excitatory else "inhibitory"
-                for _ in xrange(self.repeat_projections):
-                    self.sim.Projection(
-                        source, target, connector, target=mechanism)
+                self.sim.Projection(
+                    source, target, connector, target=mechanism)
 
         self._iterate_blocks(cs, lambda x: (x[0], x[1], x[4] >= 0.0),
                              create_projection)
@@ -550,7 +577,7 @@ class Cypress:
         """
         return [np.array(
             zip(spikes[i]), dtype=[("times", np.float64)])
-                for i in xrange(len(spikes))]
+            for i in xrange(len(spikes))]
 
     @staticmethod
     def _convert_pyNN7_signal(data, idx, n):
@@ -569,7 +596,7 @@ class Cypress:
     @staticmethod
     def _convert_pyNN8_signal(times, values, size):
         return [np.array(zip(times, values[:, i]),
-            dtype=[("times", np.float64), ("values", np.float64)]) for i in xrange(size)]
+                         dtype=[("times", np.float64), ("values", np.float64)]) for i in xrange(size)]
 
     def _fetch_spikey_voltage(self, population):
         """
@@ -579,7 +606,7 @@ class Cypress:
         ts = self.sim.timeMembraneOutput
         return [np.array(
             zip(ts, vs), dtype=[("times", np.float64), ("values", np.float64)])
-                ]
+        ]
 
     def _fetch_spikes(self, population):
         """
@@ -635,7 +662,7 @@ class Cypress:
             for data in population.get_data().segments[0].analogsignalarrays:
                 if (data.name == signal):
                     return self._convert_pyNN8_signal(data.times,
-                        data, population.size)
+                                                      data, population.size)
         return []
 
     @staticmethod
@@ -670,9 +697,6 @@ class Cypress:
     # Currently loaded pyNN version (as an integer, either 7 or 8 for 0.7 and
     # 0.8 respectively)
     version = 0
-
-    # Number of times the connections must be repeated -- required for NMPM1
-    repeat_projections = 1
 
     # Number of times the output potential has been recorded -- some platforms
     # only support a limited number of voltage recordings. Only valid for
@@ -831,4 +855,3 @@ class Cypress:
         }
 
         return res, runtimes
-
