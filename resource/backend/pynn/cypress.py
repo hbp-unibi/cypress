@@ -165,20 +165,18 @@ class Cypress:
             ("ESS", "INFO"),
             ("marocco", "INFO"),
             ("calibtic", "INFO"),
-            ("sthal", "WARN")
+            ("sthal", "FATAL")
         ])
         # Log everything to file
-        # pylogging.log_to_file("log_back.txt", pylogging.LogLevel.DEBUG)
+        # pylogging.log_to_file("log_back.txt", pylogging.LogLevel.INFO)
 
         # In case one of the UHEI platforms is used, there will by the pylogging
         # module, which is a bridge from Python to log4cxx. Tell log4cxx to send
         # its log messages back to Python.
-        try:
-            import pylogging
-            if hasattr(pylogging, "append_to_logging"):
-                pylogging.append_to_logging("PyNN")
-        except:
-            pass
+        if hasattr(pylogging, "append_to_logging"):
+            pylogging.append_to_logging("PyNN")
+        #pylogging.log_to_cout( pylogging.LogLevel.FATAL)
+
         marocco = PyMarocco()
 
         # Copy and delete non-standard setup parameters
@@ -192,9 +190,10 @@ class Cypress:
             marocco.neuron_placement.default_neuron_size(4)
         marocco = PyMarocco()
         
-        # TODO: Are these still needed?
+        # Reserve a OutputBuffer fod DNC inputs and output
         marocco.neuron_placement.restrict_rightmost_neuron_blocks(True)
-        marocco.neuron_placement.minimize_number_of_sending_repeaters(False)
+        # Restrict number of logical neurons/neuron block
+        marocco.neuron_placement.minimize_number_of_sending_repeaters(True)
         
         # Temporal (?) fix for the usage of a special HICANN chip
         hicann = None
@@ -241,11 +240,6 @@ class Cypress:
             import pyhalbe.Coordinate as C
             from pymarocco import Defects
             from pymarocco.runtime import Runtime
-            from pymarocco.coordinates import LogicalNeuron
-            from pymarocco.results import Marocco
-            from pysthal.command_line_util import init_logger
-            
-            
             
             marocco.merger_routing.strategy(marocco.merger_routing.one_to_one)
 
@@ -261,13 +255,8 @@ class Cypress:
             runtime = Runtime(marocco.default_wafer)  
             setup["marocco_runtime"] = runtime
 
-            
-            #marocco.persist = "results.bin"
-            #marocco.hicann_configurator = PyMarocco.HICANNv4Configurator
+            marocco.hicann_configurator = PyMarocco.HICANNv4Configurator
             hicann = C.HICANNOnWafer(C.Enum(367)) # choose hicann
-            #marocco.analog_enum = 0
-            #marocco.hicann_enum = hicann.id().value()
-            #marocco.wafer_cfg = "wafer.bin"   # configuration
             #marocco.roqt = "example.roqt"     # visualization
             
 
@@ -768,56 +757,7 @@ class Cypress:
         populations = self._build_populations(network["populations"])
         self._set_population_parameters(populations, network)
         self._connect(populations, network["connections"])
-        
-        # Some adjustments for the current BrainScales Software
-        if (self.simulator == "nmpm1"):
-            from pymarocco import PyMarocco
-            import pyhalbe.Coordinate as C
-            from pyhalbe import HICANN
-            # Run the mapping
-            self.backend_data["marocco"].skip_mapping = False
-            self.backend_data["marocco"].backend = PyMarocco.None
 
-            self.sim.reset()
-            self.sim.run(duration)
-            
-            # change low-level parameters before configuring hardware
-            def set_sthal_params(wafer, gmax, gmax_div):
-                for hicann in wafer.getAllocatedHicannCoordinates():
-                    fgs = wafer[hicann].floating_gates
-                    for ii in xrange(fgs.getNoProgrammingPasses()):
-                        cfg = fgs.getFGConfig(C.Enum(ii))
-                        cfg.fg_biasn = 0
-                        cfg.fg_bias = 0
-                        fgs.setFGConfig(C.Enum(ii), cfg)
-
-                    for block in C.iter_all(C.FGBlockOnHICANN):
-                        fgs.setShared(block, HICANN.shared_parameter.V_gmax0, gmax)
-                        fgs.setShared(block, HICANN.shared_parameter.V_gmax1, gmax)
-                        fgs.setShared(block, HICANN.shared_parameter.V_gmax2, gmax)
-                        fgs.setShared(block, HICANN.shared_parameter.V_gmax3, gmax)
-
-                    for block in C.iter_all(C.FGBlockOnHICANN):
-                        fgs.setShared(block, HICANN.shared_parameter.V_dllres, 275)
-                        fgs.setShared(block, HICANN.shared_parameter.V_ccas, 800)
-
-                    for driver in C.iter_all(C.SynapseDriverOnHICANN):
-                        for row in C.iter_all(C.RowOnSynapseDriver):
-                            wafer[hicann].synapses[driver][row].set_gmax_div(
-                                C.left, gmax_div)
-                            wafer[hicann].synapses[driver][row].set_gmax_div(
-                                C.right, gmax_div)
-
-            set_sthal_params(self.backend_data["runtime"].wafer(), gmax=1023, gmax_div=1)
-            
-            # Configure hardware
-            self.backend_data["marocco"].skip_mapping = True
-            self.backend_data["marocco"].backend = PyMarocco.Hardware
-            # Full configuration during first step
-            self.backend_data["marocco"].hicann_configurator = PyMarocco.HICANNv4Configurator
-            
-            
-        
         # Round up the duration to the timestep -- fixes a problem with
         # SpiNNaker
         duration = int((duration + timestep) / timestep) * timestep

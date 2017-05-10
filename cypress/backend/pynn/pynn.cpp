@@ -363,6 +363,7 @@ void open_fifo_to_read(std::string file_name, std::filebuf& res)
 		usleep(3000);
 	}
 }
+}
 
 void PyNN::do_run(NetworkBase &source, Real duration) const
 {
