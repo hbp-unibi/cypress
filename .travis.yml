@@ -1,0 +1,23 @@
+language: cpp
+python: 
+  - "2.7"
+sudo: required
+dist: trusty
+addons:
+  apt:
+    sources:
+      - ubuntu-toolchain-r-test
+      - george-edison55-precise-backports
+    packages:
+      - gcc-5
+      - g++-5
+      - cmake
+      - cmake-data
+before_install:
+  - sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-5 50
+  - sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-5 50
+install:
+  pip install pyNN requests pyminifier numpy
+script:
+  - ( mkdir build_gcc && cd build_gcc && cmake .. -DCMAKE_CXX_COMPILER=g++ -DCMAKE_C_COMPILER=gcc -DSTATIC_LINKING=FALSE && make && make test ARGS=-V )
+
