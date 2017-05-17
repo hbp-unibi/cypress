@@ -348,13 +348,11 @@ std::map<std::string, std::string> fifo_filenames(const std::string log_path)
 {
 	std::map<std::string, std::string> res;
 	res.emplace("in", std::string().append(log_path).append("_stdin"));
-	res.emplace("out", std::string().append(log_path).append("_stdout"));
-	res.emplace("err", std::string().append(log_path).append("_stderr"));
 	res.emplace("res", std::string().append(log_path).append("_res"));
 	return res;
 }
 
-void open_fifo_to_read(std::string file_name, std::filebuf& res)
+void open_fifo_to_read(std::string file_name, std::filebuf &res)
 {
 	while (true) {
 		if (res.open(file_name, std::ios::in)) {
@@ -410,8 +408,7 @@ void PyNN::do_run(NetworkBase &source, Real duration) const
 		    {Resources::PYNN_INTERFACE.open(), "run", "--simulator",
 		     m_normalised_simulator, "--library", import, "--setup",
 		     m_setup.dump(), "--duration", std::to_string(duration), "--in",
-		     fifos["in"], "--out", fifos["res"], "--stdout", fifos["out"],
-		     "--err", fifos["err"]});
+		     fifos["in"], "--out", fifos["res"]});
 
 		// Get reade to write network description to fifo. This blocks untile
 		// python process starts reading
@@ -422,34 +419,25 @@ void PyNN::do_run(NetworkBase &source, Real duration) const
 #endif
 		Process proc("python", params);
 
-// Attach the error log
 #ifndef CYPRESS_DEBUG_BINNF
 		std::ofstream log_stream(log_path);
-		// These processes are only meant to cover the first milliseconds before
+		// This process is only meant to cover the first milliseconds before
 		// all communication is switched to named pipes (fifos). This is usefull
-		// when changing the python side and the script aborts before switching
+		// when the script aborts before switching
 		std::thread log_thread_beg(Process::generic_pipe,
 		                           std::ref(proc.child_stdout()),
 		                           std::ref(std::cout));
-		std::thread err_thread_beg(Process::generic_pipe,
-		                           std::ref(proc.child_stderr()),
-		                           std::ref(std::cerr));
 
-		// Open fifos for output and error of python process. Wait until files
-		// are created, than open it for reading
-		std::filebuf fb_out, fb_err,fb_res;
-		open_fifo_to_read(fifos["out"], fb_out);
-		std::istream std_out(&fb_out);
-		open_fifo_to_read(fifos["err"],fb_err);
-		std::istream std_err(&fb_err);
-		open_fifo_to_read(fifos["res"],fb_res);
-		std::istream std_res(&fb_res);
-
-		// Continiously track std_err of python process
-		std::thread log_thread(Process::generic_pipe, std::ref(std_err),
+		// Continiously track stderr of child
+		std::thread err_thread(Process::generic_pipe,
+		                       std::ref(proc.child_stderr()),
 		                       std::ref(log_stream));
-		std::thread out_thread(binnf::marshall_log, std::ref(source.logger()),
-		                       std::ref(std_out));
+
+		// Open fifo for output and log of python process. Wait until files
+		// are created, than open it for reading
+		std::filebuf fb_res;
+		open_fifo_to_read(fifos["res"], fb_res);
+		std::istream std_res(&fb_res);
 #else
 		std::thread log_thread(Process::generic_pipe,
 		                       std::ref(proc.child_stdout()),
@@ -458,15 +446,14 @@ void PyNN::do_run(NetworkBase &source, Real duration) const
 		binnf::marshall_network(source, proc.child_stdin());
 #endif
 #ifndef CYPRESS_DEBUG_BINNF
+		log_thread_beg.join();
 		data_in.join();  // Wait until python has read the description
-		proc.close_child_stdin();
 		int res;
+
+		// Keep track of log messages, at the end read results.
 		if ((!binnf::marshall_response(source, std_res)) |
 		    ((res = proc.wait()) != 0)) {
-			log_thread.join();  // Make sure the logging thread has finished
-			log_thread_beg.join();
-			out_thread.join();
-			err_thread_beg.join();
+			err_thread.join();
 
 			for (auto i : fifos) {
 				unlink(std::get<1>(i)
@@ -494,10 +481,8 @@ void PyNN::do_run(NetworkBase &source, Real duration) const
 				    log_path + " for the simulators stderr output");
 			}
 		}
-		log_thread_beg.join();  // Make sure the logging thread has finished
-		log_thread.join();
-		err_thread_beg.join();
-		out_thread.join();
+		err_thread.join();
+
 		for (auto i : fifos) {
 			unlink(std::get<1>(i).c_str());  // Remove all fifos
 		}
