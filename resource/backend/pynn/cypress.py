@@ -294,6 +294,16 @@ class Cypress:
 
         return {"marocco": marocco, "hicann": hicann, "runtime": runtime}
 
+    @staticmethod
+    def _setup_spikey(setup, sim):
+        import pylogging
+        for log in ["HAL.Cal", "HAL.PyS", "HAL.Spi", "PyN.cfg", "PyN.syn", "PyN.wks", "Default"]:
+            pylogging.set_loglevel(pylogging.get(log),
+                                   pylogging.LogLevel.DEBUG)
+        if hasattr(pylogging, "append_to_logging"):
+            pylogging.append_to_logging("PyNN")
+        sim.setup(**setup)
+
     def _setup_simulator(self, setup, sim, simulator, version):
         """
         Internally used to setup the simulator with the given setup parameters.
@@ -321,6 +331,8 @@ class Cypress:
         # simulators
         if (simulator == "nmpm1" or simulator == "ess"):
             self.backend_data = self._setup_nmpm1(setup, sim, simulator)
+        elif (simulator == "spikey"):
+            self._setup_spikey(setup, sim)
         else:
             sim.setup(**setup)
         return setup
