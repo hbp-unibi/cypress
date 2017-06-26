@@ -89,6 +89,8 @@ def tmpdirname(N):
 
 
 def file_script(filename, tar_filename, execute):
+    if not os.path.isfile(filename):
+        return ""
     with open(filename, 'r') as fd:
         compressed = base64.b64encode(bz2.compress(fd.read()))
     return ("extract('" + tar_filename
@@ -190,7 +192,7 @@ for filename in files:
 
 arguments = []
 for arg in args.args:
-    if os.path.exists(arg):
+    if os.path.exists(arg) and os.path.isfile(arg):
         arguments.append(os.path.relpath(arg, args.base))
     else:
         arguments.append(arg)
