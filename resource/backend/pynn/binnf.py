@@ -351,7 +351,7 @@ def read_network(fd):
                                          name + "\" of type \"" + _type + "\"")
 
     # Construct the network descriptor from the binnf data
-    network = {"parameters": [], "spike_times": []}
+    network = {"parameters": [], "spike_times": [], "signals" : []}
     target = None
     while True:
         # Deserialise a single input block
@@ -379,6 +379,8 @@ def read_network(fd):
             network["connections"] = matrix
         elif name == "parameters":
             network["parameters"].append(matrix)
+        elif name == "signals":
+            network["signals"].append(matrix)
         elif name == "target":
             if matrix.size != 1:
                 raise BinnfException(
@@ -395,7 +397,6 @@ def read_network(fd):
             target = None
         else:
             raise BinnfException("Unsupported matrix type \"" + name + "\"")
-
     return network
 
 # Headers used during serialisation

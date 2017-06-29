@@ -63,6 +63,20 @@ void Transformation::do_copy_results(const NetworkBase &src,
 			    !src[i].signals().is_recording(j)) {
 				continue;
 			}
+			else if (!src[i].homogeneous_record())
+            {
+                bool record = false;
+                for(size_t k =0; k<src[i].size(); k++){
+                    if(src[i][k].signals().is_recording(j)){
+                        record = true;
+                        break;
+                    }
+                }
+                if (!record){
+                    continue;
+                }
+                    
+            }
 
 			// Find the target index
 			const std::string &signal_name = src_type.signal_names[j];
