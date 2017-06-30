@@ -63,14 +63,14 @@ public:
 		 * @param x is the position at which the window function should be
 		 * evaluated.
 		 */
-		static constexpr Real value(Real x) { return std::exp(-x * x); }
+		static Real value(Real x) { return std::exp(-x * x); }
 
 		/**
 		 * Returns the value of x for which until the value of the window
 		 * function reaches "epsilon". Multiply the result with the standard
 		 * deviation to get values for standard-deviations other than one.
 		 */
-		static constexpr Real limit(Real eps = 1e-6f)
+		static Real limit(Real eps = 1e-6f)
 		{
 			return std::sqrt(-std::log(eps));
 		}
@@ -88,7 +88,7 @@ public:
 		 * @param x is the position at which the window function should be
 		 * evaluated.
 		 */
-		static constexpr Real value(Real x)
+		static Real value(Real x)
 		{
 			return x < 0.0f ? 0.0f : std::exp(-x);
 		}
@@ -98,7 +98,7 @@ public:
 		 * function reaches "epsilon". Multiply the result with the standard
 		 * deviation to get values for standard-deviations other than one.
 		 */
-		static constexpr Real limit(Real eps = 1e-6f) { return -std::log(eps); }
+		static Real limit(Real eps = 1e-6f) { return -std::log(eps); }
 	};
 
 	/**
