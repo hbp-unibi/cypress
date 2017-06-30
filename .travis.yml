@@ -55,7 +55,7 @@ matrix:
         - sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-6 50
         - sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-6 50
 
-- os: linux
+    - os: linux
       dist: trusty
       addons:
         apt:
