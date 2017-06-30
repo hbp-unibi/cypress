@@ -55,5 +55,5 @@ install:
 script: 
   - mkdir build_gcc 
   - cd build_gcc 
-  - cmake .. -DCMAKE_CXX_COMPILER=g++ -DSTATIC_LINKING=FALSE
+  - cmake .. -DSTATIC_LINKING=FALSE
   - make && make test ARGS=-V
