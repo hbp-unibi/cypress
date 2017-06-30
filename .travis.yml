@@ -16,8 +16,9 @@ matrix:
             - g++-4.9
             - cmake-data
             - cmake
-          install: 
-            - export CXX="g++-4.9" CC="gcc-4.9"
+          before_install: 
+            - sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-4.9 50
+            - sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-4.9 50
       env: MATRIX_EVAL="CC=gcc-4.9 && CXX=g++-4.9"
 
     # works on Precise and Trusty
@@ -33,8 +34,9 @@ matrix:
             - g++-5
             - cmake-data
             - cmake
-          install: 
-            - export CXX="g++-5" CC="gcc-5"
+          before_install: 
+            - sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-5 50
+            - sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-5 50
       env: MATRIX_EVAL="CC=gcc-5 && CXX=g++-5"
 
     # works on Precise and Trusty
@@ -50,13 +52,13 @@ matrix:
             - g++-6
             - cmake-data
             - cmake
-          install: 
-            - export CXX="g++-6" CC="gcc-6"
+          before_install: 
+            - sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-6 50
+            - sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-6 50
       env: MATRIX_EVAL="CC=gcc-6 && CXX=g++-6"
 
 before_install:
     - eval "${MATRIX_EVAL}"
-    - sudo update-alternatives
 
 install: 
   - pip install pyNN requests pyminifier numpy
