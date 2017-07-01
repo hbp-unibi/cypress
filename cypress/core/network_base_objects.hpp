@@ -44,7 +44,7 @@ namespace cypress {
 class PopulationBase;
 class PopulationViewBase;
 class NeuronBase;
-class Accessor;
+struct Accessor;
 
 /**
  * The PopulationBase class represents a generic neuron population of neurons
