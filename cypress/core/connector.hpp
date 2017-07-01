@@ -881,89 +881,82 @@ public:
 inline std::unique_ptr<AllToAllConnector> Connector::all_to_all(Real weight,
                                                                 Real delay)
 {
-	return std::move(std::make_unique<AllToAllConnector>(weight, delay));
+	return std::make_unique<AllToAllConnector>(weight, delay);
 }
 
 inline std::unique_ptr<OneToOneConnector> Connector::one_to_one(Real weight,
                                                                 Real delay)
 {
-	return std::move(std::make_unique<OneToOneConnector>(weight, delay));
+	return std::make_unique<OneToOneConnector>(weight, delay);
 }
 
 inline std::unique_ptr<FromListConnector> Connector::from_list(
     const std::vector<LocalConnection> &connections)
 {
-	return std::move(std::make_unique<FromListConnector>(connections));
+	return std::make_unique<FromListConnector>(connections);
 }
 
 inline std::unique_ptr<FromListConnector> Connector::from_list(
     std::initializer_list<LocalConnection> connections)
 {
-	return std::move(std::make_unique<FromListConnector>(connections));
+	return std::make_unique<FromListConnector>(connections);
 }
 
 template <typename F>
 inline std::unique_ptr<FunctorConnector<F>> Connector::functor(const F &cback)
 {
-	return std::move(std::make_unique<FunctorConnector<F>>(cback));
+	return std::make_unique<FunctorConnector<F>>(cback);
 }
 
 template <typename F>
 inline std::unique_ptr<UniformFunctorConnector<F>> Connector::functor(
     const F &cback, Real weight, Real delay)
 {
-	return std::move(
-	    std::make_unique<UniformFunctorConnector<F>>(cback, weight, delay));
+	return std::make_unique<UniformFunctorConnector<F>>(cback, weight, delay);
 }
 
 inline std::unique_ptr<FixedProbabilityConnector<std::default_random_engine>>
 Connector::fixed_probability(std::unique_ptr<Connector> connector, Real p)
 {
-	return std::move(
-	    fixed_probability(std::move(connector), p, std::random_device()()));
+	return fixed_probability(std::move(connector), p, std::random_device()());
 }
 
 inline std::unique_ptr<FixedProbabilityConnector<std::default_random_engine>>
 Connector::fixed_probability(std::unique_ptr<Connector> connector, Real p,
                              size_t seed)
 {
-	return std::move(
-	    std::make_unique<FixedProbabilityConnector<std::default_random_engine>>(
+	return std::make_unique<FixedProbabilityConnector<std::default_random_engine>>(
 	        std::move(connector), p,
-	        std::make_shared<std::default_random_engine>(seed)));
+	        std::make_shared<std::default_random_engine>(seed));
 }
 
 inline std::unique_ptr<FixedFanInConnector<std::default_random_engine>>
 Connector::fixed_fan_in(size_t n_fan_in, Real weight, Real delay)
 {
-	return std::move(
-	    fixed_fan_in(n_fan_in, weight, delay, std::random_device()()));
+	return fixed_fan_in(n_fan_in, weight, delay, std::random_device()());
 }
 
 inline std::unique_ptr<FixedFanInConnector<std::default_random_engine>>
 Connector::fixed_fan_in(size_t n_fan_in, Real weight, Real delay, size_t seed)
 {
-	return std::move(
-	    std::make_unique<FixedFanInConnector<std::default_random_engine>>(
+	return std::make_unique<FixedFanInConnector<std::default_random_engine>>(
 	        n_fan_in, weight, delay,
-	        std::make_shared<std::default_random_engine>(seed)));
+	        std::make_shared<std::default_random_engine>(seed));
 }
 
 inline std::unique_ptr<FixedFanOutConnector<std::default_random_engine>>
 Connector::fixed_fan_out(size_t n_fan_out, Real weight, Real delay)
 {
-	return std::move(
-	    fixed_fan_out(n_fan_out, weight, delay, std::random_device()()));
+	return fixed_fan_out(n_fan_out, weight, delay, std::random_device()());
 }
 
 inline std::unique_ptr<FixedFanOutConnector<std::default_random_engine>>
 Connector::fixed_fan_out(size_t n_fan_out, Real weight, Real delay,
                          size_t seed)
 {
-	return std::move(
-	    std::make_unique<FixedFanOutConnector<std::default_random_engine>>(
+	return std::make_unique<FixedFanOutConnector<std::default_random_engine>>(
 	        n_fan_out, weight, delay,
-	        std::make_shared<std::default_random_engine>(seed)));
+	        std::make_shared<std::default_random_engine>(seed));
 }
 }
 
