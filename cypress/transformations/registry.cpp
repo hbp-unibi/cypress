@@ -16,8 +16,8 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <cypress/transformations/spikey_if_cond_exp.hpp>
 #include <cypress/transformations/spike_sources.hpp>
+#include <cypress/transformations/spikey_if_cond_exp.hpp>
 
 namespace cypress {
 namespace transformations {
@@ -29,17 +29,17 @@ struct Registry {
 		// to standard IfCondExp neurons
 		Transformations::register_neuron_type_transformation<IfFacetsHardware1,
 		                                                     IfCondExp>(
-		    [] { return std::move(std::make_unique<IFFH1ToLIF>()); });
+		    [] { return std::make_unique<IFFH1ToLIF>(); });
 
 		// Transformation responsible for lossy transforming standard IfCondExp
 		// neurons to spikey neurons
 		Transformations::register_neuron_type_transformation<IfCondExp,
 		                                                     IfFacetsHardware1>(
-		    [] { return std::move(std::make_unique<LIFToIFFH1>()); });
+		    [] { return std::make_unique<LIFToIFFH1>(); });
 
 		// Transformation responsible for fixing Spikey units
 		Transformations::register_general_transformation(
-		    [] { return std::move(std::make_unique<IFFH1UnitScale>()); },
+		    [] { return std::make_unique<IFFH1UnitScale>(); },
 		    [](const Backend &, const NetworkBase &net) {
 			    return net.population_count<IfFacetsHardware1>() > 0;
 			});
@@ -48,19 +48,19 @@ struct Registry {
 		// frequency and constant interval neurons
 		Transformations::register_neuron_type_transformation<
 		    SpikeSourceConstInterval, SpikeSourceConstFreq>(
-		    [] { return std::move(std::make_unique<CIToCF>()); });
+		    [] { return std::make_unique<CIToCF>(); });
 		Transformations::register_neuron_type_transformation<
 		    SpikeSourceConstFreq, SpikeSourceConstInterval>(
-		    [] { return std::move(std::make_unique<CIToCF>()); });
+		    [] { return std::make_unique<CIToCF>(); });
 
 		// Transformations responsible for converting from poisson and constant
 		// frequency neurons to plain spike source arrays
 		Transformations::register_neuron_type_transformation<SpikeSourcePoisson,
 		                                                     SpikeSourceArray>(
-		    [] { return std::move(std::make_unique<PoissonToSA>()); });
+		    [] { return std::make_unique<PoissonToSA>(); });
 		Transformations::register_neuron_type_transformation<
 		    SpikeSourceConstFreq, SpikeSourceArray>(
-		    [] { return std::move(std::make_unique<CFToSA>()); });
+		    [] { return std::make_unique<CFToSA>(); });
 	}
 };
 }

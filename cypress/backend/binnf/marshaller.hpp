@@ -39,7 +39,7 @@ namespace cypress {
  * Forward declarations.
  */
 class NetworkBase;
-class Connection;
+struct Connection;
 class Logger;
 
 namespace binnf {

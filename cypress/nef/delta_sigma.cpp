@@ -137,8 +137,8 @@ DeltaSigma::DiscreteWindow DeltaSigma::DiscreteWindow::create_manual(Real alpha,
 	integral *= step;
 	integral_to_zero *= step;
 
-	return std::move(DiscreteWindow(alpha, sigma, step, integral,
-	                                integral_to_zero, std::move(values)));
+	return DiscreteWindow(alpha, sigma, step, integral, integral_to_zero,
+	                      std::move(values));
 }
 
 template <typename Window>
@@ -243,22 +243,31 @@ std::vector<Real> DeltaSigma::decode(const std::vector<Real> &spikes,
 template std::pair<Real, Real>
     DeltaSigma::DiscreteWindow::calculate_alpha_and_response_time<
         DeltaSigma::ExponentialWindow>(Real, Real, Real, Real, Real);
+template std::pair<Real, Real> DeltaSigma::DiscreteWindow::
+    calculate_alpha_and_response_time<DeltaSigma::GaussWindow>(Real, Real, Real,
+                                                               Real, Real);
+
+template std::pair<Real, Real> DeltaSigma::DiscreteWindow::choose_params<
+    DeltaSigma::ExponentialWindow>(Real, Real, Real, Real);
 template std::pair<Real, Real>
-    DeltaSigma::DiscreteWindow::calculate_alpha_and_response_time<
-        DeltaSigma::GaussWindow>(Real, Real, Real, Real, Real);
-
-template std::pair<Real, Real> DeltaSigma::DiscreteWindow::choose_params<
-    DeltaSigma::ExponentialWindow>(Real, Real, Real, Real);
-template std::pair<Real, Real> DeltaSigma::DiscreteWindow::choose_params<
-    DeltaSigma::GaussWindow>(Real, Real, Real, Real);
+    DeltaSigma::DiscreteWindow::choose_params<DeltaSigma::GaussWindow>(Real,
+                                                                       Real,
+                                                                       Real,
+                                                                       Real);
 
 template DeltaSigma::DiscreteWindow DeltaSigma::DiscreteWindow::create_manual<
     DeltaSigma::ExponentialWindow>(Real, Real, Real, Real);
-template DeltaSigma::DiscreteWindow DeltaSigma::DiscreteWindow::create_manual<
-    DeltaSigma::GaussWindow>(Real, Real, Real, Real);
+template DeltaSigma::DiscreteWindow
+    DeltaSigma::DiscreteWindow::create_manual<DeltaSigma::GaussWindow>(Real,
+                                                                       Real,
+                                                                       Real,
+                                                                       Real);
 
-template DeltaSigma::DiscreteWindow DeltaSigma::DiscreteWindow::create<
-    DeltaSigma::ExponentialWindow>(Real, Real, Real, Real);
+template DeltaSigma::DiscreteWindow
+    DeltaSigma::DiscreteWindow::create<DeltaSigma::ExponentialWindow>(Real,
+                                                                      Real,
+                                                                      Real,
+                                                                      Real);
 template DeltaSigma::DiscreteWindow
     DeltaSigma::DiscreteWindow::create<DeltaSigma::GaussWindow>(Real, Real,
                                                                 Real, Real);
