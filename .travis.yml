@@ -54,7 +54,7 @@ matrix:
             - g++-6
             - clang-3.8
       env: MATRIX_EVAL="CC=clang-3.8 && CXX=clang++-3.8"
-      install:
+      before_install:
         export CXX="clang++-3.8" CC="clang-3.8"
         sudo export CXX="clang++-3.8" CC="clang-3.8"
 
@@ -69,7 +69,7 @@ matrix:
             - g++-6
             - clang-4.0
       env: MATRIX_EVAL="CC=clang-4.0 && CXX=clang++-4.0"
-      install:
+      before_install:
         export CXX="clang++-4.0" CC="clang-4.0"
         sudo export CXX="clang++-4.0" CC="clang-4.0"
 
