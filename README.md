@@ -11,7 +11,7 @@ on the Human Brain Project (HBP) neuromorphic hardware systems. Cypress also all
 to transparently execute the networks remotely on the HBP Neuromorphic Compute Platform,
 significantly shortening the time required when performing experiments.
 
-[![Build Status](https://travis-ci.org/hbp-unibi/cypress.svg?branch=master)](https://travis-ci.org/hbp-unibi/cypress) [![Documentation](https://img.shields.io/badge/docs-doxygen-blue.svg)](https://hbp-unibi.github.io/SNABSuite/index.html)
+[![Build Status](https://travis-ci.org/hbp-unibi/cypress.svg?branch=master)](https://travis-ci.org/hbp-unibi/cypress) [![Documentation](https://img.shields.io/badge/docs-doxygen-blue.svg)](https://hbp-unibi.github.io/cypress/index.html)
 
 Installation
 ------------
