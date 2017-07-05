@@ -73,7 +73,28 @@ matrix:
         export CXX="clang++-4.0" CC="clang-4.0"
         sudo export CXX="clang++-4.0" CC="clang-4.0"
 
-
+    - os: linux
+      dist: trusty
+      addons:
+        apt:
+          packages:
+            - doxygen
+            - doxygen-doc
+            - doxygen-latex
+            - doxygen-gui
+            - graphviz
+      before_install:
+      install:
+      script:
+        - mkdir build
+        - doxygen doxygen.conf
+      deploy:
+        provider: pages
+        skip_cleanup: true
+        local_dir: build/doc/html/
+        github_token: $GITHUB_TOKEN
+        on:
+          branch: master
 
 
 
