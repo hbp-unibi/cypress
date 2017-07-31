@@ -335,7 +335,7 @@ void pipe_write_helper(std::string file, NetworkBase &source)
 	std::filebuf fb_in;
 	fb_in.open(file, std::ios::out);
 	std::ostream data_in(&fb_in);
-	if (data_in.good() == false) {
+	if (!data_in.good()) {
 		throw ExecutionError("Error in pipe to python");
 	}
 	// Send the network description to the simulator, inject the connection
