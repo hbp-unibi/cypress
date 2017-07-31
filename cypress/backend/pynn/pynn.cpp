@@ -328,7 +328,7 @@ std::unordered_set<const NeuronType *> PyNN::supported_neuron_types() const
 
 namespace {
 /**
- * Helper function to put writing of network description into a seperate thread
+ * Helper function to write network description into a file
  */
 void pipe_write_helper(std::string file, NetworkBase &source)
 {
@@ -344,14 +344,24 @@ void pipe_write_helper(std::string file, NetworkBase &source)
 	fb_in.close();
 }
 
-std::map<std::string, std::string> fifo_filenames(const std::string log_path)
+/**
+ * Helper function to construct a map of filenames for results and std_in of the
+ * subprocess
+ */
+std::map<std::string, std::string> fifo_filenames(const std::string path)
 {
 	std::map<std::string, std::string> res;
-	res.emplace("in", std::string().append(log_path).append("_stdin"));
-	res.emplace("res", std::string().append(log_path).append("_res"));
+	res.emplace("in", std::string().append(path).append("_stdin"));
+	res.emplace("res", std::string().append(path).append("_res"));
 	return res;
 }
 
+/**
+ * Helper function to open a fifo for reading (the writing process has to open
+ * the fifo first. Otherwise @res will be directly closed again
+ * @param file_name name of the fifo to open
+ * @param res reference to a filebuffer which will point to fifo
+ */
 void open_fifo_to_read(std::string file_name, std::filebuf &res)
 {
 	while (true) {
@@ -410,7 +420,7 @@ void PyNN::do_run(NetworkBase &source, Real duration) const
 		     m_setup.dump(), "--duration", std::to_string(duration), "--in",
 		     fifos["in"], "--out", fifos["res"]});
 
-		// Get reade to write network description to fifo. This blocks untile
+		// Get ready to write network description to fifo. This blocks until
 		// python process starts reading
 		std::thread data_in(pipe_write_helper, fifos["in"], std::ref(source));
 #else

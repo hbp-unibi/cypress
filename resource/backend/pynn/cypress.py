@@ -195,7 +195,7 @@ class Cypress:
         # Restrict number of logical neurons/neuron block
         marocco.neuron_placement.minimize_number_of_sending_repeaters(True)
 
-        # Temporal (?) fix for the usage of a special HICANN chip
+        # Temporary (?) fix for the usage of a special HICANN chip
         hicann = None
         runtime = None
 
@@ -348,7 +348,7 @@ class Cypress:
             params = {"spike_times": []}  # sPyNNaker issue #190
         res = self.sim.Population(count, type_, params)
 
-        # Temporal (?) fix for the usage of a special HICANN chip
+        # Temporary (?) fix for the usage of a special HICANN chip
         if self.simulator == "nmpm1" and not (self.backend_data["hicann"] is None):
             self.backend_data["marocco"].manual_placement.on_hicann(
                 res, self.backend_data["hicann"])
