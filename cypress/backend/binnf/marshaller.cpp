@@ -17,9 +17,9 @@
  */
 
 #include <algorithm>
-#include <vector>
 #include <string>
 #include <unordered_set>
+#include <vector>
 
 #include <cypress/backend/binnf/binnf.hpp>
 #include <cypress/backend/binnf/marshaller.hpp>
@@ -27,6 +27,7 @@
 #include <cypress/core/network_base_objects.hpp>
 #include <cypress/core/neurons.hpp>
 #include <cypress/core/types.hpp>
+#include <cypress/util/logger.hpp>
 #include <cypress/util/matrix.hpp>
 
 namespace cypress {
@@ -242,7 +243,7 @@ bool marshall_response(NetworkBase &net, std::istream &is)
 		try {
 			block = deserialise(is);
 			if (block.type == BlockType::INVALID) {
-				return had_block; // We're at the end of the stream
+				return had_block;  // We're at the end of the stream
 			}
 			had_block = true;
 
@@ -282,8 +283,7 @@ bool marshall_response(NetworkBase &net, std::istream &is)
 				auto neuron = net[tar_pid][tar_nid];
 				auto idx = neuron.type().signal_index("spikes");
 				if (idx.valid() && neuron.signals().is_recording(idx.value())) {
-					auto data = std::make_shared<Matrix<Real>>(
-					        block.rows(), 1);
+					auto data = std::make_shared<Matrix<Real>>(block.rows(), 1);
 					for (size_t i = 0; i < block.rows(); i++) {
 						(*data)(i, 0) = block.get_float(i, 0);
 					}
@@ -305,8 +305,7 @@ bool marshall_response(NetworkBase &net, std::istream &is)
 				auto neuron = net[tar_pid][tar_nid];
 				auto idx = neuron.type().signal_index(signal);
 				if (idx.valid() && neuron.signals().is_recording(idx.value())) {
-					auto data = std::make_shared<Matrix<Real>>(
-					        block.rows(), 2);
+					auto data = std::make_shared<Matrix<Real>>(block.rows(), 2);
 					for (size_t i = 0; i < block.rows(); i++) {
 						(*data)(i, 0) = block.get_float(i, 0);
 						(*data)(i, 1) = block.get_float(i, 1);
@@ -337,6 +336,36 @@ bool marshall_response(NetworkBase &net, std::istream &is)
 	}
 	return had_block;
 }
-}
-}
 
+bool marshall_log(Logger &logger, std::istream &is)
+{
+	Block block;
+	bool had_block = false;
+	while (is.good()) {
+		// Deserialise the incomming data, continue until the end of the input
+		// stream is reached, skip faulty blocks
+		try {
+			block = deserialise(is);
+			if (block.type == BlockType::INVALID) {
+				return had_block;  // We're at the end of the stream
+			}
+			had_block = true;
+
+			if (block.type == BlockType::LOG) {
+				logger.log(block.severity, block.time, block.module, block.msg);
+				continue;
+			}
+			else if (block.type != BlockType::MATRIX) {
+				throw BinnfDecodeException("Unsupported block type!");
+			}
+		}
+		catch (BinnfDecodeException &ex) {
+			logger.error("cypress", std::string("Error while parsing BiNNF: ") +
+			                            ex.what());
+			continue;
+		}
+	}
+	return had_block;
+}
+}
+}

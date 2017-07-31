@@ -158,26 +158,25 @@ class Cypress:
         import pylogging
         from pymarocco import PyMarocco
 
+        pylogging.reset()
+        pylogging.log_to_cout(pylogging.LogLevel.FATAL)
         # Activate logging
         from pysthal.command_line_util import init_logger
         init_logger("INFO", [
             ("ESS", "INFO"),
             ("marocco", "INFO"),
             ("calibtic", "INFO"),
-            ("sthal", "WARN")
+            ("sthal", "FATAL")
         ])
         # Log everything to file
-        # pylogging.log_to_file("log_back.txt", pylogging.LogLevel.DEBUG)
+        # pylogging.log_to_file("log_back.txt", pylogging.LogLevel.INFO)
 
         # In case one of the UHEI platforms is used, there will by the pylogging
         # module, which is a bridge from Python to log4cxx. Tell log4cxx to send
         # its log messages back to Python.
-        try:
-            import pylogging
-            if hasattr(pylogging, "append_to_logging"):
-                pylogging.append_to_logging("PyNN")
-        except:
-            pass
+        if hasattr(pylogging, "append_to_logging"):
+            pylogging.append_to_logging("PyNN")
+
         marocco = PyMarocco()
 
         # Copy and delete non-standard setup parameters
@@ -188,21 +187,28 @@ class Cypress:
             marocco.neuron_placement.default_neuron_size(setup["neuron_size"])
             del setup["neuron_size"]
         else:
-            marocco.neuron_placement.default_neuron_size(2)
-        logger.warn("Using a virtual neuron size of " +
-                    str(marocco.neuron_placement.default_neuron_size()))
+            marocco.neuron_placement.default_neuron_size(4)
+        marocco = PyMarocco()
 
-        marocco.neuron_placement.minimize_number_of_sending_repeaters(False)
+        # Reserve a OutputBuffer fod DNC inputs and output
+        marocco.neuron_placement.restrict_rightmost_neuron_blocks(True)
+        # Restrict number of logical neurons/neuron block
+        marocco.neuron_placement.minimize_number_of_sending_repeaters(True)
+
+        # Temporary (?) fix for the usage of a special HICANN chip
+        hicann = None
+        runtime = None
+
         # Two possibilities for choosing the HW Capacitance. This is unrelated
         # to biological capacitance (everything will be scaled automatically),
         # but changes the range of hardware parameters, especially weights.
         if "big_capacitor" in setup:
-            logger.warn("Using big capacitors")
+            logger.info("Using big capacitors")
             marocco.param_trafo.use_big_capacitors = True
             del setup["big_capacitor"]
         else:
             marocco.param_trafo.use_big_capacitors = False
-            logger.warn("Using small capacitors")
+            logger.info("Using small capacitors")
 
         # In the mapping process, bandwidth of input can be considered.
         # consider_firing_rate will estimate the firing rate either of the
@@ -212,7 +218,7 @@ class Cypress:
         # bandwidth_utilization(par) with a value of par < 1.0 will reduce the
         # seemingly available bandwidth for mapping by par.
         if "bandwidth" in setup:
-            logger.warn("Marocco bandwidth_utilization is set to " +
+            logger.info("Marocco bandwidth_utilization is set to " +
                         str(setup["bandwidth"]))
             marocco.input_placement.consider_firing_rate(True)
             marocco.input_placement.bandwidth_utilization(
@@ -224,23 +230,69 @@ class Cypress:
             marocco.experiment_time_offset = 5.e-7
             if "calib_path" in setup:
                 # Use custom calibration in both mapping and ESS!
-                logger.warn("Using custom calibration at " +
+                logger.info("Using custom calibration at " +
                             str(setup["calib_path"]))
                 marocco.calib_backend = PyMarocco.XML
                 marocco.calib_path = str(setup["calib_path"])
                 marocco.ess_config.calib_path = str(setup["calib_path"])
                 del setup["calib_path"]
         else:
+            import pyhalbe.Coordinate as C
+            from pymarocco import Defects
+            from pymarocco.runtime import Runtime
+
+            marocco.merger_routing.strategy(marocco.merger_routing.one_to_one)
+
+            marocco.bkg_gen_isi = 125
+            marocco.pll_freq = 125e6
+
             marocco.backend = PyMarocco.Hardware
             marocco.calib_backend = PyMarocco.XML
-            marocco.calib_path = "/wang/data/calibration/wafer_0"
+
+            # Chose calibration files
+            if "calib_path" in setup:
+                marocco.defects.path = marocco.calib_path = str(
+                    setup["calib_path"])
+                logger.info("Using custom calibration at " +
+                            str(setup["calib_path"]))
+                del setup["calib_path"]
+            else:
+                marocco.defects.path = marocco.calib_path = "/wang/data/calibration/ITL_2016"
+            marocco.defects.backend = Defects.XML
+
+            # Chose Wafer and HICANN. Have to be in accordance with parameters
+            # for srun
+            if "wafer" in setup:
+                marocco.default_wafer = C.Wafer(int(setup["wafer"]))
+                logger.info("Using custom wafer at " + str(setup["wafer"]))
+                del setup["wafer"]
+            else:
+                marocco.default_wafer = C.Wafer(33)
+            if "hicann" in setup:
+                if isinstance(setup["hicann"], (list, tuple)):
+                    hicann = []
+                    for hno in setup["hicann"]:
+                        hicann.append(C.HICANNOnWafer(C.Enum(int(hno))))
+                else:
+                    hicann = C.HICANNOnWafer(C.Enum(int(setup["hicann"])))
+                logger.info("Using custom HICANN number " +
+                            str(setup["hicann"]) + "\n")
+                del setup["hicann"]
+            else:
+                hicann = C.HICANNOnWafer(C.Enum(367))  # choose hicann
+
+            runtime = Runtime(marocco.default_wafer)
+            setup["marocco_runtime"] = runtime
+
+            marocco.hicann_configurator = PyMarocco.HICANNv4Configurator
 
         # Pass the marocco object and the actual setup to the simulation setup
         # method
         sim.setup(marocco=marocco, **setup)
 
         # Return used neuron size
-        return {}
+
+        return {"marocco": marocco, "hicann": hicann, "runtime": runtime}
 
     def _setup_simulator(self, setup, sim, simulator, version):
         """
@@ -295,6 +347,11 @@ class Cypress:
         if is_source and self.simulator == "nmmc1":
             params = {"spike_times": []}  # sPyNNaker issue #190
         res = self.sim.Population(count, type_, params)
+
+        # Temporary (?) fix for the usage of a special HICANN chip
+        if self.simulator == "nmpm1" and not (self.backend_data["hicann"] is None):
+            self.backend_data["marocco"].manual_placement.on_hicann(
+                res, self.backend_data["hicann"])
 
         # Increment the neuron counter needed to work around absolute neuron ids
         # in PyNN 0.6, store the neuron index in the created population

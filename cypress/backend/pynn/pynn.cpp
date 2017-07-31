@@ -17,15 +17,19 @@
  */
 
 #include <algorithm>
-#include <future>
+#include <cerrno>
 #include <fstream>
-#include <string>
+#include <future>
 #include <sstream>
+#include <string>
+#include <system_error>
 #include <thread>
-#include <vector>
 #include <unordered_map>
 #include <unordered_set>
+#include <vector>
 
+#include <sys/stat.h>
+#include <sys/types.h>
 #include <unistd.h>
 
 #include <cypress/backend/binnf/marshaller.hpp>
@@ -324,6 +328,53 @@ std::unordered_set<const NeuronType *> PyNN::supported_neuron_types() const
 	return SUPPORTED_NEURON_TYPE_MAP.find("__default__")->second;
 }
 
+namespace {
+/**
+ * Helper function to write network description into a file
+ */
+void pipe_write_helper(std::string file, NetworkBase &source)
+{
+	std::filebuf fb_in;
+	fb_in.open(file, std::ios::out);
+	std::ostream data_in(&fb_in);
+	if (!data_in.good()) {
+		throw ExecutionError("Error in pipe to python");
+	}
+	// Send the network description to the simulator, inject the connection
+	// transformation to rewrite the connections
+	binnf::marshall_network(source, data_in);
+	fb_in.close();
+}
+
+/**
+ * Helper function to construct a map of filenames for results and std_in of the
+ * subprocess
+ */
+std::map<std::string, std::string> fifo_filenames(const std::string path)
+{
+	std::map<std::string, std::string> res;
+	res.emplace("in", std::string().append(path).append("_stdin"));
+	res.emplace("res", std::string().append(path).append("_res"));
+	return res;
+}
+
+/**
+ * Helper function to open a fifo for reading (the writing process has to open
+ * the fifo first. Otherwise @res will be directly closed again
+ * @param file_name name of the fifo to open
+ * @param res reference to a filebuffer which will point to fifo
+ */
+void open_fifo_to_read(std::string file_name, std::filebuf &res)
+{
+	while (true) {
+		if (res.open(file_name, std::ios::in)) {
+			break;
+		}
+		usleep(3000);
+	}
+}
+}
+
 void PyNN::do_run(NetworkBase &source, Real duration) const
 {
 	// Find the import that should be used
@@ -356,45 +407,80 @@ void PyNN::do_run(NetworkBase &source, Real duration) const
 	// Run the PyNN python backend
 	{
 #ifndef CYPRESS_DEBUG_BINNF
+		// Generate file names for temporary files
+		filesystem::tmpfile(log_path);
+		auto fifos = fifo_filenames(log_path);
+
+		// Make sure we can create the files
+		if (mkfifo(fifos["in"].c_str(), 0666) != 0) {
+			throw std::system_error(errno, std::system_category());
+		}
+
 		std::vector<std::string> params(
 		    {Resources::PYNN_INTERFACE.open(), "run", "--simulator",
 		     m_normalised_simulator, "--library", import, "--setup",
-		     m_setup.dump(), "--duration", std::to_string(duration)});
+		     m_setup.dump(), "--duration", std::to_string(duration), "--in",
+		     fifos["in"], "--out", fifos["res"]});
+
+		// Get ready to write network description to fifo. This blocks until
+		// python process starts reading
+		std::thread data_in(pipe_write_helper, fifos["in"], std::ref(source));
 #else
 		std::vector<std::string> params(
 		    {Resources::PYNN_INTERFACE.open(), "dump"});
 #endif
 		Process proc("python", params);
 
-// Attach the error log
 #ifndef CYPRESS_DEBUG_BINNF
-		std::ofstream log_stream(filesystem::tmpfile(log_path));
-		std::thread log_thread(Process::generic_pipe,
+		std::ofstream log_stream(log_path);
+		// This process is only meant to cover the first milliseconds before
+		// all communication is switched to named pipes (fifos). This is usefull
+		// when the script aborts before switching
+		std::thread log_thread_beg(Process::generic_pipe,
+		                           std::ref(proc.child_stdout()),
+		                           std::ref(std::cout));
+
+		// Continiously track stderr of child
+		std::thread err_thread(Process::generic_pipe,
 		                       std::ref(proc.child_stderr()),
 		                       std::ref(log_stream));
+
+		// Open fifo for output and log of python process. Wait until files
+		// are created, than open it for reading
+		std::filebuf fb_res;
+		open_fifo_to_read(fifos["res"], fb_res);
+		std::istream std_res(&fb_res);
 #else
 		std::thread log_thread(Process::generic_pipe,
 		                       std::ref(proc.child_stdout()),
 		                       std::ref(std::cout));
-#endif
-
-		// Send the network description to the simulator, inject the connection
-		// transformation to rewrite the connections
+		// Send the network description to the simulator
 		binnf::marshall_network(source, proc.child_stdin());
-		proc.close_child_stdin();
-
-// Wait for the process to be done
+#endif
 #ifndef CYPRESS_DEBUG_BINNF
+		log_thread_beg.join();
+		data_in.join();  // Wait until python has read the description
 		int res;
-		if ((!binnf::marshall_response(source, proc.child_stdout())) |
+
+		// Keep track of log messages, at the end read results.
+		if ((!binnf::marshall_response(source, std_res)) |
 		    ((res = proc.wait()) != 0)) {
-			log_thread.join();  // Make sure the logging thread has finished
+			err_thread.join();
 
 			// Explicitly state if the process was killed by a signal
 			if (res < 0) {
 				source.logger().error(
 				    "cypress", "Simulator child process killed by signal " +
 				                   std::to_string(-res));
+			}
+
+			for (auto i : fifos) {
+				if (unlink(std::get<1>(i).c_str()) < 0) {  // Remove all fifos
+					// Somethings gone wrong, probably child process still
+					// accessing
+					// file
+					throw std::system_error(errno, std::system_category());
+				}
 			}
 
 			// Only dump stderr if no error message has been logged
@@ -411,12 +497,20 @@ void PyNN::do_run(NetworkBase &source, Real duration) const
 				    log_path + " for the simulators stderr output");
 			}
 		}
-#endif
+		err_thread.join();
 
+		for (auto i : fifos) {
+			if (unlink(std::get<1>(i).c_str()) < 0) {  // Remove all fifos
+				// Somethings gone wrong, probably child process still accessing
+				// file
+				throw std::system_error(errno, std::system_category());
+			}
+		}
+#else
 		// Make sure the logging thread has finished
 		log_thread.join();
+#endif
 	}
-
 	// Remove the log file
 	if (!m_keep_log) {
 		unlink(log_path.c_str());

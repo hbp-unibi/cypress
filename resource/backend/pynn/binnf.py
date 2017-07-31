@@ -188,7 +188,7 @@ def dtype_to_header(dt):
     entry.
     """
     return map(lambda x: {"name": x[0], "type": INV_TYPE_MAP[x[1][0].name]},
-        sorted(dt.fields.items(), key=lambda x: x[1][1]))
+               sorted(dt.fields.items(), key=lambda x: x[1][1]))
 
 
 def serialise_matrix(fd, name, matrix):
@@ -455,4 +455,3 @@ def write_runtimes(fd, times):
 
 __all__ = ["serialise_matrix", "serialise_log", "deserialise", "read_network",
            "BinnfException"]
-

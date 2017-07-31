@@ -49,7 +49,10 @@ public:
 
 	TransformationProperties properties() const override
 	{
-		return TransformationProperties{200, false};
+		TransformationProperties res;
+		res.cost = 200;
+		res.lossy = false;
+		return res;
 	}
 
 	virtual ~TransformationType2(){};
@@ -61,7 +64,10 @@ public:
 
 	TransformationProperties properties() const override
 	{
-		return TransformationProperties{100, true};
+		TransformationProperties res;
+		res.cost = 100;
+		res.lossy = true;
+		return res;
 	}
 
 	virtual ~TransformationType3(){};

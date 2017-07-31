@@ -163,7 +163,10 @@ def run(filename, args):
 def cleanup():
     # Remove extracted files -- we're only interested in newly created files
     for file in files:
-        os.unlink(file)
+        try:
+            os.unlink(file)
+        except:
+            pass
 
     # Create a tar.bz2 of the target folder containing all the output
     tarname = os.path.basename(dir)
@@ -297,9 +300,10 @@ for dataitem in datalist:
         # Move the content from the temporary directory to the top-level
         # directory, remove the temporary directory
         for filename in os.listdir(tmpdir):
+            src = os.path.join(tmpdir, filename)
             dest = os.path.join(os.getcwd(), filename)
-            if not os.path.isdir(dest):
-                shutil.copy(os.path.join(tmpdir, filename), os.path.join(os.getcwd(),filename))
+            if not os.path.isdir(src):
+                shutil.copy(src, dest)
         shutil.rmtree(tmpdir)
 
         logger.info("Done!")

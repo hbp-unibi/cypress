@@ -116,6 +116,12 @@ a major bottleneck. However, constructing networks in C++ is extremely fast. Fur
 this amazing alien C++ technology-thingy allows to detect most errors in your code before actually
 executing it. Who would have thought of that?
 
+FAQ
+------------
+
+Q: Executing make && make test (or during simulations) the program aborts with a seg fault.
+A: Try building without static linking (comment line 52 in CMakeLists.txt) ```SET(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static")```
+
 ## Authors
 
 This project has been initiated by Andreas Stöckel in 2016 while working

@@ -220,7 +220,8 @@ int main(int argc, const char *argv[])
 
 	// Neuron and synfire chain parameters
 	Parameters neuron_params = Parameters();
-	SynfireChainParameters<Neuron> params{neuron_params};
+	SynfireChainParameters<Neuron> params;
+	params.neuron_params = neuron_params;
 
 	// Create the network and the synfire chain
 	Network net;
