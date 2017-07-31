@@ -467,16 +467,20 @@ void PyNN::do_run(NetworkBase &source, Real duration) const
 		    ((res = proc.wait()) != 0)) {
 			err_thread.join();
 
-			for (auto i : fifos) {
-				unlink(std::get<1>(i)
-				           .c_str());  // Remove all fifos in case of error
-			}
-
 			// Explicitly state if the process was killed by a signal
 			if (res < 0) {
 				source.logger().error(
 				    "cypress", "Simulator child process killed by signal " +
 				                   std::to_string(-res));
+			}
+
+			for (auto i : fifos) {
+				if (unlink(std::get<1>(i).c_str()) < 0) {  // Remove all fifos
+					// Somethings gone wrong, probably child process still
+					// accessing
+					// file
+					throw std::system_error(errno, std::system_category());
+				}
 			}
 
 			// Only dump stderr if no error message has been logged
