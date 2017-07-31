@@ -17,10 +17,12 @@
  */
 
 #include <algorithm>
+#include <cerrno>
 #include <fstream>
 #include <future>
 #include <sstream>
 #include <string>
+#include <system_error>
 #include <thread>
 #include <unordered_map>
 #include <unordered_set>
@@ -411,7 +413,7 @@ void PyNN::do_run(NetworkBase &source, Real duration) const
 
 		// Make sure we can create the files
 		if (mkfifo(fifos["in"].c_str(), 0666) != 0) {
-			throw ExecutionError("Error while creating named pipe");
+			throw std::system_error(errno, std::system_category());
 		}
 
 		std::vector<std::string> params(
@@ -494,7 +496,11 @@ void PyNN::do_run(NetworkBase &source, Real duration) const
 		err_thread.join();
 
 		for (auto i : fifos) {
-			unlink(std::get<1>(i).c_str());  // Remove all fifos
+			if (unlink(std::get<1>(i).c_str()) < 0) {  // Remove all fifos
+				// Somethings gone wrong, probably child process still accessing
+				// file
+				throw std::system_error(errno, std::system_category());
+			}
 		}
 #else
 		// Make sure the logging thread has finished
