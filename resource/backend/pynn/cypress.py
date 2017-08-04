@@ -77,7 +77,7 @@ class Cypress:
         for i in xrange(count + 1):
             elem = eqn_fun(lst[i]) if i < count else None
             if i == count or elem != begin_elem:
-                if not begin_elem is None:
+                if begin_elem is not None:
                     cbck_fun(begin_elem, begin, i)
                 begin_elem = elem
                 begin = i
@@ -132,8 +132,8 @@ class Cypress:
         evaluated code.
         :param simulator: simulator name that should be made available to the
         evaluated code.
-        :param version: PyNN version number that should be made available to the
-        evaluated code.
+        :param version: PyNN version number that should be made available to
+        the evaluated code.
         """
         res = {}
         for key, value in setup.items():
@@ -317,9 +317,9 @@ class Cypress:
 
         # PyNN 0.7 compatibility hack: Update min_delay/timestep if only one
         # of the values is set
-        if ((not "min_delay" in setup) and ("timestep" in setup)):
+        if (("min_delay" not in setup) and ("timestep" in setup)):
             setup["min_delay"] = setup["timestep"]
-        if (("min_delay" in setup) and (not "timestep" in setup)):
+        if (("min_delay" in setup) and ("timestep" not in setup)):
             setup["timestep"] = setup["min_delay"]
 
         # PyNN 0.7 compatibility hack: Force certain parameters to be floating
@@ -385,11 +385,11 @@ class Cypress:
                         if self.record_v_count == 0:
                             setattr(res, "__spikey_record_v", 0)
                             self.sim.record_v(res[0], '')
-                            logger.warning("Spikey can only record membrane voltage for "
-                                           + "one neuron! Neuron 0 is recorded!")
+                            logger.warning("Spikey can only record membrane voltage" +
+                                           " for one neuron! Neuron 0 is recorded!")
                         else:
-                            logger.warning("Spikey can only record membrane voltage for "
-                                           + "one neuron! Records will be ignored")
+                            logger.warning("Spikey can only record membrane voltage" +
+                                           " for one neuron! Records will be ignored")
                     else:
                         res.record_v()
                     # Increment the record_v_count variable
@@ -426,8 +426,8 @@ class Cypress:
                                                    "one neuron! Record from " +
                                                    "neuron " + str(list[0]))
                             else:
-                                logger.warning("Spikey can only record membrane"
-                                               + "voltage for one neuron! " +
+                                logger.warning("Spikey can only record membrane" +
+                                               "voltage for one neuron! " +
                                                "voltage rec will be ignored")
                         else:
                             res.record_v(list)
@@ -440,8 +440,8 @@ class Cypress:
                     # Special case SpiNNaker
                     if((self.simulator == "spinnaker") or
                             (self.simulator == "nmmc1")):
-                        logger.warn("Setting up recording for individual cells"
-                                    + " is not supported by SpiNNaker!")
+                        logger.warn("Setting up recording for individual cells" +
+                                    " is not supported by SpiNNaker!")
                         if (SIG_SPIKES in record[i]):
                             res.record()
                         if (SIG_V in record[i]):
@@ -449,7 +449,7 @@ class Cypress:
                         if ((SIG_GE in record[i]) or (SIG_GI in record[i])):
                             res.record_gsyn()
 
-                    # Every other backend support PopulationView
+                    # Every other backend supports PopulationView
                     else:
                         # Set record via PopulationView
                         pop = self.sim.PopulationView(res, list)
