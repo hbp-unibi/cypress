@@ -134,7 +134,7 @@ public:
 	 * @param tar_begin is an iterator pointing at the first neuron in the
 	 * target
 	 * population that should be connected.
-	 * @param tar_end is an iterator pointing at the first neuron in the
+	 * @param tar_end is an iterator pointing at the last neuron in the
 	 * target population that should be connected.
 	 * @param connector is the object establishing the actual connections.
 	 * @return a reference at this object for function chaining.
