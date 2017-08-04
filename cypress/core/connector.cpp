@@ -71,6 +71,21 @@ void AllToAllConnector::connect(const ConnectionDescriptor &descr,
 	}
 }
 
+bool AllToAllConnector::group_connect(const ConnectionDescriptor &descr,
+	                     GroupConnction &tar) const
+{
+	tar.psrc = descr.pid_src();
+	tar.src0 = descr.nid_src0();
+	tar.src1 = descr.nid_src1();
+	tar.ptar = descr.pid_tar();
+	tar.tar0 = descr.nid_tar0();
+    tar.tar1 = descr.nid_tar1();
+	tar.synapse = Synapse(m_weight, m_delay);
+	tar.additional_parameter = 0;
+    tar.connection_name = "AllToAllConnector";
+    return true;
+}
+
 /*
  * Class OneToOneConnector
  */
@@ -82,6 +97,21 @@ void OneToOneConnector::connect(const ConnectionDescriptor &descr,
 		tar.emplace_back(descr.pid_src(), descr.pid_tar(), descr.nid_src0() + i,
 		                 descr.nid_tar0() + i, weight(), delay());
 	}
+}
+
+bool OneToOneConnector::group_connect(const ConnectionDescriptor &descr,
+	                     GroupConnction &tar) const
+{
+	tar.psrc = descr.pid_src();
+	tar.src0 = descr.nid_src0();
+	tar.src1 = descr.nid_src1();
+	tar.ptar = descr.pid_tar();
+	tar.tar0 = descr.nid_tar0();
+    tar.tar1 = descr.nid_tar1();
+	tar.synapse = Synapse(m_weight, m_delay);
+	tar.additional_parameter = 0;
+    tar.connection_name = "OneToOneConnector";
+    return true;
 }
 
 /*
@@ -98,5 +128,11 @@ void FromListConnector::connect(const ConnectionDescriptor &descr,
 			                 c.synapse.weight, c.synapse.delay);
 		}
 	}
+}
+
+bool FromListConnector::group_connect(const ConnectionDescriptor &,
+	                   GroupConnction &) const 
+{
+    return false;
 }
 }
