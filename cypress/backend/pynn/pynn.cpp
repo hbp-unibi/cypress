@@ -442,8 +442,11 @@ void PyNN::do_run(NetworkBase &source, Real duration) const
 		std::thread log_thread(Process::generic_pipe,
 		                       std::ref(proc.child_stdout()),
 		                       std::ref(std::cout));
+
 		// Send the network description to the simulator
 		binnf::marshall_network(source, proc.child_stdin());
+		proc.close_child_stdin();
+
 #endif
 #ifndef CYPRESS_DEBUG_BINNF
 		log_thread_beg.join();
