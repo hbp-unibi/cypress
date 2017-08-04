@@ -58,6 +58,22 @@ static int32_t binnf_type_id(const NeuronType &type)
 	                            "\" not supported!");
 }
 
+static int32_t binnf_connector_id(const std::string &connector)
+{
+	static const std::map<const std::string, int32_t> CONNECTION_TYPE_ID_MAP{
+	    {{"AllToAllConnector", 1},       // PyNN: AllToAllConnector
+	     {"OneToOneConnector", 2},       // PyNN: OneToOneConnector
+	     {"RandomConnector", 3},         // PyNN: FixedProbabilityConnector
+	     {"FixedFanInConnector", 4},     // PyNN: FixedNumberPreConnector
+	     {"FixedFanOutConnector", 5}}};  // PyNN: FixedNumberPostConnector
+
+	auto it = CONNECTION_TYPE_ID_MAP.find(connector);
+	if (it != CONNECTION_TYPE_ID_MAP.end()) {
+		return it->second;
+	}
+	return 0;
+}
+
 /**
  * Constructs and sends the matrix containing the populations to the simulator.
  *
@@ -127,30 +143,89 @@ static void write_inhomogeneous_record(const PopulationBase &population,
 				                      // population, do not try to record it
 				if (idx.valid()) {
 					// Check whether the neuron wants to record this signal
-                    record = population[i].signals().is_recording(idx.value());
+					record = population[i].signals().is_recording(idx.value());
 				}
 				block.set(i, j++, record);
-				
 			}
 		}
 	}
 	serialise(os, block);
 }
 
+namespace {
+#pragma pack(push, 1)
+// Structure for writing data in BiNNF table
+struct custom_conn_descr {
+	uint32_t pid_src = 0;
+	NeuronIndex nid_src_start = 0;
+	NeuronIndex nid_src_end = 0;
+	uint32_t pid_tar = 0;
+	NeuronIndex nid_tar_start = 0;
+	NeuronIndex nid_tar_end = 0;
+	int32_t connector_id = 0;
+	Real weight = 0.0;
+	Real delay = 0.0;
+	Real parameter = 0.0;
+};
+#pragma pack(pop)
+custom_conn_descr convert_non_list_connection(GroupConnction conn)
+{
+	custom_conn_descr res;
+	res.pid_src = conn.psrc;
+	res.nid_src_start = conn.src0;
+	res.nid_src_end = conn.src1;
+	res.pid_tar = conn.ptar;
+	res.nid_tar_start = conn.tar0;
+	res.nid_tar_end = conn.tar1;
+	res.connector_id = binnf_connector_id(conn.connection_name);
+	res.weight = conn.synapse.weight;
+	res.delay = conn.synapse.delay;
+	res.parameter = conn.additional_parameter;
+	return res;
+}
+}
 /**
- * Constructs and sends the connection matrix to the simulator.
+ * Constructs and sends the connections to the simulator. There are two
+ * different formats: Own connectors are expanded to a list, PyNN supported
+ * Connectors are converted to a compact custom_conn_descr. The latter make use
+ * of PyNN included connectors.
  */
 static void write_connections(const std::vector<ConnectionDescriptor> &descrs,
                               std::ostream &os)
 {
-	static const Header CONNECTIONS_HEADER = {
+	static const Header LIST_CONNECTIONS_HEADER = {
 	    {"pid_src", "pid_tar", "nid_src", "nid_tar", "weight", "delay"},
 	    {INT, INT, INT, INT, FLOAT, FLOAT}};
 
-	std::vector<Connection> connections = instantiate_connections(descrs);
-	serialise_matrix(os, "connections", CONNECTIONS_HEADER,
+	static const Header GROUP_CONNECTIONS_HEADER = {
+	    {"pid_src", "nid_src_start", "nid_src_end", "pid_tar", "nid_tar_start",
+	     "nid_tar_end", "connector_id", "weight", "delay", "parameter"},
+	    {INT, INT, INT, INT, INT, INT, INT, FLOAT, FLOAT, FLOAT}};
+
+	std::vector<ConnectionDescriptor> list_connections;
+	std::vector<custom_conn_descr> group_connections;
+
+	for (auto desc : descrs) {
+		GroupConnction temp;
+        // Check wether connection can be used as grouped connection
+		if (desc.connector().group_connect(desc, temp)) {
+			group_connections.emplace_back(convert_non_list_connection(temp));
+		}
+		else {
+			list_connections.emplace_back(desc);
+		}
+	}
+
+	// Expand all other connections
+	std::vector<Connection> connections =
+	    instantiate_connections(list_connections);
+
+	serialise_matrix(os, "list_connections", LIST_CONNECTIONS_HEADER,
 	                 reinterpret_cast<uint8_t *>(&connections[0]),
 	                 connections.size());
+	serialise_matrix(os, "group_connections", GROUP_CONNECTIONS_HEADER,
+	                 reinterpret_cast<uint8_t *>(&group_connections[0]),
+	                 group_connections.size());
 }
 
 static void write_target(PopulationIndex pid, NeuronIndex nid, std::ostream &os)

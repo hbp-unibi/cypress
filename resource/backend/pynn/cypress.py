@@ -670,6 +670,130 @@ class Cypress:
         self._iterate_blocks(cs, lambda x: (x[0], x[1], x[4] >= 0.0),
                              create_projection)
 
+    def _connect_connectors(self, populations, connections):
+        """
+        Instead of using the from lsit connector, this function uses pre defined
+        connectors from pyNN, for which the mapping process is (hoopefully) optimized.
+        :param populations: is the list of already created population objects.
+        :param connections: is the list containing the connection descriptions.
+        """
+
+        def check_full_pop(pop, start, end):
+            # Check wether the full population is used
+            return (start == 0) and (end == len(pop))
+
+        def get_connector_new(conn_id, parameter, allow_self_conn=False):
+            """
+            returns a connector according to conn_id (which is identical to
+            those in cypress c++ part.
+            :param conn_id: int representing a connection type
+            :param parameter: optional parameter for the conneciton
+            :param allow_self_conn: Allows self connections of a neuron. Disabled
+            by default (not valid on some backends)
+            """
+            if conn_id == 1:
+                return self.sim.AllToAllConnector(
+                    allow_self_connections=allow_self_conn)
+            elif conn_id == 2:
+                return self.sim.OneToOneConnector()
+            elif conn_id == 3:
+                return self.sim.FixedProbabilityConnector(p_connect=parameter,
+                                                          allow_self_connections=allow_self_conn)
+            elif conn_id == 4:
+                return self.sim.FixedNumberPreConnector(n=int(parameter),
+                                                        allow_self_connections=allow_self_conn)
+            elif conn_id == 5:
+                return self.sim.FixedNumberPostConnector(n=int(parameter),
+                                                         allow_self_connections=allow_self_conn)
+            else:
+                raise CypressException("Unknown Connector ID " + conn_id)
+
+        # Blame SpiNNaker for "not implemented error" on setWeight of a
+        # projection. Therefore we have to set weights and delays with the
+        # connector
+        def get_connector_old(conn_id, weight, delay, parameter, allow_self_conn=False):
+            """
+            returns a connector according to conn_id (which is identical to
+            those in cypress c++ part.
+            :param conn_id: int representing a connection type
+            :param weight: weight of the connection
+            :param delay: synaptic delay in the connection
+            :param parameter: optional parameter for the conneciton
+            :param allow_self_conn: Allows self connections of a neuron. Disabled
+            by default (not valid on some backends)
+            """
+            if conn_id == 1:
+                return self.sim.AllToAllConnector(weights=weight, delays=delay,
+                                                  allow_self_connections=allow_self_conn)
+            elif conn_id == 2:
+                return self.sim.OneToOneConnector(weights=weight, delays=delay)
+            elif conn_id == 3:
+                return self.sim.FixedProbabilityConnector(p_connect=parameter,
+                                                          weights=weight,
+                                                          delays=delay,
+                                                          allow_self_connections=allow_self_conn)
+            elif conn_id == 4:
+                return self.sim.FixedNumberPreConnector(n=int(parameter),
+                                                        weights=weight,
+                                                        delays=delay,
+                                                        allow_self_connections=allow_self_conn)
+            elif conn_id == 5:
+                return self.sim.FixedNumberPostConnector(n=int(parameter),
+                                                         weights=weight,
+                                                         delays=delay,
+                                                         allow_self_connections=allow_self_conn)
+            else:
+                raise CypressException("Unknown Connector ID " + conn_id)
+
+        def connect_pop(pop1, pop2, conn_id, weight, delay, parameter=0):
+            """
+            This function connects two populations with a PyNN connector.
+            :param pop*: Population or PopulationView object
+            :param conn_id: int representing a connection type
+            :param weight: weight of the connection
+            :param delay: synaptic delay in the connection
+            :param parameter: optional parameter for the conneciton
+            """
+            mechanism = 'excitatory' if weight > 0 else 'inhibitory'
+            if self.version < 8:
+                # Weight*s*, delay*s* are part of the connector, use option
+                # "target"
+                proj = self.sim.Projection(pop1, pop2, get_connector_old(
+                    conn_id, np.abs(weight), delay, parameter), target=mechanism)
+            else:
+                # Weight, delay is part of a synapse object
+                if self.simulator == "nest":
+                    # Fix delays in nest having to be larger than and multiples of the
+                    # simulation timestep
+                    dt = self.get_time_step()
+                    delay = np.maximum(np.round(delay / dt), 1.0) * dt
+                synapse = self.sim.StaticSynapse(weight=weight, delay=delay)
+                self.sim.Projection(pop1, pop2, connector=get_connector_new(
+                    conn_id, parameter), synapse_type=synapse, label="")
+
+        def get_pop_view(pop, start, end):
+            """
+            Returns a PopulationView object containing neurons from start to end.
+            Checks compatibility with backend
+            :param pop: Population object
+            :param start: integer value for the first neuron included
+            :param end: integer value for the first neuron *not* included
+            """
+            if check_full_pop(pop, start, end):
+                return pop
+            elif self.simulator in ["nmmc1", "spikey"]:
+                logger.warn("Backend does not not support partial view" +
+                            " on populations! Connecting using the full Population!")
+                return pop
+            else:
+                return pop[start:end]
+
+        # Iterate through all connection descriptors
+        for conn in connections:
+            src = get_pop_view(populations[conn[0]]['obj'], conn[1], conn[2])
+            tar = get_pop_view(populations[conn[3]]['obj'], conn[4], conn[5])
+            connect_pop(src, tar, conn[6], conn[7], conn[8], conn[9])
+
     @staticmethod
     def _convert_pyNN7_spikes(spikes, n, idx_offs=0, t_scale=1.0):
         """
@@ -909,7 +1033,8 @@ class Cypress:
         populations = self._build_populations(
             network["populations"], network["signals"])
         self._set_population_parameters(populations, network)
-        self._connect(populations, network["connections"])
+        self._connect(populations, network["list_connections"])
+        self._connect_connectors(populations, network["group_connections"])
 
         # Round up the duration to the timestep -- fixes a problem with
         # SpiNNaker
