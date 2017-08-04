@@ -326,6 +326,7 @@ std::unordered_set<const NeuronType *> PyNN::supported_neuron_types() const
 	return SUPPORTED_NEURON_TYPE_MAP.find("__default__")->second;
 }
 
+#ifndef CYPRESS_DEBUG_BINNF
 namespace {
 /**
  * Helper function to put writing of network description into a seperate thread
@@ -362,6 +363,7 @@ void open_fifo_to_read(std::string file_name, std::filebuf &res)
 	}
 }
 }
+#endif
 
 void PyNN::do_run(NetworkBase &source, Real duration) const
 {
