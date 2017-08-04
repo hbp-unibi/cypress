@@ -285,6 +285,9 @@ template <typename RandomEngine>
 class FixedProbabilityConnector;
 
 template <typename RandomEngine>
+class RandomConnector;
+
+template <typename RandomEngine>
 class FixedFanInConnector;
 
 template <typename RandomEngine>
@@ -338,6 +341,7 @@ public:
 	virtual bool group_connect(const ConnectionDescriptor &descr,
 	                           GroupConnction &tar) const = 0;
 
+	/**
 	 * Returns true if the connector can create the connections for the given
 	 * connection descriptor. While most connectors will always be able to
 	 * create a connection, for example a one-to-one connector
@@ -438,6 +442,34 @@ public:
 	    FixedProbabilityConnector<std::default_random_engine>>
 	fixed_probability(std::unique_ptr<Connector> connector, Real p,
 	                  size_t seed);
+
+	/**
+	 * Connector adapter which ensures connections are only produced with a
+	 * certain probability.
+	 *
+	 * @param weight is the synaptic weight that should be used for all
+	 * connections.
+	 * @param delay is the synaptic delay that should be used for all
+	 * connections.
+	 * @param probability probability with which an connection is created.
+	 */
+	static std::unique_ptr<RandomConnector<std::default_random_engine>> random(
+	    Real weight = 1, Real delay = 0, Real probability = 1);
+
+	/**
+	 * Connector adapter which ensures connections are only produced with a
+	 * certain probability.
+	 *
+	 * @param weight is the synaptic weight that should be used for all
+	 * connections.
+	 * @param delay is the synaptic delay that should be used for all
+	 * connections.
+	 * @param probability probability with which an connection is created.
+	 * @param seed is the seed the random number generator should be initialised
+	 * with.
+	 */
+	static std::unique_ptr<RandomConnector<std::default_random_engine>> random(
+	    Real weight, Real delay, Real probability, size_t seed);
 
 	/**
 	 * Connector which randomly selects neurons from the source population and
@@ -810,13 +842,16 @@ public:
 };
 
 class FixedProbabilityConnectorBase : public Connector {
+protected:
+	std::string name_string = "FixedProbabilityConnector";
+
 public:
-	std::string name() const override { return "FixedProbabilityConnector"; }
+	std::string name() const override { return name_string; }
 };
 
 template <typename RandomEngine>
 class FixedProbabilityConnector : public FixedProbabilityConnectorBase {
-private:
+protected:
 	std::unique_ptr<Connector> m_connector;
 	std::shared_ptr<RandomEngine> m_engine;
 	Real m_p = 1.0;
@@ -852,6 +887,44 @@ public:
 	bool valid(const ConnectionDescriptor &descr) const override
 	{
 		return m_connector->valid(descr);
+	}
+};
+
+/**
+ * Establishes a random connection between populations. A possible connection
+ * between two neurons exists with given probability @probability.
+ */
+template <typename RandomEngine>
+class RandomConnector : public FixedProbabilityConnector<RandomEngine> {
+private:
+	using Base = FixedProbabilityConnector<RandomEngine>;
+	Real m_weight;
+	Real m_delay;
+
+public:
+	RandomConnector(Real weight, Real delay, Real probability,
+	                std::shared_ptr<RandomEngine> engine)
+	    : FixedProbabilityConnector<RandomEngine>(
+	          Connector::all_to_all(weight, delay), probability, engine),
+	      m_weight(weight),
+	      m_delay(delay)
+	{
+		FixedProbabilityConnectorBase::name_string = "RandomConnector";
+	}
+
+	bool group_connect(const ConnectionDescriptor &descr,
+	                   GroupConnction &tar) const override
+	{
+		tar.psrc = descr.pid_src();
+		tar.src0 = descr.nid_src0();
+		tar.src1 = descr.nid_src1();
+		tar.ptar = descr.pid_tar();
+		tar.tar0 = descr.nid_tar0();
+		tar.tar1 = descr.nid_tar1();
+		tar.synapse = Synapse(m_weight, m_delay);
+		tar.additional_parameter = Base::m_p;
+		tar.connection_name = "RandomConnector";
+		return true;
 	}
 };
 
@@ -990,6 +1063,21 @@ public:
 			});
 	}
 
+	bool group_connect(const ConnectionDescriptor &descr,
+	                   GroupConnction &tar) const override
+	{
+		tar.psrc = descr.pid_src();
+		tar.src0 = descr.nid_src0();
+		tar.src1 = descr.nid_src1();
+		tar.ptar = descr.pid_tar();
+		tar.tar0 = descr.nid_tar0();
+		tar.tar1 = descr.nid_tar1();
+		tar.synapse = Synapse(Base::m_weight, Base::m_delay);
+		tar.additional_parameter = m_n_fan_out;
+		tar.connection_name = "FixedFanOutConnector";
+		return true;
+	};
+
 	/**
 	 * Checks the validity of the connection. For the FixedFanOutConnector,
 	 * the number of neurons in the target population must be at least equal to
@@ -1058,6 +1146,19 @@ Connector::fixed_probability(std::unique_ptr<Connector> connector, Real p,
 	    FixedProbabilityConnector<std::default_random_engine>>(
 	    std::move(connector), p,
 	    std::make_shared<std::default_random_engine>(seed));
+}
+
+inline std::unique_ptr<RandomConnector<std::default_random_engine>>
+Connector::random(Real weight, Real delay, Real p)
+{
+	return random(weight, delay, p, std::random_device()());
+}
+
+inline std::unique_ptr<RandomConnector<std::default_random_engine>>
+Connector::random(Real weight, Real delay, Real p, size_t seed)
+{
+	return std::make_unique<RandomConnector<std::default_random_engine>>(
+	    weight, delay, p, std::make_shared<std::default_random_engine>(seed));
 }
 
 inline std::unique_ptr<FixedFanInConnector<std::default_random_engine>>
