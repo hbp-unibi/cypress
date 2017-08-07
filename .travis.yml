@@ -103,6 +103,7 @@ before_install:
 
 install: 
   - sudo pip install pyNN requests pyminifier numpy
+  - pip install pyNN requests pyminifier numpy
 script: 
   - mkdir build_gcc 
   - cd build_gcc 
