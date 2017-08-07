@@ -1,23 +1,110 @@
-language: cpp
-python: 
-  - "2.7"
+language: generic
+python: 2.7.13
 sudo: required
-dist: trusty
-addons:
-  apt:
-    sources:
-      - ubuntu-toolchain-r-test
-      - george-edison55-precise-backports
-    packages:
-      - gcc-5
-      - g++-5
-      - cmake
-      - cmake-data
-before_install:
-  - sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-5 50
-  - sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-5 50
-install:
-  pip install pyNN requests pyminifier numpy
-script:
-  - ( mkdir build_gcc && cd build_gcc && cmake .. -DCMAKE_CXX_COMPILER=g++ -DCMAKE_C_COMPILER=gcc -DSTATIC_LINKING=FALSE && make && make test ARGS=-V )
+matrix:
+  include:
+    - os: linux
+      dist: trusty
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+          packages:
+            - g++-4.9
+      env: MATRIX_EVAL="CC=gcc-4.9 && CXX=g++-4.9"
+      before_install: 
+        - sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-4.9 50
+        - sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-4.9 50
 
+    - os: linux
+      dist: trusty
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+          packages:
+            - g++-5
+          before_install: 
+      env: MATRIX_EVAL="CC=gcc-5 && CXX=g++-5"
+      before_install: 
+        - sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-5 50
+        - sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-5 50
+
+    - os: linux
+      dist: trusty
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+          packages:
+            - g++-6
+      env: MATRIX_EVAL="CC=gcc-6 && CXX=g++-6"
+      before_install: 
+        - sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-6 50
+        - sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-6 50
+
+    - os: linux
+      dist: trusty
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+            - llvm-toolchain-trusty-3.8
+          packages:
+            - g++-6
+            - clang-3.8
+      env: MATRIX_EVAL="CC=clang-3.8 && CXX=clang++-3.8"
+      before_install:
+        export CXX="clang++-3.8" CC="clang-3.8"
+        sudo export CXX="clang++-3.8" CC="clang-3.8"
+
+    - os: linux
+      dist: trusty
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+            - llvm-toolchain-trusty-4.0
+          packages:
+            - g++-6
+            - clang-4.0
+      env: MATRIX_EVAL="CC=clang-4.0 && CXX=clang++-4.0"
+      before_install:
+        export CXX="clang++-4.0" CC="clang-4.0"
+        sudo export CXX="clang++-4.0" CC="clang-4.0"
+
+    - os: linux
+      dist: trusty
+      addons:
+        apt:
+          packages:
+            - doxygen
+            - doxygen-doc
+            - doxygen-latex
+            - doxygen-gui
+            - graphviz
+      before_install:
+      install:
+      script:
+        - mkdir build
+        - doxygen doxygen.conf
+      deploy:
+        provider: pages
+        skip_cleanup: true
+        local_dir: build/doc/html/
+        github_token: $GITHUB_TOKEN
+        on:
+          branch: master
+
+
+
+before_install:
+    - eval "${MATRIX_EVAL}"
+
+install: 
+  - sudo pip install pyNN requests pyminifier numpy
+script: 
+  - mkdir build_gcc 
+  - cd build_gcc 
+  - cmake .. -DSTATIC_LINKING=FALSE
+  - make && make test ARGS=-V

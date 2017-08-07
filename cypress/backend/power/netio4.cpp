@@ -17,17 +17,16 @@
  */
 
 #include <fstream>
-#include <sstream>
 #include <mutex>
+#include <sstream>
+#include <string>
 
 #include <cypress/backend/power/netio4.hpp>
+#include <cypress/util/logger.hpp>
 #include <cypress/util/process.hpp>
 
 namespace cypress {
-NetIO4::NetIO4(cypress::Json &config)
-{
-	read_json_config(config);
-}
+NetIO4::NetIO4(cypress::Json &config) { read_json_config(config); }
 
 NetIO4::NetIO4(const std::string &config_filename)
 {
@@ -51,17 +50,19 @@ void NetIO4::read_json_config(cypress::Json &config)
 		m_device_port_map.emplace(it.key(), it.value());
 	}
 
-	std::cerr << "Trying to connect to the NETIO4 device at " << m_addr << ":"
-	          << m_port << " with username \"" << m_user << "\"..."
-	          << std::endl;
+	global_logger().debug(
+	    "NETIO4", "Trying to connect to the NETIO4 device at " + m_addr + ":" +
+	                  std::to_string(m_port) + " with username \"" + m_user +
+	                  "\"...");
 	if (connected()) {
-		std::cerr << "Connection successful." << std::endl;
+		global_logger().info("NETIO4", "Connection successful.");
 		for (auto elem : m_device_port_map) {
-			std::cerr << elem.first << " --> port " << elem.second << std::endl;
+			global_logger().debug("NETIO4", elem.first + " --> port " +
+			                                    std::to_string(elem.second));
 		}
 	}
 	else {
-		std::cerr << "No connection to the device!" << std::endl;
+		global_logger().fatal_error("NETIO4", "No connection to the device!");
 	}
 }
 
@@ -185,4 +186,3 @@ bool NetIO4::switch_off(const std::string &device)
 	return false;
 }
 }
-

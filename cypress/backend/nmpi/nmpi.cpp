@@ -47,7 +47,7 @@ static int run_broker(const std::vector<std::string> &args,
 
 	if (external_files.size() > 1) {
 		params.emplace_back("--files");
-		for (size_t i = 1; i < external_files.size(); i++) {
+		for (size_t i = 0; i < external_files.size(); i++) {
 			params.emplace_back(external_files[i]);
 		}
 	}

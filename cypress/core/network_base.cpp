@@ -380,16 +380,14 @@ std::unique_ptr<Backend> NetworkBase::make_backend(std::string backend_id,
 			throw std::invalid_argument(
 			    "Expected another backend name following \"nmpi\"!");
 		}
-		auto backend =
-		    std::move(make_backend(join(elems, '.'), argc, argv, setup));
+		auto backend = make_backend(join(elems, '.'), argc, argv, setup);
 		if (dynamic_cast<PyNN *>(backend.get()) == nullptr) {
 			throw std::invalid_argument(
 			    "NMPI backend only works in conjunction with PyNN backends!");
 		}
 		std::unique_ptr<PyNN> pynn_backend(dynamic_cast<PyNN *>(backend.get()));
 		backend.release();
-		return std::move(
-		    std::make_unique<NMPI>(std::move(pynn_backend), argc, argv));
+		return std::make_unique<NMPI>(std::move(pynn_backend), argc, argv);
 	}
 	else if (elems[0] == "pynn") {
 		elems.erase(elems.begin());  // Remove the first element
@@ -400,10 +398,10 @@ std::unique_ptr<Backend> NetworkBase::make_backend(std::string backend_id,
 		return std::make_unique<PyNN>(join(elems, '.'), setup);
 	}
 	else if (elems[0] == "nest") {
-		return std::move(std::make_unique<NEST>(setup));
+		return std::make_unique<NEST>(setup);
 	}
 	else {
-		return std::move(std::make_unique<PyNN>(join(elems, '.'), setup));
+		return std::make_unique<PyNN>(join(elems, '.'), setup);
 	}
 	return nullptr;
 }

@@ -19,12 +19,13 @@
 #include <atomic>
 #include <chrono>
 #include <iostream>
+#include <mutex>
 #include <sstream>
 #include <thread>
-#include <mutex>
 
 #include <cypress/backend/power/power.hpp>
 #include <cypress/core/exceptions.hpp>
+#include <cypress/util/logger.hpp>
 #include <cypress/util/process.hpp>
 
 namespace cypress {
@@ -197,11 +198,10 @@ void PowerManagementBackend::do_run(NetworkBase &network, Real duration) const
 			// successful, try again
 			if (repeat > 1) {
 				if (m_device->switch_off(dev_name)) {
-					std::cerr
-					    << "Error while executing the simulation, going "
-					       "to power-cycle the neuromorphic device and retry!"
-					    << std::endl;
-					sleep(delay);
+					global_logger().warn("PowerBackend",
+					    "Error while executing the simulation, going "
+					    "to power-cycle the neuromorphic device and retry!");
+					    sleep(delay);
 					repeat--;
 					continue;
 				}
@@ -212,4 +212,3 @@ void PowerManagementBackend::do_run(NetworkBase &network, Real duration) const
 	}
 }
 }
-

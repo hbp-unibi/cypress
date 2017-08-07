@@ -17,18 +17,18 @@
  */
 
 #include <algorithm>
-#include <queue>
 #include <limits>
 #include <mutex>
+#include <queue>
 #include <stack>
 #include <tuple>
 #include <unordered_map>
 
 #include <cypress/core/backend.hpp>
 #include <cypress/core/exceptions.hpp>
-#include <cypress/core/transformation.hpp>
 #include <cypress/core/network_base.hpp>
 #include <cypress/core/network_base_objects.hpp>
+#include <cypress/core/transformation.hpp>
 #include <cypress/util/logger.hpp>
 
 namespace cypress {
@@ -62,6 +62,18 @@ void Transformation::do_copy_results(const NetworkBase &src,
 			if (src[i].homogeneous_record() &&
 			    !src[i].signals().is_recording(j)) {
 				continue;
+			}
+			else if (!src[i].homogeneous_record()) {
+				bool record = false;
+				for (size_t k = 0; k < src[i].size(); k++) {
+					if (src[i][k].signals().is_recording(j)) {
+						record = true;
+						break;
+					}
+				}
+				if (!record) {
+					continue;
+				}
 			}
 
 			// Find the target index
@@ -330,7 +342,7 @@ void Transformations::run(const Backend &backend, NetworkBase network,
 		    TransformationRegistry::get_neuron_type_transformations();
 		for (auto it = available_neuron_trafos.begin();
 		     it != available_neuron_trafos.end(); it++) {
-			if (disabled_trafo_ids.count(std::get<0> (*it)()->id()) > 0) {
+			if (disabled_trafo_ids.count(std::get<0>(*it)()->id()) > 0) {
 				it = available_neuron_trafos.erase(it);
 			}
 		}
@@ -366,8 +378,8 @@ void Transformations::run(const Backend &backend, NetworkBase network,
 					    "cypress",
 					    "Executing transformation " + trafos.top()->id());
 				}
-				networks.emplace(std::move(
-				    trafos.top()->transform(networks.top(), aux_cpy)));
+				networks.emplace(
+				    trafos.top()->transform(networks.top(), aux_cpy));
 			}
 			catch (TransformationException e) {
 				networks.top().logger().warn(
@@ -386,7 +398,7 @@ void Transformations::run(const Backend &backend, NetworkBase network,
 		// back to the original network
 		auto apply_trafos = [&]() {
 			for (const auto &ctor : neuron_trafos) {
-				if (!apply_trafo(std::move(ctor()))) {
+				if (!apply_trafo(ctor())) {
 					return false;
 				}
 			}
@@ -394,8 +406,7 @@ void Transformations::run(const Backend &backend, NetworkBase network,
 			// Apply all general transformations
 			for (const auto &descr :
 			     TransformationRegistry::get_general_transformations()) {
-				std::unique_ptr<Transformation> trafo =
-				    std::move(std::get<0>(descr)());
+				std::unique_ptr<Transformation> trafo = std::get<0>(descr)();
 				if (disabled_trafo_ids.count(trafo->id()) > 0) {
 					continue;  // Skip disabled transformations
 				}

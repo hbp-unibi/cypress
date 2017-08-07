@@ -139,7 +139,7 @@ private:
 	std::vector<std::tuple<std::shared_ptr<LogBackend>, LogSeverity>>
 	    m_backends;
 	std::mutex m_logger_mtx;
-	LogSeverity m_min_level = LogSeverity::INFO;
+	// LogSeverity m_min_level = LogSeverity::INFO;
 	std::map<LogSeverity, size_t> m_counts;
 
 	size_t backend_idx(int idx) const

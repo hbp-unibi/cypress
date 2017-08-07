@@ -294,6 +294,17 @@ class Cypress:
 
         return {"marocco": marocco, "hicann": hicann, "runtime": runtime}
 
+    @staticmethod
+    def _setup_spikey(setup, sim):
+        import pylogging
+        for log in ["HAL.Cal", "HAL.PyS", "HAL.Spi", "PyN.cfg", "PyN.syn",
+                    "PyN.wks", "Default"]:
+            pylogging.set_loglevel(pylogging.get(log),
+                                   pylogging.LogLevel.DEBUG)
+        if hasattr(pylogging, "append_to_logging"):
+            pylogging.append_to_logging("PyNN")
+        sim.setup(**setup)
+
     def _setup_simulator(self, setup, sim, simulator, version):
         """
         Internally used to setup the simulator with the given setup parameters.
@@ -321,18 +332,21 @@ class Cypress:
         # simulators
         if (simulator == "nmpm1" or simulator == "ess"):
             self.backend_data = self._setup_nmpm1(setup, sim, simulator)
+        elif (simulator == "spikey"):
+            self._setup_spikey(setup, sim)
         else:
             sim.setup(**setup)
         return setup
 
-    def _build_population(self, count, type_name, record):
+    def _build_population(self, count, type_name, signals, record):
         """
-        Used internally to creates a PyNN neuron population according to the
+        Used internally to create a PyNN neuron population according to the
         given parameters.
 
         :param count: is the size of the population
         :param type_name: is the name of the neuron type that should be used.
-        :param record: is an array with signals that should be recorded.
+        :param signals: is an array with signals + data that should be recorded.
+        :param record: is an array with signal names that should be recorded.
         """
 
         # Translate the neuron type to the PyNN neuron type
@@ -360,51 +374,147 @@ class Cypress:
                 setattr(res, "__offs", self.neuron_count)
             self.neuron_count += count
 
-        # Setup recording
-        if self.version <= 7:
-            # Setup recording
-            if (SIG_SPIKES in record):
-                res.record()
-            if (SIG_V in record):
-                # Special handling for voltage recording with Spikey
-                if (self.simulator == "spikey"):
-                    if self.record_v_count == 0:
-                        setattr(res, "__spikey_record_v", True)
-                        self.sim.record_v(res[0], '')
-                else:
-                    res.record_v()
+        # Setup recording. Check if data is homogeneous
+        if((signals.shape[0] != count) or (count == 1)):
+            if self.version <= 7:
+                if (SIG_SPIKES in record):
+                    res.record()
+                if (SIG_V in record):
+                    # Special handling for voltage recording with Spikey
+                    if (self.simulator == "spikey"):
+                        if self.record_v_count == 0:
+                            setattr(res, "__spikey_record_v", 0)
+                            self.sim.record_v(res[0], '')
+                            logger.warning("Spikey can only record membrane voltage for "
+                                           + "one neuron! Neuron 0 is recorded!")
+                        else:
+                            logger.warning("Spikey can only record membrane voltage for "
+                                           + "one neuron! Records will be ignored")
+                    else:
+                        res.record_v()
+                    # Increment the record_v_count variable
+                    self.record_v_count += count
+                if ((SIG_GE in record) or (SIG_GI in record)):
+                    res.record_gsyn()
+            elif (self.version == 8):
+                res.record(record)
+        else:
+            for i in xrange(0, len(record)):
+                # Create a list of neuron indices to be recorded
+                list = []
+                for j in xrange(0, len(signals["record_" + record[i]])):
+                    if signals["record_" + record[i]][j]:
+                        # Spikey's record funtion uses PyIDs instead of ints
+                        if(self.simulator == "spikey"):
+                            list.append(res[j])
+                        else:
+                            list.append(j)
 
-                # Increment the record_v_count variable
-                self.record_v_count += count
-            if ((SIG_GE in record) or (SIG_GI in record)):
-                res.record_gsyn()
-        elif (self.version == 8):
-            # Setup recording
-            res.record(record)
+                if self.version <= 6:
+                    if (SIG_SPIKES in record[i]):
+                        res.record(list)
+                    if (SIG_V in record[i]):
+                        # Special handling for voltage recording with Spikey
+                        if (self.simulator == "spikey"):
+                            if self.record_v_count == 0:
+                                setattr(res, "__spikey_record_v", int(list[0]))
+                                self.sim.record_v(list[0], '')
+                                self.record_v_count = 1
+                                if(len(list) > 1):
+                                    logger.warning("Spikey can only record " +
+                                                   "membrane voltage for " +
+                                                   "one neuron! Record from " +
+                                                   "neuron " + str(list[0]))
+                            else:
+                                logger.warning("Spikey can only record membrane"
+                                               + "voltage for one neuron! " +
+                                               "voltage rec will be ignored")
+                        else:
+                            res.record_v(list)
+                        # Increment the record_v_count variable
+                        self.record_v_count += len(list)
+                    if ((SIG_GE in record[i]) or (SIG_GI in record[i])):
+                        res.record_gsyn(list)
 
+                elif (self.version == 7):
+                    # Special case SpiNNaker
+                    if((self.simulator == "spinnaker") or
+                            (self.simulator == "nmmc1")):
+                        logger.warn("Setting up recording for individual cells"
+                                    + " is not supported by SpiNNaker!")
+                        if (SIG_SPIKES in record[i]):
+                            res.record()
+                        if (SIG_V in record[i]):
+                            res.record_v()
+                        if ((SIG_GE in record[i]) or (SIG_GI in record[i])):
+                            res.record_gsyn()
+
+                    # Every other backend support PopulationView
+                    else:
+                        # Set record via PopulationView
+                        pop = self.sim.PopulationView(res, list)
+                        if (SIG_SPIKES in record[i]):
+                            pop.record()
+                        if (SIG_V in record[i]):
+                            pop.record_v()
+                            self.record_v_count += len(list)
+                        if ((SIG_GE in record[i]) or (SIG_GI in record[i])):
+                            res.record_gsyn(list)
+
+                elif (self.version == 8):
+                    pop = self.sim.PopulationView(res, list)
+                    pop.record(record[i])
         return res
 
-    def _build_populations(self, populations):
+    def _gather_records(self, signals, count):
+        """
+        Used internally to gather all signal names which are actually recorded
+
+        :param count: is the size of the population
+        :param signals: is an array with signals + data that should be recorded.
+        """
+
         # Fetch all keys in the structured array starting with "record_"
         record_keys = filter(lambda x: x.startswith("record_"),
-                             populations.dtype.fields.keys())
+                             signals.dtype.fields.keys())
 
+        # Fetch the name of the record keys
+        signals_ = zip(map(lambda key: signals[key], record_keys), record_keys)
+
+        # If data is homogeneous
+        if(signals.shape[0] != count):
+            # throw away "record_" of the keys, gather entries which are set to
+            # one
+            record = map(lambda x: x[1][7:], filter(
+                lambda x: x[0] == 1, signals_))
+            return record
+        else:
+            record = []
+            for i in xrange(0, len(signals_)):
+                _record = False
+                # Check wether signal is recorded for any neuron
+                for j in xrange(0, len(signals_[i][0])):
+                    if signals_[i][0][j] != 0:
+                        _record = True
+                        break
+                if(_record):
+                    record.append(signals_[i][1])
+            # Throw away the "record_"
+            record = map(lambda x: x[7:], record)
+            return record
+
+    def _build_populations(self, populations, signals):
         # Create a population descriptor for each row in the array
         res = [None] * len(populations)
         for i in xrange(len(populations)):
-            # Fetch the name of the record keys (excluding the record_) for
-            # which a "1" is set in the corresponding structured array
-            # entry
             count = populations[i]["count"]
             type_name = TYPES[populations[i]["type"]]
-            record = map(lambda x: x[1][7:], filter(lambda x: x[0] == 1, zip(
-                map(lambda key: populations[i][key], record_keys),
-                record_keys)))
+            record = self._gather_records(signals[i], count)
             res[i] = {
                 "count": count,
                 "type_name": type_name,
                 "record": record,
-                "obj": self._build_population(int(count), type_name, record)
+                "obj": self._build_population(int(count), type_name, signals[i], record)
             }
         return res
 
@@ -566,7 +676,6 @@ class Cypress:
         Converts a pyNN7 spike train, list of (nid, time)-tuples, into a list
         of lists containing the spike times for each neuron individually.
         """
-
         # Create one result list for each neuron
         res = [[] for _ in xrange(n)]
         for row in spikes:
@@ -585,14 +694,18 @@ class Cypress:
         return res
 
     @staticmethod
-    def _convert_pyNN8_spikes(spikes):
+    def _convert_pyNN8_spikes(spikes, n):
         """
-        Converts a pyNN8 spike train (some custom datastructure), into a list
+        Converts a pyNN8 spike train (neo datastructure), into a list
         of arrays containing the spike times for each neuron individually.
         """
-        return [np.array(
-            zip(spikes[i]), dtype=[("times", np.float64)])
-            for i in xrange(len(spikes))]
+        res = [[] for _ in xrange(n)]
+        for spike_train in spikes:
+            res[spike_train.annotations["source_index"]] = spike_train
+        for i in xrange(n):
+            res[i].sort()
+            res[i] = np.array(zip(res[i]), dtype=[("times", np.float64)])
+        return res
 
     @staticmethod
     def _convert_pyNN7_signal(data, idx, n):
@@ -609,19 +722,33 @@ class Cypress:
             dtype=[("times", np.float64), ("values", np.float64)]) for i in xrange(n)]
 
     @staticmethod
-    def _convert_pyNN8_signal(times, values, size):
-        return [np.array(zip(times, values[:, i]),
-                         dtype=[("times", np.float64), ("values", np.float64)]) for i in xrange(size)]
+    def _convert_pyNN8_signal(data, size):
+        """
+        Converts a pyNN8 analog value array (neo datastructure), into a list
+        of arrays containing the signal for each neuron individually.
+        """
+        res = [[[], []] for _ in xrange(size)]
+        neuron_ids = data.channel_indexes
+        for i in xrange(0, len(neuron_ids)):
+            res[neuron_ids[i]] = np.array((data.times, data.T[i]))
+
+        for i in xrange(size):
+            res[i] = np.array(zip(res[i][0], res[i][1]), dtype=[
+                              ("times", np.float64), ("values", np.float64)])
+        return res
 
     def _fetch_spikey_voltage(self, population):
         """
         Hack which returns the voltages recorded by spikey.
         """
+        res = [[[], []] for _ in xrange(population.size)]
         vs = self.sim.membraneOutput
         ts = self.sim.timeMembraneOutput
-        return [np.array(
-            zip(ts, vs), dtype=[("times", np.float64), ("values", np.float64)])
-        ]
+        res[getattr(population, "__spikey_record_v")] = np.array((vs, ts))
+        for i in xrange(population.size):
+            res[i] = np.array(zip(res[i][0], res[i][1]), dtype=[
+                              ("times", np.float64), ("values", np.float64)])
+        return res
 
     def _fetch_spikes(self, population):
         """
@@ -640,7 +767,7 @@ class Cypress:
                 population.getSpikes(), population.size, idx_offs=idx_offs)
         elif (self.version == 8):
             return self._convert_pyNN8_spikes(population.get_data().segments[
-                0].spiketrains)
+                0].spiketrains, population.size)
         return []
 
     def _fetch_signal(self, population, signal):
@@ -676,8 +803,7 @@ class Cypress:
         elif (self.version == 8):
             for data in population.get_data().segments[0].analogsignalarrays:
                 if (data.name == signal):
-                    return self._convert_pyNN8_signal(data.times,
-                                                      data, population.size)
+                    return self._convert_pyNN8_signal(data, population.size)
         return []
 
     @staticmethod
@@ -780,7 +906,8 @@ class Cypress:
 
         # Generate the neuron populations and fetch the canonicalized population
         # descriptors
-        populations = self._build_populations(network["populations"])
+        populations = self._build_populations(
+            network["populations"], network["signals"])
         self._set_population_parameters(populations, network)
         self._connect(populations, network["connections"])
 

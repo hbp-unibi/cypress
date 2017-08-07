@@ -27,6 +27,10 @@
 #include <unordered_set>
 #include <vector>
 
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <unistd.h>
+
 namespace cypress {
 namespace filesystem {
 /**
@@ -41,6 +45,11 @@ template <typename T>
 void canonicalise_files(T &files)
 {
 	for (std::string &file : files) {
+        // Make sure the path points at a regular file
+		struct stat stat;
+		if (lstat(file.c_str(), &stat) != 0 || !S_ISREG(stat.st_mode)) {
+			continue;
+		}
 		file = canonicalise(file);
 	}
 }
@@ -81,7 +90,6 @@ std::string longest_common_path(const T &dirs, char sep = '/')
  * @return a string pointing at the file that should be created.
  */
 std::string tmpfile(std::string &path);
-
 }
 }
 

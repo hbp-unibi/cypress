@@ -71,12 +71,26 @@ static void write_populations(const std::vector<PopulationBase> &populations,
 	std::vector<std::string> names{"count", "type"};
 	std::vector<NumberType> types{INT, INT};
 
+	// Fill the populations matrix
+	Block block("populations", {names, types}, populations.size());
+	for (size_t i = 0; i < populations.size(); i++) {
+		block.set(i, 0, populations[i].size());
+		block.set(i, 1, binnf_type_id(populations[i].type()));
+	}
+
+	serialise(os, block);
+}
+
+static void write_inhomogeneous_record(const PopulationBase &population,
+                                       std::ostream &os)
+{
+	std::vector<std::string> names;
+	std::vector<NumberType> types;
+
 	// Fetch all signals available in the populations
-	std::unordered_set<std::string> signals;
-	for (auto const &population : populations) {
-		for (auto const &signal_name : population.type().signal_names) {
-			signals.emplace(signal_name);
-		}
+	std::vector<std::string> signals;
+	for (auto const &signal_name : population.type().signal_names) {
+		signals.emplace_back(signal_name);
 	}
 
 	// Add the signals to the header
@@ -85,36 +99,41 @@ static void write_populations(const std::vector<PopulationBase> &populations,
 		types.emplace_back(INT);
 	}
 
-	// Fill the populations matrix
-	Block block("populations", {names, types}, populations.size());
-	for (size_t i = 0; i < populations.size(); i++) {
-		block.set(i, 0, populations[i].size());
-		block.set(i, 1, binnf_type_id(populations[i].type()));
-		size_t j = 2;
+	const bool homogeneous = population.homogeneous_record();
+	const size_t n_rows = homogeneous ? 1 : population.size();
+
+	// Fill the signals matrix
+	Block block("signals", {names, types}, n_rows);
+	if (homogeneous) {
+		size_t j = 0;
 		for (auto const &signal : signals) {
-			// Lookup the signal index for this population
-			auto idx = populations[i].type().signal_index(signal);
-			bool record = false;  // If this signal does not exist in this
-			                      // population, do not try to record it
+			auto idx = population.type().signal_index(signal);
 			if (idx.valid()) {
-				if (populations[i].homogeneous_record()) {
-					// All neurons in this population use the same record flag
-					record = populations[i].signals().is_recording(idx.value());
-				}
-				else {
-					// Check whether any neuron in this population wants to
-					// record this signal
-					for (size_t k = 0; k < populations[i].size(); k++) {
-						record = record ||
-						         populations[i][k].signals().is_recording(
-						             idx.value());
-					}
-				}
+				block.set(0, j++,
+				          population.signals().is_recording(idx.value()));
 			}
-			block.set(i, j++, record);
+			else {
+				block.set(0, j++, false);
+			}
 		}
 	}
-
+	else {
+		for (size_t i = 0; i < n_rows; i++) {
+			size_t j = 0;
+			for (auto const &signal : signals) {
+				// Lookup the signal index for this population
+				auto idx = population.type().signal_index(signal);
+				bool record = false;  // If this signal does not exist in this
+				                      // population, do not try to record it
+				if (idx.valid()) {
+					// Check whether the neuron wants to record this signal
+                    record = population[i].signals().is_recording(idx.value());
+				}
+				block.set(i, j++, record);
+				
+			}
+		}
+	}
 	serialise(os, block);
 }
 
@@ -226,6 +245,7 @@ void marshall_network(NetworkBase &net, std::ostream &os)
 
 	// Write the population parameters
 	for (const auto &population : populations) {
+		write_inhomogeneous_record(population, os);
 		write_parameters(population, os);
 	}
 }
