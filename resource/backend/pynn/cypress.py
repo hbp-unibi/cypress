@@ -769,7 +769,7 @@ class Cypress:
                     delay = np.maximum(np.round(delay / dt), 1.0) * dt
                 synapse = self.sim.StaticSynapse(weight=weight, delay=delay)
                 self.sim.Projection(pop1, pop2, connector=get_connector_new(
-                    conn_id, parameter), synapse_type=synapse, label="")
+                    conn_id, parameter), synapse_type=synapse)
 
         def get_pop_view(pop, start, end):
             """
