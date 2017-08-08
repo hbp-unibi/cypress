@@ -98,8 +98,10 @@ class Cypress:
             return 7
         elif (version[0:3] == '0.8'):
             return 8
+        elif (version[0:3] == '0.9'):
+            return 9
         raise CypressException("Unsupported PyNN version '" + version +
-                               "', supported are PyNN 0.6, 0.7 and 0.8")
+                               "', supported are PyNN 0.6 to 0.9")
 
     @classmethod
     def _load_simulator(cls, library):
@@ -396,7 +398,7 @@ class Cypress:
                     self.record_v_count += count
                 if ((SIG_GE in record) or (SIG_GI in record)):
                     res.record_gsyn()
-            elif (self.version == 8):
+            elif (self.version >= 8):
                 res.record(record)
         else:
             for i in xrange(0, len(record)):
@@ -461,7 +463,7 @@ class Cypress:
                         if ((SIG_GE in record[i]) or (SIG_GI in record[i])):
                             res.record_gsyn(list)
 
-                elif (self.version == 8):
+                elif (self.version >= 8):
                     pop = self.sim.PopulationView(res, list)
                     pop.record(record[i])
         return res
@@ -770,6 +772,10 @@ class Cypress:
                 synapse = self.sim.StaticSynapse(weight=weight, delay=delay)
                 self.sim.Projection(pop1, pop2, connector=get_connector_new(
                     conn_id, parameter), synapse_type=synapse)
+                # Note: In PyNN 0.8 using both negative weights AND
+                # receptor_type="inhibitory" will create an excitatory synapse.
+                # Using receptor_type="excitatory" and negative weights will
+                # create and inhibitory connection.
 
         def get_pop_view(pop, start, end):
             """
@@ -852,7 +858,14 @@ class Cypress:
         of arrays containing the signal for each neuron individually.
         """
         res = [[[], []] for _ in xrange(size)]
-        neuron_ids = data.channel_indexes
+
+        try:
+            # Neo < 0.5
+            neuron_ids = data.channel_indexes
+        except:
+            # Neo = 0.5
+            neuron_ids = data.channel_index.channel_ids
+
         for i in xrange(0, len(neuron_ids)):
             res[neuron_ids[i]] = np.array((data.times, data.T[i]))
 
@@ -889,7 +902,7 @@ class Cypress:
                         if hasattr(population, "__offs") else 0)
             return self._convert_pyNN7_spikes(
                 population.getSpikes(), population.size, idx_offs=idx_offs)
-        elif (self.version == 8):
+        elif (self.version >= 8):
             return self._convert_pyNN8_spikes(population.get_data().segments[
                 0].spiketrains, population.size)
         return []
@@ -926,6 +939,10 @@ class Cypress:
                                                       population.size)
         elif (self.version == 8):
             for data in population.get_data().segments[0].analogsignalarrays:
+                if (data.name == signal):
+                    return self._convert_pyNN8_signal(data, population.size)
+        elif (self.version == 9):
+            for data in population.get_data().segments[0].analogsignals:
                 if (data.name == signal):
                     return self._convert_pyNN8_signal(data, population.size)
         return []
