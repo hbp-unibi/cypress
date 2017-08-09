@@ -22,9 +22,9 @@
 #define CYPRESS_CORE_CONNECTOR_HPP
 
 #include <memory>
+#include <random>
 #include <string>
 #include <vector>
-#include <random>
 
 #include <cypress/core/types.hpp>
 #include <cypress/util/comperator.hpp>
@@ -54,8 +54,7 @@ struct Synapse {
 	 * Constructor of the Synapse structure. Per default initialises all member
 	 * variables with zero.
 	 */
-	Synapse(Real weight = 0.0, Real delay = 0.0)
-	    : weight(weight), delay(delay)
+	Synapse(Real weight = 0.0, Real delay = 0.0) : weight(weight), delay(delay)
 	{
 	}
 
@@ -189,6 +188,83 @@ struct Connection {
 		    n.src, s.n.src)(n.tar, s.n.tar)();
 	}
 };
+
+/**
+ * For some connectors and backends it may not be necessary to list all
+ * connections, but to describe the connector
+ */
+struct GroupConnction {
+	/**
+	 * Source population index.
+	 */
+	uint32_t psrc;
+
+	/**
+	 * Target population index.
+	 */
+	uint32_t ptar;
+
+	/**
+	 * Index of the first neuron in the source population involved in the
+	 * connection.
+	 */
+	NeuronIndex src0;
+
+	/**
+	 * Index of the last neuron in the source population involved in the
+	 * connection.
+	 */
+	NeuronIndex src1;
+
+	/**
+	 * Index of the first neuron in the target population involved in the
+	 * connection.
+	 */
+	NeuronIndex tar0;
+
+	/**
+	 * Index of the last neuron in the target population involved in the
+	 * connection.
+	 */
+	NeuronIndex tar1;
+
+	/**
+	 * Synaptic properties.
+	 */
+	Synapse synapse;
+
+	/**
+	 * Addtional Parameter storing e.g. connection probability or number of
+	 * neurons (only for certain Connectors)
+	 */
+	Real additional_parameter;
+
+	/**
+	 * Flag stating wether this is a valid group connection
+	 */
+	// bool valid_group = false;
+
+	std::string connection_name = "invalid";
+
+	/**
+	 * Checks whether the connection is valid.
+	 */
+	bool valid() const
+	{
+		return synapse.valid() && connection_name != "invalid";
+	}
+
+	/**
+	 * Returns true if the synapse is excitatory.
+	 */
+	bool excitatory() const { return synapse.excitatory(); }
+
+	/**
+	 * Returns true if the synapse is inhibitory.
+	 */
+	bool inhibitory() const { return synapse.inhibitory(); }
+};
+
 #pragma pack(pop)
 
 /*
@@ -207,6 +283,9 @@ class UniformFunctorConnector;
 
 template <typename RandomEngine>
 class FixedProbabilityConnector;
+
+template <typename RandomEngine>
+class RandomConnector;
 
 template <typename RandomEngine>
 class FixedFanInConnector;
@@ -249,6 +328,18 @@ public:
 	 */
 	virtual void connect(const ConnectionDescriptor &descr,
 	                     std::vector<Connection> &tar) const = 0;
+
+	/**
+	 * Tells the Connector to actually create the neuron-to-neuron connections
+	 * between certain neurons in a compact group representation
+	 *
+	 * @param descr is the connection descriptor containing the data detailing
+	 * the connection.
+	 * @param tar is the group connection.
+	 * @return true if connection is valid and makes sense
+	 */
+	virtual bool group_connect(const ConnectionDescriptor &descr,
+	                           GroupConnction &tar) const = 0;
 
 	/**
 	 * Returns true if the connector can create the connections for the given
@@ -351,6 +442,34 @@ public:
 	    FixedProbabilityConnector<std::default_random_engine>>
 	fixed_probability(std::unique_ptr<Connector> connector, Real p,
 	                  size_t seed);
+
+	/**
+	 * Connector adapter which ensures connections are only produced with a
+	 * certain probability.
+	 *
+	 * @param weight is the synaptic weight that should be used for all
+	 * connections.
+	 * @param delay is the synaptic delay that should be used for all
+	 * connections.
+	 * @param probability probability with which an connection is created.
+	 */
+	static std::unique_ptr<RandomConnector<std::default_random_engine>> random(
+	    Real weight = 1, Real delay = 0, Real probability = 1);
+
+	/**
+	 * Connector adapter which ensures connections are only produced with a
+	 * certain probability.
+	 *
+	 * @param weight is the synaptic weight that should be used for all
+	 * connections.
+	 * @param delay is the synaptic delay that should be used for all
+	 * connections.
+	 * @param probability probability with which an connection is created.
+	 * @param seed is the seed the random number generator should be initialised
+	 * with.
+	 */
+	static std::unique_ptr<RandomConnector<std::default_random_engine>> random(
+	    Real weight, Real delay, Real probability, size_t seed);
 
 	/**
 	 * Connector which randomly selects neurons from the source population and
@@ -544,7 +663,7 @@ std::vector<Connection> instantiate_connections(
  * Abstract base class for connectors with a weight and an delay.
  */
 class UniformConnector : public Connector {
-private:
+protected:
 	Real m_weight;
 	Real m_delay;
 
@@ -572,6 +691,9 @@ public:
 	void connect(const ConnectionDescriptor &descr,
 	             std::vector<Connection> &tar) const override;
 
+	bool group_connect(const ConnectionDescriptor &descr,
+	                   GroupConnction &tar) const override;
+
 	bool valid(const ConnectionDescriptor &) const override { return true; }
 
 	std::string name() const override { return "AllToAllConnector"; }
@@ -589,6 +711,9 @@ public:
 
 	void connect(const ConnectionDescriptor &descr,
 	             std::vector<Connection> &tar) const override;
+
+	bool group_connect(const ConnectionDescriptor &descr,
+	                   GroupConnction &tar) const override;
 
 	bool valid(const ConnectionDescriptor &descr) const override
 	{
@@ -623,6 +748,9 @@ public:
 	void connect(const ConnectionDescriptor &descr,
 	             std::vector<Connection> &tar) const override;
 
+	bool group_connect(const ConnectionDescriptor &,
+	                   GroupConnction &tar) const override;
+
 	bool valid(const ConnectionDescriptor &) const override { return true; }
 
 	std::string name() const override { return "FromListConnector"; }
@@ -631,6 +759,12 @@ public:
 class FunctorConnectorBase : public Connector {
 public:
 	std::string name() const override { return "FunctorConnector"; }
+
+	bool group_connect(const ConnectionDescriptor &,
+	                   GroupConnction &) const override
+	{
+		return false;
+	}
 };
 
 template <typename Callback>
@@ -667,6 +801,12 @@ public:
 	using UniformConnector::UniformConnector;
 
 	std::string name() const override { return "UniformFunctorConnector"; }
+
+	bool group_connect(const ConnectionDescriptor &,
+	                   GroupConnction &) const override
+	{
+		return false;
+	}
 };
 
 template <typename Callback>
@@ -702,13 +842,16 @@ public:
 };
 
 class FixedProbabilityConnectorBase : public Connector {
+protected:
+	std::string name_string = "FixedProbabilityConnector";
+
 public:
-	std::string name() const override { return "FixedProbabilityConnector"; }
+	std::string name() const override { return name_string; }
 };
 
 template <typename RandomEngine>
 class FixedProbabilityConnector : public FixedProbabilityConnectorBase {
-private:
+protected:
 	std::unique_ptr<Connector> m_connector;
 	std::shared_ptr<RandomEngine> m_engine;
 	Real m_p = 1.0;
@@ -735,9 +878,53 @@ public:
 		}
 	}
 
+	bool group_connect(const ConnectionDescriptor &,
+	                   GroupConnction &) const override
+	{
+		return false;
+	}
+
 	bool valid(const ConnectionDescriptor &descr) const override
 	{
 		return m_connector->valid(descr);
+	}
+};
+
+/**
+ * Establishes a random connection between populations. A possible connection
+ * between two neurons exists with given probability @probability.
+ */
+template <typename RandomEngine>
+class RandomConnector : public FixedProbabilityConnector<RandomEngine> {
+private:
+	using Base = FixedProbabilityConnector<RandomEngine>;
+	Real m_weight;
+	Real m_delay;
+
+public:
+	RandomConnector(Real weight, Real delay, Real probability,
+	                std::shared_ptr<RandomEngine> engine)
+	    : FixedProbabilityConnector<RandomEngine>(
+	          Connector::all_to_all(weight, delay), probability, engine),
+	      m_weight(weight),
+	      m_delay(delay)
+	{
+		FixedProbabilityConnectorBase::name_string = "RandomConnector";
+	}
+
+	bool group_connect(const ConnectionDescriptor &descr,
+	                   GroupConnction &tar) const override
+	{
+		tar.psrc = descr.pid_src();
+		tar.src0 = descr.nid_src0();
+		tar.src1 = descr.nid_src1();
+		tar.ptar = descr.pid_tar();
+		tar.tar0 = descr.nid_tar0();
+		tar.tar1 = descr.nid_tar1();
+		tar.synapse = Synapse(m_weight, m_delay);
+		tar.additional_parameter = Base::m_p;
+		tar.connection_name = "RandomConnector";
+		return true;
 	}
 };
 
@@ -817,6 +1004,21 @@ public:
 			});
 	}
 
+	bool group_connect(const ConnectionDescriptor &descr,
+	                   GroupConnction &tar) const override
+	{
+		tar.psrc = descr.pid_src();
+		tar.src0 = descr.nid_src0();
+		tar.src1 = descr.nid_src1();
+		tar.ptar = descr.pid_tar();
+		tar.tar0 = descr.nid_tar0();
+		tar.tar1 = descr.nid_tar1();
+		tar.synapse = Synapse(Base::m_weight, Base::m_delay);
+		tar.additional_parameter = m_n_fan_in;
+		tar.connection_name = "FixedFanInConnector";
+		return true;
+	};
+
 	/**
 	 * Checks the validity of the connection. For the FixedFanInConnector to be
 	 * valid, the number of neurons in the source population must be at least
@@ -860,6 +1062,21 @@ public:
 			                     Base::weight(), Base::delay());
 			});
 	}
+
+	bool group_connect(const ConnectionDescriptor &descr,
+	                   GroupConnction &tar) const override
+	{
+		tar.psrc = descr.pid_src();
+		tar.src0 = descr.nid_src0();
+		tar.src1 = descr.nid_src1();
+		tar.ptar = descr.pid_tar();
+		tar.tar0 = descr.nid_tar0();
+		tar.tar1 = descr.nid_tar1();
+		tar.synapse = Synapse(Base::m_weight, Base::m_delay);
+		tar.additional_parameter = m_n_fan_out;
+		tar.connection_name = "FixedFanOutConnector";
+		return true;
+	};
 
 	/**
 	 * Checks the validity of the connection. For the FixedFanOutConnector,
@@ -925,9 +1142,23 @@ inline std::unique_ptr<FixedProbabilityConnector<std::default_random_engine>>
 Connector::fixed_probability(std::unique_ptr<Connector> connector, Real p,
                              size_t seed)
 {
-	return std::make_unique<FixedProbabilityConnector<std::default_random_engine>>(
-	        std::move(connector), p,
-	        std::make_shared<std::default_random_engine>(seed));
+	return std::make_unique<
+	    FixedProbabilityConnector<std::default_random_engine>>(
+	    std::move(connector), p,
+	    std::make_shared<std::default_random_engine>(seed));
+}
+
+inline std::unique_ptr<RandomConnector<std::default_random_engine>>
+Connector::random(Real weight, Real delay, Real p)
+{
+	return random(weight, delay, p, std::random_device()());
+}
+
+inline std::unique_ptr<RandomConnector<std::default_random_engine>>
+Connector::random(Real weight, Real delay, Real p, size_t seed)
+{
+	return std::make_unique<RandomConnector<std::default_random_engine>>(
+	    weight, delay, p, std::make_shared<std::default_random_engine>(seed));
 }
 
 inline std::unique_ptr<FixedFanInConnector<std::default_random_engine>>
@@ -940,8 +1171,8 @@ inline std::unique_ptr<FixedFanInConnector<std::default_random_engine>>
 Connector::fixed_fan_in(size_t n_fan_in, Real weight, Real delay, size_t seed)
 {
 	return std::make_unique<FixedFanInConnector<std::default_random_engine>>(
-	        n_fan_in, weight, delay,
-	        std::make_shared<std::default_random_engine>(seed));
+	    n_fan_in, weight, delay,
+	    std::make_shared<std::default_random_engine>(seed));
 }
 
 inline std::unique_ptr<FixedFanOutConnector<std::default_random_engine>>
@@ -951,12 +1182,11 @@ Connector::fixed_fan_out(size_t n_fan_out, Real weight, Real delay)
 }
 
 inline std::unique_ptr<FixedFanOutConnector<std::default_random_engine>>
-Connector::fixed_fan_out(size_t n_fan_out, Real weight, Real delay,
-                         size_t seed)
+Connector::fixed_fan_out(size_t n_fan_out, Real weight, Real delay, size_t seed)
 {
 	return std::make_unique<FixedFanOutConnector<std::default_random_engine>>(
-	        n_fan_out, weight, delay,
-	        std::make_shared<std::default_random_engine>(seed));
+	    n_fan_out, weight, delay,
+	    std::make_shared<std::default_random_engine>(seed));
 }
 }
 

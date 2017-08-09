@@ -328,6 +328,7 @@ std::unordered_set<const NeuronType *> PyNN::supported_neuron_types() const
 	return SUPPORTED_NEURON_TYPE_MAP.find("__default__")->second;
 }
 
+#ifndef CYPRESS_DEBUG_BINNF
 namespace {
 /**
  * Helper function to write network description into a file
@@ -374,6 +375,7 @@ void open_fifo_to_read(std::string file_name, std::filebuf &res)
 	}
 }
 }
+#endif
 
 void PyNN::do_run(NetworkBase &source, Real duration) const
 {
@@ -454,8 +456,11 @@ void PyNN::do_run(NetworkBase &source, Real duration) const
 		std::thread log_thread(Process::generic_pipe,
 		                       std::ref(proc.child_stdout()),
 		                       std::ref(std::cout));
+
 		// Send the network description to the simulator
 		binnf::marshall_network(source, proc.child_stdin());
+		proc.close_child_stdin();
+
 #endif
 #ifndef CYPRESS_DEBUG_BINNF
 		log_thread_beg.join();

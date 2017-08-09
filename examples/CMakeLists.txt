@@ -21,6 +21,9 @@ project(cypress)
 add_executable(simple simple)
 target_link_libraries(simple cypress)
 
+add_executable(simple_inhibitory simple_inhibitory)
+target_link_libraries(simple_inhibitory cypress)
+
 add_executable(measure_tuning_curves measure_tuning_curves)
 target_link_libraries(measure_tuning_curves cypress)
 

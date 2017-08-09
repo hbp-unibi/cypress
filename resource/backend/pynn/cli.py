@@ -54,7 +54,7 @@ class BinnfHandler(logging.Handler):
             time.time(),
             severity,
             record.name,
-            str(record.msg))
+            record.msg.encode('utf-8'))
 
 
 # Log all log messages via Binnf

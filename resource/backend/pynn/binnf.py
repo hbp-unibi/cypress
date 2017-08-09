@@ -335,8 +335,11 @@ def read_network(fd):
         "parameters": ["pid", "nid"],
         "target": ["pid", "nid"],
         "spike_times": ["times"],
-        "connections":
-        ["pid_src", "pid_tar", "nid_src", "nid_tar", "weight", "delay"]
+        "list_connections":
+        ["pid_src", "pid_tar", "nid_src", "nid_tar", "weight", "delay"],
+        "group_connections":
+        ["pid_src", "nid_src_start", "nid_src_end", "pid_tar", "nid_tar_start",
+         "nid_tar_end", "connector_id", "weight", "delay", "parameter"],
     }
 
     def validate_matrix(name, matrix):
@@ -351,7 +354,7 @@ def read_network(fd):
                                          name + "\" of type \"" + _type + "\"")
 
     # Construct the network descriptor from the binnf data
-    network = {"parameters": [], "spike_times": [], "signals" : []}
+    network = {"parameters": [], "spike_times": [], "signals": []}
     target = None
     while True:
         # Deserialise a single input block
@@ -372,11 +375,16 @@ def read_network(fd):
                 raise BinnfException(
                     "Only a single \"populations\" instance is supported")
             network["populations"] = matrix
-        elif name == "connections":
-            if "connections" in network:
+        elif name == "list_connections":
+            if "list_connections" in network:
                 raise BinnfException(
-                    "Only a single \"connections\" instance is supported")
-            network["connections"] = matrix
+                    "Only a single \"list_connections\" instance is supported")
+            network["list_connections"] = matrix
+        elif name == "group_connections":
+            if "group_connections" in network:
+                raise BinnfException(
+                    "Only a single \"group_connections\" instance is supported")
+            network["group_connections"] = matrix
         elif name == "parameters":
             network["parameters"].append(matrix)
         elif name == "signals":
