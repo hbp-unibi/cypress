@@ -30,6 +30,7 @@
 #include <cypress/backend/nest/nest.hpp>
 #include <cypress/backend/nmpi/nmpi.hpp>
 #include <cypress/backend/pynn/pynn.hpp>
+#include <cypress/backend/pynn/slurm.hpp>
 
 #include <cypress/transformations/registry.hpp>
 
@@ -397,6 +398,15 @@ std::unique_ptr<Backend> NetworkBase::make_backend(std::string backend_id,
 		}
 		return std::make_unique<PyNN>(join(elems, '.'), setup);
 	}
+	else if (elems[0] == "slurm") {
+		elems.erase(elems.begin());  // Remove the first element
+		if (elems.empty()) {
+			throw std::invalid_argument(
+			    "Expected another backend name following \"pynn\"!");
+		}
+		return std::make_unique<Slurm>(join(elems, '.'), setup);
+	}
+	
 	else if (elems[0] == "nest") {
 		return std::make_unique<NEST>(setup);
 	}
