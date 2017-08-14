@@ -97,6 +97,13 @@ void Slurm::do_run(NetworkBase &network, Real duration) const
 	if (m_exec_python) {
 		std::string import = get_import(m_imports, m_simulator);
 		std::vector<std::string> params;
+
+		// Creating files, so that the python part won't create fifos and block
+		// afterwards
+		{
+			std::ofstream(m_filename + "_stdin", std::ios::out);
+			std::ofstream(m_filename + "_stdout", std::ios::out);
+		}
 		if (m_normalised_simulator == "nmpm1") {  // TODO
 			Json hicann = 367, wafer = 33;
 			if (m_setup.find("hicann") != m_setup.end()) {
