@@ -402,7 +402,7 @@ std::unique_ptr<Backend> NetworkBase::make_backend(std::string backend_id,
 		elems.erase(elems.begin());  // Remove the first element
 		if (elems.empty()) {
 			throw std::invalid_argument(
-			    "Expected another backend name following \"pynn\"!");
+			    "Expected another backend name following \"slurm\"!");
 		}
 		return std::make_unique<Slurm>(join(elems, '.'), setup);
 	}
