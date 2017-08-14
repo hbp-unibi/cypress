@@ -306,6 +306,11 @@ PyNN::PyNN(const std::string &simulator, const Json &setup)
 		m_keep_log = true;
 		m_setup.erase("keep_log");
 	}
+
+	// Delete config option for SLURM
+	m_setup.erase("slurm_mode");
+	m_setup.erase("slurm_filename");
+	m_setup.erase("station");
 }
 
 PyNN::~PyNN() = default;
@@ -377,31 +382,57 @@ void open_fifo_to_read(std::string file_name, std::filebuf &res)
 }
 #endif
 
-void PyNN::do_run(NetworkBase &source, Real duration) const
+std::string PyNN::get_import(const std::vector<std::string> &imports,
+                             const std::string &simulator)
 {
 	// Find the import that should be used
-	std::vector<bool> available = PYNN_UTIL.has_imports(m_imports);
+	std::vector<bool> available = PYNN_UTIL.has_imports(imports);
 	std::string import;
 	for (size_t i = 0; i < available.size(); i++) {
 		if (available[i]) {
-			import = m_imports[i];
+			import = imports[i];
 			break;
 		}
 	}
+	auto normalised_simulator = PYNN_UTIL.lookup_simulator(simulator).first;
 	if (import.empty()) {
 		std::stringstream ss;
-		ss << "The simulator \"" << m_simulator << "\" with canonical name \""
-		   << m_normalised_simulator << "\" was not found on this system or an "
-		                                "error occured during the import. The "
-		                                "following imports were tried: ";
-		for (size_t i = 0; i < m_imports.size(); i++) {
+		ss << "The simulator \"" << simulator << "\" with canonical name \""
+		   << normalised_simulator << "\" was not found on this system or an "
+		                              "error occured during the import. The "
+		                              "following imports were tried: ";
+		for (size_t i = 0; i < imports.size(); i++) {
 			if (i > 0) {
 				ss << ", ";
 			}
-			ss << m_imports[i];
+			ss << imports[i];
 		}
 		throw PyNNSimulatorNotFound(ss.str());
 	}
+	return import;
+}
+
+void PyNN::write_binnf(NetworkBase &source, std::string base_filename)
+{
+	// Generate file names for temporary files
+	filesystem::tmpfile(base_filename);
+	auto filenames = fifo_filenames(base_filename);
+	pipe_write_helper(filenames["in"], source);
+}
+
+void PyNN::read_back_binnf(NetworkBase &source, std::string base_filename)
+{
+	std::filebuf fb_res;
+	auto filenames = fifo_filenames(base_filename);
+	open_fifo_to_read(filenames["res"], fb_res);
+	std::istream std_res(&fb_res);
+	binnf::marshall_response(source, std_res);
+	// TODO: Check wether simulation broke down
+}
+
+void PyNN::do_run(NetworkBase &source, Real duration) const
+{
+	std::string import = get_import(m_imports, m_simulator);
 
 	// Generate the error log filename
 	std::string log_path = ".cypress_err_" + m_normalised_simulator + "_XXXXXX";

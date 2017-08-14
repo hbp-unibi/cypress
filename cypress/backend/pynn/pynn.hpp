@@ -34,13 +34,14 @@ namespace cypress {
  * for network execution.
  */
 class PyNN : public Backend {
-private:
+protected:
 	std::string m_simulator;
 	std::string m_normalised_simulator;
 	std::vector<std::string> m_imports;
 	bool m_keep_log;
 	Json m_setup;
 
+private:
 	void do_run(NetworkBase &network, Real duration) const override;
 
 public:
@@ -122,6 +123,29 @@ public:
 	 * Lists available PyNN simulators.
 	 */
 	static std::vector<std::string> simulators();
+
+	/**
+	 * Returns a string containing the import for given simulator. Throws an
+	 * error is simualator could not be found
+	 * @param imports list of possible/supported imports
+	 * @param simulator simulator string
+	 */
+	static std::string get_import(const std::vector<std::string> &imports,
+	                              const std::string &simulator);
+
+	/**
+	 * Searilises a network description in binnf format to base_filename_stdin
+	 * @param source network description
+	 * @param base_filename basic filenam
+	 */
+	static void write_binnf(NetworkBase &source, std::string base_filename);
+
+	/**
+	 * After a PyNN simulation has finished and written the results back to a
+	 * file (@base_filename + _stdres), this function will parse the results
+	 * into @source and logging output to the logger in @source.
+	 */
+	static void read_back_binnf(NetworkBase &source, std::string base_filename);
 };
 }
 
