@@ -112,13 +112,27 @@ void Slurm::do_run(NetworkBase &network, Real duration) const
 				network.logger().warn("cypress", "Using default wafer!");
 			}
 
-			params = std::vector<std::string>(
-			    {"-p experiment --wmod", wafer.dump(-1), "--hicann",
-			     hicann.dump(-1), "python", Resources::PYNN_INTERFACE.open(),
-			     "run", "--simulator", m_normalised_simulator, "--library",
-			     import, "--setup", m_setup.dump(), "--duration",
-			     std::to_string(duration), "--in", m_filename + "_stdin",
-			     "--out", m_filename + "_res"});
+			params = std::vector<std::string>({"-p",
+			                                   "experiment",
+			                                   "--wmod",
+			                                   wafer.dump(-1),
+			                                   "--hicann",
+			                                   hicann.dump(-1),
+			                                   "python",
+			                                   Resources::PYNN_INTERFACE.open(),
+			                                   "run",
+			                                   "--simulator",
+			                                   m_normalised_simulator,
+			                                   "--library",
+			                                   import,
+			                                   "--setup",
+			                                   m_setup.dump(),
+			                                   "--duration",
+			                                   std::to_string(duration),
+			                                   "--in",
+			                                   m_filename + "_stdin",
+			                                   "--out",
+			                                   m_filename + "_res"});
 		}
 		else if (m_normalised_simulator == "spikey") {
 			size_t station = 538;
@@ -131,19 +145,35 @@ void Slurm::do_run(NetworkBase &network, Real duration) const
 			Json temp = m_setup;
 			temp.erase("station");
 			params = std::vector<std::string>(
-			    {"-p spikey --gres" + std::to_string(station), "python",
-			     Resources::PYNN_INTERFACE.open(), "run", "--simulator",
-			     m_normalised_simulator, "--library", import, "--setup",
-			     m_setup.dump(), "--duration", std::to_string(duration), "--in",
-			     m_filename + "_stdin", "--out", m_filename + "_res"});
+			    {"-p", "spikey", "--gres", "station" + std::to_string(station),
+			     "python", Resources::PYNN_INTERFACE.open(), "run",
+			     "--simulator", m_normalised_simulator, "--library", import,
+			     "--setup", m_setup.dump(), "--duration",
+			     std::to_string(duration), "--in", m_filename + "_stdin",
+			     "--out", m_filename + "_res"});
 		}
 		else if (m_normalised_simulator == "ess") {
-			params = std::vector<std::string>(
-			    {"-p simulation -c8 --mem 30G python",
-			     Resources::PYNN_INTERFACE.open(), "run", "--simulator",
-			     m_normalised_simulator, "--library", import, "--setup",
-			     m_setup.dump(), "--duration", std::to_string(duration), "--in",
-			     m_filename + "_stdin", "--out", m_filename + "_res"});
+			params = std::vector<std::string>({"-p",
+			                                   "simulation",
+			                                   "-c",
+			                                   "8",
+			                                   "--mem",
+			                                   "30G",
+			                                   "python",
+			                                   Resources::PYNN_INTERFACE.open(),
+			                                   "run",
+			                                   "--simulator",
+			                                   m_normalised_simulator,
+			                                   "--library",
+			                                   import,
+			                                   "--setup",
+			                                   m_setup.dump(),
+			                                   "--duration",
+			                                   std::to_string(duration),
+			                                   "--in",
+			                                   m_filename + "_stdin",
+			                                   "--out",
+			                                   m_filename + "_res"});
 		}
 		else {
 			throw NotSupportedException("Simulator " + m_normalised_simulator +
