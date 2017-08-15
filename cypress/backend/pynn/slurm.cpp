@@ -219,6 +219,8 @@ void Slurm::do_run(NetworkBase &network, Real duration) const
 				    "cypress", "Simulator child process killed by signal " +
 				                   std::to_string(-res));
 			}
+			unlink((m_filename + "_stdin").c_str());
+			unlink((m_filename + "_res").c_str());
 			throw ExecutionError(
 			    std::string("Error while executing the simulator, see ") +
 			    m_filename + " for the simulators stderr output");
@@ -229,6 +231,10 @@ void Slurm::do_run(NetworkBase &network, Real duration) const
 
 	if (m_read_results) {
 		read_back_binnf(network, m_filename);
+		unlink((m_filename + "_stdin").c_str());
+		unlink((m_filename + "_res").c_str());
+		unlink((m_filename + "_stdout").c_str());
+		unlink((m_filename).c_str());
 	}
 }
 
