@@ -16,6 +16,8 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <cstdio>
+
 #include <string>
 #include <thread>
 #include <vector>
@@ -104,6 +106,8 @@ void Slurm::do_run(NetworkBase &network, Real duration) const
 			std::ofstream(m_filename + "_stdin", std::ios::out);
 			std::ofstream(m_filename + "_stdout", std::ios::out);
 		}
+		std::string current_dir = std::string(get_current_dir_name()) + "/";
+
 		if (m_normalised_simulator == "nmpm1") {  // TODO
 			Json hicann = 367, wafer = 33;
 			if (m_setup.find("hicann") != m_setup.end()) {
@@ -119,27 +123,28 @@ void Slurm::do_run(NetworkBase &network, Real duration) const
 				network.logger().warn("cypress", "Using default wafer!");
 			}
 
-			params = std::vector<std::string>({"-p",
-			                                   "experiment",
-			                                   "--wmod",
-			                                   wafer.dump(-1),
-			                                   "--hicann",
-			                                   hicann.dump(-1),
-			                                   "python",
-			                                   Resources::PYNN_INTERFACE.open(),
-			                                   "run",
-			                                   "--simulator",
-			                                   m_normalised_simulator,
-			                                   "--library",
-			                                   import,
-			                                   "--setup",
-			                                   m_setup.dump(),
-			                                   "--duration",
-			                                   std::to_string(duration),
-			                                   "--in",
-			                                   m_filename + "_stdin",
-			                                   "--out",
-			                                   m_filename + "_res"});
+			params =
+			    std::vector<std::string>({"-p",
+			                              "experiment",
+			                              "--wmod",
+			                              wafer.dump(-1),
+			                              "--hicann",
+			                              hicann.dump(-1),
+			                              "python",
+			                              Resources::PYNN_INTERFACE.open(),
+			                              "run",
+			                              "--simulator",
+			                              m_normalised_simulator,
+			                              "--library",
+			                              import,
+			                              "--setup",
+			                              m_setup.dump(),
+			                              "--duration",
+			                              std::to_string(duration),
+			                              "--in",
+			                              current_dir + m_filename + "_stdin",
+			                              "--out",
+			                              current_dir + m_filename + "_res"});
 		}
 		else if (m_normalised_simulator == "spikey") {
 			size_t station = 538;
@@ -156,31 +161,33 @@ void Slurm::do_run(NetworkBase &network, Real duration) const
 			     "python", Resources::PYNN_INTERFACE.open(), "run",
 			     "--simulator", m_normalised_simulator, "--library", import,
 			     "--setup", m_setup.dump(), "--duration",
-			     std::to_string(duration), "--in", m_filename + "_stdin",
-			     "--out", m_filename + "_res"});
+			     std::to_string(duration), "--in",
+			     current_dir + m_filename + "_stdin", "--out",
+			     current_dir + m_filename + "_res"});
 		}
 		else if (m_normalised_simulator == "ess") {
-			params = std::vector<std::string>({"-p",
-			                                   "simulation",
-			                                   "-c",
-			                                   "8",
-			                                   "--mem",
-			                                   "30G",
-			                                   "python",
-			                                   Resources::PYNN_INTERFACE.open(),
-			                                   "run",
-			                                   "--simulator",
-			                                   m_normalised_simulator,
-			                                   "--library",
-			                                   import,
-			                                   "--setup",
-			                                   m_setup.dump(),
-			                                   "--duration",
-			                                   std::to_string(duration),
-			                                   "--in",
-			                                   m_filename + "_stdin",
-			                                   "--out",
-			                                   m_filename + "_res"});
+			params =
+			    std::vector<std::string>({"-p",
+			                              "simulation",
+			                              "-c",
+			                              "8",
+			                              "--mem",
+			                              "30G",
+			                              "python",
+			                              Resources::PYNN_INTERFACE.open(),
+			                              "run",
+			                              "--simulator",
+			                              m_normalised_simulator,
+			                              "--library",
+			                              import,
+			                              "--setup",
+			                              m_setup.dump(),
+			                              "--duration",
+			                              std::to_string(duration),
+			                              "--in",
+			                              current_dir + m_filename + "_stdin",
+			                              "--out",
+			                              current_dir + m_filename + "_res"});
 		}
 		else {
 			throw NotSupportedException("Simulator " + m_normalised_simulator +
