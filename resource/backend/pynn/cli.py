@@ -74,6 +74,10 @@ logger.setLevel(logging.DEBUG)
 def do_run(args):
     import json
 
+    out_filename = getattr(args, "out")
+    if out_filename != '-':
+        os.listdir(os.path.dirname(os.path.abspath(out_filename)))
+
     # Fetch the input/output file
     in_filename = getattr(args, "in")
     in_fd = sys.stdin if in_filename == '-' else open(in_filename, "rb")
