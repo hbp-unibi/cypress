@@ -100,12 +100,15 @@ void Slurm::do_run(NetworkBase &network, Real duration) const
 		std::string import = get_import(m_imports, m_simulator);
 		std::vector<std::string> params;
 
-		// Creating files, so that the python part won't create fifos and block
+		// Creating file, so that the python part won't create fifos and block
 		// afterwards
 		std::ofstream(m_filename + "_res", std::ios::out).close();
+
+		// Get the current working directory
 		std::string current_dir = std::string(get_current_dir_name()) + "/";
 
-		if (m_normalised_simulator == "nmpm1") {  // TODO
+		// Set simulator dependent options for slurm
+		if (m_normalised_simulator == "nmpm1") {
 			Json hicann = 367, wafer = 33;
 			if (m_setup.find("hicann") != m_setup.end()) {
 				hicann = m_setup["hicann"];
@@ -161,14 +164,17 @@ void Slurm::do_run(NetworkBase &network, Real duration) const
 		    std::to_string(duration) + " --in " + current_dir + m_filename +
 		    "_stdin" + " --out " + current_dir + m_filename +
 		    "_res; ls >/dev/null");
+
+		// Synchronize files on servers (Heidelberg setup...)
 		system("ls > /dev/null");
+
+		// Run the srun (non-blocking at this point)
 		Process proc("srun", params);
 
 		std::ofstream log_stream(m_filename);
 
 		// This process is only meant to cover the first milliseconds before
-		// all communication is switched to named pipes (fifos). This is usefull
-		// when the script aborts before switching
+		// all communication is switched to files.
 		std::thread log_thread_beg(Process::generic_pipe,
 		                           std::ref(proc.child_stdout()),
 		                           std::ref(std::cout));
@@ -187,8 +193,6 @@ void Slurm::do_run(NetworkBase &network, Real duration) const
 				    "cypress", "Simulator child process killed by signal " +
 				                   std::to_string(-res));
 			}
-			unlink((m_filename + "_stdin").c_str());
-			unlink((m_filename + "_res").c_str());
 			throw ExecutionError(
 			    std::string("Error while executing the simulator, see ") +
 			    m_filename + " for the simulators stderr output");
@@ -198,6 +202,7 @@ void Slurm::do_run(NetworkBase &network, Real duration) const
 	}
 
 	if (m_read_results) {
+		system("ls > /dev/null");
 		read_back_binnf(network, m_filename);
 		unlink((m_filename + "_stdin").c_str());
 		unlink((m_filename + "_res").c_str());
