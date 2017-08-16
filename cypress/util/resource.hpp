@@ -78,6 +78,12 @@ public:
 	 * resource.
 	 */
 	const std::string &open() const;
+
+	/**
+	 * Returns the name of a file in the current directory which will contain
+	 * the data stored in the resource. Deletion of the file is not covered!
+	 */
+	const std::string open_local(std::string filename) const;
 };
 }
 #endif /* CYPRESS_UTIL_RESOURCE_HPP */

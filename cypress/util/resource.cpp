@@ -18,8 +18,12 @@
 
 #include <mutex>
 
+#include <fcntl.h>
 #include <stdlib.h>
+#include <sys/stat.h>
 #include <unistd.h>
+
+#include <iostream>
 
 #include <cypress/util/resource.hpp>
 
@@ -47,5 +51,19 @@ const std::string &Resource::open() const
 		write(m_fd, &m_data[0], m_data.size());
 	}
 	return m_filename;
+}
+
+const std::string Resource::open_local(std::string filename) const
+{
+	// Protect access to this method
+	static std::mutex mutex;
+	std::lock_guard<std::mutex> lock(mutex);
+
+	std::string current_dir = std::string(get_current_dir_name()) + "/";
+	// Create a temporary file and dump the resource content there
+	int fd = ::open((current_dir + filename).c_str(), (O_CREAT | O_WRONLY),
+	                (S_IRWXU | S_IRWXG));
+	write(fd, &m_data[0], m_data.size());
+	return current_dir + filename;
 }
 }
