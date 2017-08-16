@@ -160,7 +160,7 @@ void Slurm::do_run(NetworkBase &network, Real duration) const
 		    "ls > /dev/null; python " +
 		    Resources::PYNN_INTERFACE.open_local(m_filename + ".py") + " run " +
 		    "--simulator " + m_normalised_simulator + " --library " + import +
-		    " --setup " + m_setup.dump() + " --duration " +
+		    " --setup " + "'" + m_setup.dump() + "'" + " --duration " +
 		    std::to_string(duration) + " --in " + current_dir + m_filename +
 		    "_stdin" + " --out " + current_dir + m_filename +
 		    "_res; ls >/dev/null");
