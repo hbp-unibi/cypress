@@ -161,6 +161,7 @@ void Slurm::do_run(NetworkBase &network, Real duration) const
 		    std::to_string(duration) + " --in " + current_dir + m_filename +
 		    "_stdin" + " --out " + current_dir + m_filename +
 		    "_res; ls >/dev/null");
+		system("ls > /dev/null");
 		Process proc("srun", params);
 
 		std::ofstream log_stream(m_filename);
