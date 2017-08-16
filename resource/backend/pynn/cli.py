@@ -103,6 +103,7 @@ def do_run(args):
 
     # Pipe for Output/Results/Logs
     out_filename = getattr(args, "out")
+    out_fd = sys.stdout
     if out_filename != '-':
         if not os.path.isfile(out_filename):
             os.mkfifo(out_filename, 0666)
