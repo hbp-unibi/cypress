@@ -415,7 +415,6 @@ std::string PyNN::get_import(const std::vector<std::string> &imports,
 void PyNN::write_binnf(NetworkBase &source, std::string base_filename)
 {
 	// Generate file names for temporary files
-	filesystem::tmpfile(base_filename);
 	auto filenames = fifo_filenames(base_filename);
 	pipe_write_helper(filenames["in"], source);
 }
