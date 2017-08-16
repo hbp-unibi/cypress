@@ -102,10 +102,7 @@ void Slurm::do_run(NetworkBase &network, Real duration) const
 
 		// Creating files, so that the python part won't create fifos and block
 		// afterwards
-		{
-			std::ofstream(m_filename + "_stdin", std::ios::out);
-			std::ofstream(m_filename + "_stdout", std::ios::out);
-		}
+		std::ofstream(m_filename + "_res", std::ios::out).close();
 		std::string current_dir = std::string(get_current_dir_name()) + "/";
 
 		if (m_normalised_simulator == "nmpm1") {  // TODO
