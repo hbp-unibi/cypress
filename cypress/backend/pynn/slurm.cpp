@@ -109,25 +109,34 @@ void Slurm::do_run(NetworkBase &network, Real duration) const
 
 		// Set simulator dependent options for slurm
 		if (m_normalised_simulator == "nmpm1") {
-			Json hicann = 367, wafer = 33;
+			std::string hicann = "367", wafer = "33";
 			if (m_setup.find("hicann") != m_setup.end()) {
-				hicann = m_setup["hicann"];
+				Json j_hicann = m_setup["hicann"];
+				hicann = j_hicann.dump(-1);
+				if (j_hicann.is_array()) {
+					hicann.erase(hicann.begin());
+					hicann.erase(hicann.end());
+				}
 			}
 			else {
 				network.logger().warn("cypress", "Using default hicann!");
 			}
 			if (m_setup.find("wafer") != m_setup.end()) {
-				wafer = m_setup["wafer"];
+				Json j_wafer = m_setup["wafer"];
+				wafer = j_wafer.dump(-1);
+				if (j_wafer.is_array()) {
+					wafer.erase(wafer.begin());
+					wafer.erase(wafer.end());
+				}
 			}
 			else {
 				network.logger().warn("cypress", "Using default wafer!");
 			}
 
 			params = std::vector<std::string>({
-			    "-p", "experiment", "--wmod", wafer.dump(-1), "--hicann",
-			    hicann.dump(-1), "bash", "-c",
+			    "-p", "experiment", "--wmod", wafer, "--hicann", hicann, "bash",
+			    "-c",
 			});
-			// TODO hicann.dump works for arrays?
 		}
 		else if (m_normalised_simulator == "spikey") {
 			size_t station = 538;
@@ -137,8 +146,6 @@ void Slurm::do_run(NetworkBase &network, Real duration) const
 			else {
 				network.logger().warn("cypress", "Using default spikey 538!");
 			}
-			Json temp = m_setup;
-			temp.erase("station");
 			params = std::vector<std::string>({
 			    "-p", "spikey", "--gres", "station" + std::to_string(station),
 			    "bash", "-c",
