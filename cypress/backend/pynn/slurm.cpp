@@ -88,6 +88,13 @@ Slurm::Slurm(const std::string &simulator, const Json &setup)
 		filesystem::tmpfile(m_filename);
 	}
 }
+namespace {
+bool file_is_empty(std::string filename)
+{
+	std::ifstream file(filename);
+	return file.good() && (file.peek() == std::ifstream::traits_type::eof());
+}
+}
 
 void Slurm::do_run(NetworkBase &network, Real duration) const
 {
@@ -190,8 +197,12 @@ void Slurm::do_run(NetworkBase &network, Real duration) const
 		std::thread err_thread(Process::generic_pipe,
 		                       std::ref(proc.child_stderr()),
 		                       std::ref(log_stream));
-		int res;
-		if ((res = proc.wait()) != 0) {
+
+		// Wait for process to finish
+		int res = proc.wait();
+		// Synchronize files on servers (Heidelberg setup...)
+		system("ls > /dev/null");
+		if (res != 0 || file_is_empty(m_filename + "_res")) {
 			err_thread.join();
 			log_thread_beg.join();
 			// Explicitly state if the process was killed by a signal
@@ -209,7 +220,6 @@ void Slurm::do_run(NetworkBase &network, Real duration) const
 	}
 
 	if (m_read_results) {
-		system("ls > /dev/null");
 		read_back_binnf(network, m_filename);
 		unlink((m_filename + "_stdin").c_str());
 		unlink((m_filename + "_res").c_str());
