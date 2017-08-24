@@ -419,14 +419,18 @@ void PyNN::write_binnf(NetworkBase &source, std::string base_filename)
 	pipe_write_helper(filenames["in"], source);
 }
 
-void PyNN::read_back_binnf(NetworkBase &source, std::string base_filename)
+void PyNN::read_back_binnf(NetworkBase &source, std::string base_filename,
+                           bool log)
 {
-	std::filebuf fb_res;
-	auto filenames = fifo_filenames(base_filename);
-	open_fifo_to_read(filenames["res"], fb_res);
+	std::filebuf fb_res, fb_log;
+	open_fifo_to_read(base_filename + "_res", fb_res);
+	if (log) {
+		open_fifo_to_read(base_filename + "_log", fb_log);
+		std::istream std_log(&fb_log);
+		binnf::marshall_log(source.logger(), std_log);
+	}
 	std::istream std_res(&fb_res);
 	binnf::marshall_response(source, std_res);
-	// TODO: Check wether simulation broke down
 }
 
 void PyNN::do_run(NetworkBase &source, Real duration) const

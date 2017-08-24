@@ -110,6 +110,7 @@ void Slurm::do_run(NetworkBase &network, Real duration) const
 		// Creating file, so that the python part won't create fifos and block
 		// afterwards
 		std::ofstream(m_filename + "_res", std::ios::out).close();
+		std::ofstream(m_filename + "_log", std::ios::out).close();
 
 		// Get the current working directory
 		std::string current_dir = std::string(get_current_dir_name()) + "/";
@@ -176,8 +177,8 @@ void Slurm::do_run(NetworkBase &network, Real duration) const
 		    "--simulator " + m_normalised_simulator + " --library " + import +
 		    " --setup " + "'" + m_setup.dump() + "'" + " --duration " +
 		    std::to_string(duration) + " --in " + current_dir + m_filename +
-		    "_stdin" + " --out " + current_dir + m_filename +
-		    "_res; ls >/dev/null");
+		    "_stdin" + " --out " + current_dir + m_filename + "_res" +
+		    " --log " + current_dir + m_filename + "_log; ls >/dev/null");
 
 		// Synchronize files on servers (Heidelberg setup...)
 		system("ls > /dev/null");
@@ -223,7 +224,7 @@ void Slurm::do_run(NetworkBase &network, Real duration) const
 		read_back_binnf(network, m_filename);
 		unlink((m_filename + "_stdin").c_str());
 		unlink((m_filename + "_res").c_str());
-		unlink((m_filename + "_stdout").c_str());
+		unlink((m_filename + "_log").c_str());
 		unlink((m_filename + ".py").c_str());
 		unlink((m_filename).c_str());
 	}

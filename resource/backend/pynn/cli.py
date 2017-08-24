@@ -97,7 +97,7 @@ def do_run(args):
         os.close(2)
         os.open(err_path, os.O_WRONLY)
 
-    # Pipe for Output/Results/Logs
+    # Pipe for Results/Logs
     out_filename = getattr(args, "out")
     out_fd = sys.stdout
     if out_filename != '-':
@@ -107,6 +107,12 @@ def do_run(args):
         handler.log_fd = out_fd
         os.close(1)
         os.open(os.devnull, os.O_WRONLY)
+        
+    log_filename = getattr(args, "log")
+    if log_filename != '-':
+        if not os.path.isfile(log_filename):
+            os.mkfifo(log_filename, 0666)
+        handler.log_fd = open(log_filename, "wb", 0)
 
     logger.info(
         "Running simulation with the following parameters: simulator=" +
@@ -232,6 +238,11 @@ sp_run.add_argument(
     type=str,
     default="-",
     help="StdOutput filename, use \"-\" for stdout")
+sp_run.add_argument(
+    "--log",
+    type=str,
+    default="-",
+    help="Log filename, use \"-\" for --out or stdout")
 sp_run.set_defaults(func=do_run)
 
 # Options for the "dump" subcommand
