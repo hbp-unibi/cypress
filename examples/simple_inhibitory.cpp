@@ -73,8 +73,7 @@ int main(int argc, const char *argv[])
 	        1000.0),
 	    SpikeSourceConstFreqSignals().record_spikes());
 	// Connect Inhibitory input to only a part of the target population and run
-	net.add_connection(net.populations("source2")[0], popview,
-	                   Connector::all_to_all(-0.015, 1));
+	net.add_connection("source2", popview, Connector::all_to_all(-0.015, 1));
 	net.run(argv[1], 0.0, argc, argv);
 
 	// Print the spike times for each source neuron
