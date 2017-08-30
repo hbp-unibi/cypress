@@ -128,7 +128,9 @@ public:
 			m_descrs.clear();
 		}
 		m_done = true;
-		m_power_off_thread->join();
+		if (m_power_off_thread) {
+			m_power_off_thread->join();
+		}
 	}
 
 	/**
@@ -198,10 +200,11 @@ void PowerManagementBackend::do_run(NetworkBase &network, Real duration) const
 			// successful, try again
 			if (repeat > 1) {
 				if (m_device->switch_off(dev_name)) {
-					global_logger().warn("PowerBackend",
+					global_logger().warn(
+					    "PowerBackend",
 					    "Error while executing the simulation, going "
 					    "to power-cycle the neuromorphic device and retry!");
-					    sleep(delay);
+					sleep(delay);
 					repeat--;
 					continue;
 				}
