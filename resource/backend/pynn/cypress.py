@@ -917,8 +917,6 @@ class Cypress:
         spikes should be obtained.
         :param signal: name of the signal that should be returned.
         """
-        if (self.simulator == "nmpm1"):
-            return []
         if (self.version <= 7):
             if (signal == SIG_V):
                 # Special handling for the spikey simulator
