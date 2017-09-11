@@ -108,7 +108,7 @@ def do_run(args):
         os.close(1)
         os.open(os.devnull, os.O_WRONLY)
         
-    log_filename = getattr(args, "log")
+    log_filename = getattr(args, "logs")
     if log_filename != '-':
         if not os.path.isfile(log_filename):
             os.mkfifo(log_filename, 0666)
@@ -239,7 +239,7 @@ sp_run.add_argument(
     default="-",
     help="StdOutput filename, use \"-\" for stdout")
 sp_run.add_argument(
-    "--log",
+    "--logs",
     type=str,
     default="-",
     help="Log filename, use \"-\" for --out or stdout")

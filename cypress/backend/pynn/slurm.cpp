@@ -178,7 +178,7 @@ void Slurm::do_run(NetworkBase &network, Real duration) const
 		    " --setup " + "'" + m_setup.dump() + "'" + " --duration " +
 		    std::to_string(duration) + " --in " + current_dir + m_filename +
 		    "_stdin" + " --out " + current_dir + m_filename + "_res" +
-		    " --log " + current_dir + m_filename + "_log; ls >/dev/null");
+		    " --logs " + current_dir + m_filename + "_log; ls >/dev/null");
 
 		// Synchronize files on servers (Heidelberg setup...)
 		system("ls > /dev/null");
