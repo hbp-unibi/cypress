@@ -881,7 +881,7 @@ class Cypress:
         res = [[[], []] for _ in xrange(population.size)]
         vs = self.sim.membraneOutput
         ts = self.sim.timeMembraneOutput
-        res[getattr(population, "__spikey_record_v")] = np.array((vs, ts))
+        res[getattr(population, "__spikey_record_v")] = np.array((ts, vs))
         for i in xrange(population.size):
             res[i] = np.array(zip(res[i][0], res[i][1]), dtype=[
                               ("times", np.float64), ("values", np.float64)])
