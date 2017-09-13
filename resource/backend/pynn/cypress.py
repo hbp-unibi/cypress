@@ -259,7 +259,7 @@ class Cypress:
                             str(setup["calib_path"]))
                 del setup["calib_path"]
             else:
-                marocco.defects.path = marocco.calib_path = "/wang/data/calibration/ITL_2016"
+                marocco.defects.path = marocco.calib_path = "/wang/data/calibration/guidebook"
             marocco.defects.backend = Defects.XML
 
             # Chose Wafer and HICANN. Have to be in accordance with parameters
