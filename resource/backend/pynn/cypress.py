@@ -286,7 +286,7 @@ class Cypress:
             runtime = Runtime(marocco.default_wafer)
             setup["marocco_runtime"] = runtime
 
-            marocco.hicann_configurator = PyMarocco.HICANNv4Configurator
+            #marocco.hicann_configurator = PyMarocco.HICANNv4Configurator
 
         # Pass the marocco object and the actual setup to the simulation setup
         # method
@@ -958,6 +958,47 @@ class Cypress:
             return pyNN.common.control.DEFAULT_TIME_STEP
         return 0.1  # Above values are not defined in PyNN 0.6
 
+    @staticmethod
+    def _nmpm1_set_sthal_params(wafer, gmax, gmax_div):
+        """
+        synaptic strength:
+        gmax: 0 - 1023, strongest: 1023
+        gmax_div: 1 - 15, strongest: 1
+        """
+        import pyhalbe.Coordinate as C
+        from pyhalbe import HICANN
+
+        # for all HICANNs in use
+        for hicann in wafer.getAllocatedHicannCoordinates():
+            
+            fgs = wafer[hicann].floating_gates
+            # set parameters influencing the synaptic strength
+            for block in C.iter_all(C.FGBlockOnHICANN):
+                fgs.setShared(block, HICANN.shared_parameter.V_gmax0, gmax)
+                fgs.setShared(block, HICANN.shared_parameter.V_gmax1, gmax)
+                fgs.setShared(block, HICANN.shared_parameter.V_gmax2, gmax)
+                fgs.setShared(block, HICANN.shared_parameter.V_gmax3, gmax)
+
+            for driver in C.iter_all(C.SynapseDriverOnHICANN):
+                for row in C.iter_all(C.RowOnSynapseDriver):
+                    wafer[hicann].synapses[driver][row].set_gmax_div(
+                        C.left, gmax_div)
+                    wafer[hicann].synapses[driver][row].set_gmax_div(
+                        C.right, gmax_div)
+
+            # don't change values below
+            for ii in xrange(fgs.getNoProgrammingPasses()):
+                cfg = fgs.getFGConfig(C.Enum(ii))
+                cfg.fg_biasn = 0
+                cfg.fg_bias = 0
+                fgs.setFGConfig(C.Enum(ii), cfg)
+
+            for block in C.iter_all(C.FGBlockOnHICANN):
+                fgs.setShared(block, HICANN.shared_parameter.V_dllres, 275)
+                fgs.setShared(block, HICANN.shared_parameter.V_ccas, 800)
+                
+            
+
     #
     # Public interface
     #
@@ -1054,6 +1095,22 @@ class Cypress:
         # Round up the duration to the timestep -- fixes a problem with
         # SpiNNaker
         duration = int((duration + timestep) / timestep) * timestep
+        
+        if self.simulator == "nmpm1":
+            from pymarocco import PyMarocco
+            # Only mapping
+            self.backend_data["marocco"].skip_mapping = False
+            self.backend_data["marocco"].backend = PyMarocco.None
+            self.sim.reset()
+            self.sim.run(duration)
+            
+            # Set some low-level parameters (current workflow...)
+            self._nmpm1_set_sthal_params(self.backend_data[
+                             "runtime"].wafer(), gmax=1023, gmax_div=1)
+            # Disable mapping for the execution
+            self.backend_data["marocco"].skip_mapping = True
+            self.backend_data["marocco"].backend = PyMarocco.Hardware
+            self.backend_data["marocco"].hicann_configurator = PyMarocco.HICANNv4Configurator
 
         # Run the simulation
         t2 = time.time()
@@ -1086,5 +1143,4 @@ class Cypress:
             "initialize": t2 - t1,
             "finalize": t4 - t3
         }
-
         return res, runtimes
