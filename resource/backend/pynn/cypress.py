@@ -481,8 +481,13 @@ class Cypress:
                             res.record_gsyn(list)
 
                 elif (self.version >= 8):
-                    pop = self.sim.PopulationView(res, list)
-                    pop.record(record[i])
+                    if (self.simulator == "nmmc1"):
+                        logger.warn("Setting up recording for individual cells" +
+                                    " is not supported by SpiNNaker!")
+                        res.record(record[i])
+                    else:
+                        pop = self.sim.PopulationView(res, list)
+                        pop.record(record[i])
         return res
 
     def _gather_records(self, signals, count):
@@ -622,8 +627,12 @@ class Cypress:
                 else:
                     if has_v_rest:
                         init_param("v", pop, ps[begin:end]["v_rest"].tolist())
-                    for key in keys:
-                        pop.tset(key, ps[begin:end][key].tolist())
+                    if self.version <= 7:
+                        for key in keys:
+                            pop.tset(key, ps[begin:end][key].tolist())
+                    else:
+                        for key in keys:
+                            pop.set(key=ps[begin:end][key].tolist())
 
             iterate_pid_blocks(ps, block_set_params)
 
@@ -634,7 +643,10 @@ class Cypress:
             values = map(lambda x: x["times"]["times"].tolist(), ts[begin:end])
             if ts[begin]["nid"] == ALL_NEURONS:
                 values = values * pop.size
-            pop.tset("spike_times", values)
+            if self.version <= 7:
+                pop.tset("spike_times", values)
+            else:
+                pop.set(spike_times=values)
 
         iterate_pid_blocks(ts, block_set_times)
 
@@ -986,7 +998,7 @@ class Cypress:
 
         # for all HICANNs in use
         for hicann in wafer.getAllocatedHicannCoordinates():
-            
+
             fgs = wafer[hicann].floating_gates
             # set parameters influencing the synaptic strength
             for block in C.iter_all(C.FGBlockOnHICANN):
@@ -1012,8 +1024,6 @@ class Cypress:
             for block in C.iter_all(C.FGBlockOnHICANN):
                 fgs.setShared(block, HICANN.shared_parameter.V_dllres, 275)
                 fgs.setShared(block, HICANN.shared_parameter.V_ccas, 800)
-                
-            
 
     #
     # Public interface
