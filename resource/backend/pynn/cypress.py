@@ -103,6 +103,23 @@ class Cypress:
         raise CypressException("Unsupported PyNN version '" + version +
                                "', supported are PyNN 0.6 to 0.9")
 
+    @staticmethod
+    def _check_neo_version():
+        """
+        Internally used to check the current neo version. Neo is used with 
+        PyNN>0.8
+        """
+        import neo as n
+        version = n.__version__
+        if (version[0:3] == '0.3'):
+            return 3
+        elif (version[0:3] == '0.4'):
+            return 4
+        elif (version[0:3] == '0.5'):
+            return 5
+        raise CypressException("Unsupported PyNN version '" + version +
+                               "', supported are PyNN 0.6 to 0.9")
+
     @classmethod
     def _load_simulator(cls, library):
         """
@@ -852,17 +869,16 @@ class Cypress:
             dtype=[("times", np.float64), ("values", np.float64)]) for i in xrange(n)]
 
     @staticmethod
-    def _convert_pyNN8_signal(data, size):
+    def _convert_pyNN8_signal(data, size, neo_version):
         """
         Converts a pyNN8 analog value array (neo datastructure), into a list
         of arrays containing the signal for each neuron individually.
         """
         res = [[[], []] for _ in xrange(size)]
 
-        try:
-            # Neo < 0.5
+        if (neo_version < 5):
             neuron_ids = data.channel_indexes
-        except:
+        else:
             # Neo = 0.5
             neuron_ids = data.channel_index.channel_ids
 
@@ -935,14 +951,14 @@ class Cypress:
                 if (self.simulator != "nmmc1"):
                     return self._convert_pyNN7_signal(population.get_gsyn(), 3,
                                                       population.size)
-        elif (self.version == 8):
+        elif (self._check_neo_version() < 5):
             for data in population.get_data().segments[0].analogsignalarrays:
                 if (data.name == signal):
-                    return self._convert_pyNN8_signal(data, population.size)
-        elif (self.version == 9):
+                    return self._convert_pyNN8_signal(data, population.size, 3)
+        elif (self._check_neo_version() == 5):
             for data in population.get_data().segments[0].analogsignals:
                 if (data.name == signal):
-                    return self._convert_pyNN8_signal(data, population.size)
+                    return self._convert_pyNN8_signal(data, population.size, 5)
         return []
 
     @staticmethod
