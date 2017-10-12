@@ -1066,6 +1066,7 @@ public:
 	bool group_connect(const ConnectionDescriptor &descr,
 	                   GroupConnction &tar) const override
 	{
+        return false;
 		tar.psrc = descr.pid_src();
 		tar.src0 = descr.nid_src0();
 		tar.src1 = descr.nid_src1();
