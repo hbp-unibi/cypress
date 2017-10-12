@@ -632,7 +632,7 @@ class Cypress:
                             pop.tset(key, ps[begin:end][key].tolist())
                     else:
                         for key in keys:
-                            pop.set(key=ps[begin:end][key].tolist())
+                            pop.set(**{key : ps[begin:end][key].tolist()})
 
             iterate_pid_blocks(ps, block_set_params)
 
@@ -679,7 +679,7 @@ class Cypress:
         def create_projection(elem, begin, end):
             # Separate the synaptic connections into inhibitory and excitatory
             # synapses if not on NEST -- use the absolute weight value
-            separate_synapses = self.simulator != "nest"  # This is a bug in NEST
+            separate_synapses = (self.simulator != "nest") and (self.version < 8)
             if separate_synapses:
                 csv[begin:end]["weight"] = np.abs(csv[begin:end]["weight"])
 
@@ -1121,7 +1121,7 @@ class Cypress:
         # Round up the duration to the timestep -- fixes a problem with
         # SpiNNaker
         duration = int((duration + timestep) / timestep) * timestep
-        
+
         if self.simulator == "nmpm1":
             from pymarocco import PyMarocco
             # Only mapping
@@ -1129,14 +1129,15 @@ class Cypress:
             self.backend_data["marocco"].backend = PyMarocco.None
             self.sim.reset()
             self.sim.run(duration)
-            
+
             # Set some low-level parameters (current workflow...)
             self._nmpm1_set_sthal_params(self.backend_data[
-                             "runtime"].wafer(), gmax=1023, gmax_div=1)
+                "runtime"].wafer(), gmax=1023, gmax_div=1)
             # Disable mapping for the execution
             self.backend_data["marocco"].skip_mapping = True
             self.backend_data["marocco"].backend = PyMarocco.Hardware
-            self.backend_data["marocco"].hicann_configurator = PyMarocco.HICANNv4Configurator
+            self.backend_data[
+                "marocco"].hicann_configurator = PyMarocco.HICANNv4Configurator
 
         # Run the simulation
         t2 = time.time()
