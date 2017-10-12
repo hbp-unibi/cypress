@@ -123,7 +123,7 @@ void Slurm::do_run(NetworkBase &network, Real duration) const
 				hicann = j_hicann.dump(-1);
 				if (j_hicann.is_array()) {
 					hicann.erase(hicann.begin());
-					hicann.erase(hicann.end());
+					hicann.erase(hicann.end() - 1);
 				}
 			}
 			else {
