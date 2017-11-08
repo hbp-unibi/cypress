@@ -42,6 +42,3 @@ target_link_libraries(synfire cypress)
 add_executable(winner_take_all winner_take_all)
 target_link_libraries(winner_take_all cypress)
 
-add_executable(time_consumption_connectors time_consumption_connectors)
-target_link_libraries(time_consumption_connectors cypress)
-
