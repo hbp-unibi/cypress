@@ -790,7 +790,7 @@ class Cypress:
                 # Weight*s*, delay*s* are part of the connector, use option
                 # "target"
                 proj = self.sim.Projection(pop1, pop2, get_connector_old(
-                    conn_id, np.abs(weight), delay, parameter), target=mechanism)
+                    conn_id, np.abs(float(weight)), float(delay), parameter), target=mechanism)
             else:
                 # Weight, delay is part of a synapse object
                 if self.simulator == "nest":
@@ -798,7 +798,7 @@ class Cypress:
                     # simulation timestep
                     dt = self.get_time_step()
                     delay = np.maximum(np.round(delay / dt), 1.0) * dt
-                synapse = self.sim.StaticSynapse(weight=weight, delay=delay)
+                synapse = self.sim.StaticSynapse(weight=float(weight), delay=float(delay))
                 self.sim.Projection(pop1, pop2, connector=get_connector_new(
                     conn_id, parameter), synapse_type=synapse)
                 # Note: In PyNN 0.8 using both negative weights AND
