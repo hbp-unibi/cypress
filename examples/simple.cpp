@@ -28,8 +28,8 @@
  * @author Andreas Stöckel
  */
 
-#include <iostream>
 #include <fstream>
+#include <iostream>
 
 #include <cypress/cypress.hpp>
 
@@ -60,8 +60,25 @@ int main(int argc, const char *argv[])
 	            IfFacetsHardware1Signals().record_spikes())
 	        // Project each neuron in the population "source" onto each neuron
 	        // in the population "target"
-	        .add_connection("source", "target", Connector::all_to_all(0.015))
-	        .run(argv[1], 0.0, argc, argv);
+	        .add_connection("source", "target",
+	                        /*Connector::all_to_all(0.015, 1*/Connector::fixed_fan_in( 3, 0.015,1.0));
+
+	// Use only a part of the target population
+	PopulationView<IfFacetsHardware1> popview(
+	    net, net.populations("target")[0].pid(), 8, 20);
+	// Inhibitory input
+	/*auto a =
+	    net.add_population<SpikeSourceConstFreq>(
+	         "source2", 16,
+	         SpikeSourceConstFreqParameters().start(100.0).rate(100.0).duration(
+	             1000.0),
+	         SpikeSourceConstFreqSignals().record_spikes())
+	        .add_connection("source2", popview,
+	                        /*Connector::all_to_all(-0.015, 1)*//*Connector::fixed_fan_in( 3, 0.015
+                                                                            )                            );
+	(net.population("target"))[3].signals().record(1, true);*/
+
+	net.run(argv[1], 200.0, argc, argv);
 
 	// Print the spike times for each source neuron
 	/*	for (auto neuron : net.population<SpikeSourcePoisson>("source")) {
@@ -78,6 +95,7 @@ int main(int argc, const char *argv[])
 		          << ", " << neuron.signals().get_spikes().size() / 0.9
 		          << std::endl;
 	}
+	std::cout << net.populations("target")[0][3].signals().data(1) << std::endl;
 
 	return 0;
 }
