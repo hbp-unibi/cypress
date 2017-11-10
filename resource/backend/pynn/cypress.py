@@ -678,8 +678,9 @@ class Cypress:
                 recep = "inhibitory"
                 for conn in list_connections[i]:
                     conn["weight"] = -conn["weight"]
+                    conn = list(conn)
             connector = self.sim.FromListConnector(
-                list_connections[i].tolist())
+                list_connections[i])
             if self.version < 8:
                 self.sim.Projection(source, target, connector,
                                     target=recep)
