@@ -167,7 +167,21 @@ struct custom_conn_descr {
 	Real delay = 0.0;
 	Real parameter = 0.0;
 };
+
+/*
+ * Contains information about one instance of list connection
+ */
+struct list_con_header {
+	uint32_t pid_src = 0;
+	uint32_t pid_tar = 0;
+	uint32_t file = 0;
+	list_con_header(uint32_t pid_src, uint32_t pid_tar, uint32_t file)
+	    : pid_src(pid_src), pid_tar(pid_tar), file(file)
+	{
+	}
+};
 #pragma pack(pop)
+
 custom_conn_descr convert_non_list_connection(GroupConnction conn)
 {
 	custom_conn_descr res;
@@ -183,11 +197,58 @@ custom_conn_descr convert_non_list_connection(GroupConnction conn)
 	res.parameter = conn.additional_parameter;
 	return res;
 }
+
+/**
+ * Write list connections, split connections into excitatory and inhibitory
+ * connections as a compatibility hack
+ *
+ * @param descrs list of Connection descriptions
+ * @param os output stream
+ */
+static void write_list_connections(
+    const std::vector<ConnectionDescriptor> &descrs, std::ostream &os)
+{
+	static const Header LOCAL_CONNECTION_HEADER = {
+	    {"nid_src", "nid_tar", "weight", "delay"}, {INT, INT, FLOAT, FLOAT}};
+	static const Header LIST_CONNECTIONS_HEADER = {
+	    {"pid_src", "pid_tar", "file"}, {INT, INT, INT}};
+
+	std::vector<list_con_header> pids;
+
+	for (auto des : descrs) {
+		std::vector<LocalConnection> conns_exc, conns_inh;
+		std::vector<Connection> conns_full;
+		des.connect(conns_full);
+		for (auto i : conns_full) {
+			if (i.n.synapse.weight < 0) {
+				conns_inh.emplace_back(i.n);
+			}
+			else {
+				conns_exc.emplace_back(i.n);
+			}
+		}
+		if (conns_inh.size() > 0) {
+			serialise_matrix(os, "list_connection", LOCAL_CONNECTION_HEADER,
+			                 reinterpret_cast<uint8_t *>(&conns_inh[0]),
+			                 conns_inh.size());
+			pids.emplace_back(list_con_header(des.pid_src(), des.pid_tar(), 0));
+		}
+		if (conns_exc.size() > 0) {
+			serialise_matrix(os, "list_connection", LOCAL_CONNECTION_HEADER,
+			                 reinterpret_cast<uint8_t *>(&conns_exc[0]),
+			                 conns_exc.size());
+			pids.emplace_back(list_con_header(des.pid_src(), des.pid_tar(), 0));
+		}
+	}
+	serialise_matrix(os, "list_connection_header", LIST_CONNECTIONS_HEADER,
+	                 reinterpret_cast<uint8_t *>(&pids[0]), pids.size());
 }
+}
+
 /**
  * Constructs and sends the connections to the simulator. There are two
  * different formats: Own connectors are expanded to a list, PyNN supported
- * Connectors are converted to a compact custom_conn_descr. The latter make use
+ * Connectors are converted to a compact custom_conn_descr. The latter makes use
  * of PyNN included connectors.
  */
 static void write_connections(const std::vector<ConnectionDescriptor> &descrs,
@@ -207,7 +268,7 @@ static void write_connections(const std::vector<ConnectionDescriptor> &descrs,
 
 	for (auto desc : descrs) {
 		GroupConnction temp;
-        // Check wether connection can be used as grouped connection
+		// Check wether connection can be used as grouped connection
 		if (desc.connector().group_connect(desc, temp)) {
 			group_connections.emplace_back(convert_non_list_connection(temp));
 		}
@@ -216,13 +277,8 @@ static void write_connections(const std::vector<ConnectionDescriptor> &descrs,
 		}
 	}
 
-	// Expand all other connections
-	std::vector<Connection> connections =
-	    instantiate_connections(list_connections);
+	write_list_connections(list_connections, os);
 
-	serialise_matrix(os, "list_connections", LIST_CONNECTIONS_HEADER,
-	                 reinterpret_cast<uint8_t *>(&connections[0]),
-	                 connections.size());
 	serialise_matrix(os, "group_connections", GROUP_CONNECTIONS_HEADER,
 	                 reinterpret_cast<uint8_t *>(&group_connections[0]),
 	                 group_connections.size());
@@ -455,8 +511,9 @@ bool marshall_log(Logger &logger, std::istream &is)
 			}
 		}
 		catch (BinnfDecodeException &ex) {
-			logger.error("cypress", std::string("Error while parsing BiNNF: ") +
-			                            ex.what());
+			logger.error(
+			    "cypress",
+			    std::string("Error while parsing BiNNF: ") + ex.what());
 			continue;
 		}
 	}
