@@ -650,7 +650,7 @@ class Cypress:
 
         iterate_pid_blocks(ts, block_set_times)
 
-    def _connect(self, populations, connections):
+    def _connect(self, populations, conn_hdrs, list_connections):
         """
         Performs the actual connections between neurons. First transforms the
         given connections list into a sorted connection matrix, then tries to
@@ -661,45 +661,31 @@ class Cypress:
         :param connections: is the list containing the connections.
         """
 
-        # Get a view of the matrix containing only the listed columns
-        cs = connections
-        csv = np.ndarray(
-            cs.shape, {name: cs.dtype.fields[name]
-                       for name in ["nid_src", "nid_tar", "weight", "delay"]},
-            cs, 0, cs.strides)
-
         # Fix delays in nest having to be larger than and multiples of the
         # simulation timestep
         if self.simulator == "nest":
             dt = self.get_time_step()
-            csv["delay"] = np.maximum(np.round(csv["delay"] / dt), 1.0) * dt
+            for i in list_connections:
+                i["delay"] = np.maximum(
+                    np.round(i["delay"] / dt), 1.0) * dt
 
-        # Build the actual connections, iterate over blocks which share pid_src
-        # and pid_tar
-        def create_projection(elem, begin, end):
-            # Separate the synaptic connections into inhibitory and excitatory
-            # synapses if not on NEST -- use the absolute weight value
-            separate_synapses = (self.simulator != "nest") and (self.version < 8)
-            if separate_synapses:
-                csv[begin:end]["weight"] = np.abs(csv[begin:end]["weight"])
-
-            # Create the connector
-            connector = self.sim.FromListConnector(csv[begin:end].tolist())
-
+        for i in xrange(0, len(conn_hdrs)):
             # Fetch source and target population objects
-            source = populations[elem[0]]["obj"]
-            target = populations[elem[1]]["obj"]
-
-            if not separate_synapses:
-                self.sim.Projection(source, target, connector)
+            source = populations[int(conn_hdrs[i][0])]["obj"]
+            target = populations[int(conn_hdrs[i][1])]["obj"]
+            recep = "excitatory"
+            if(list_connections[i][0]["weight"] < 0):
+                recep = "inhibitory"
+                for conn in list_connections[i]:
+                    conn["weight"] = -conn["weight"]
+            connector = self.sim.FromListConnector(
+                list_connections[i].tolist())
+            if self.version < 8:
+                self.sim.Projection(source, target, connector,
+                                    target=recep)
             else:
-                is_excitatory = elem[2]
-                mechanism = "excitatory" if is_excitatory else "inhibitory"
-                self.sim.Projection(
-                    source, target, connector, target=mechanism)
-
-        self._iterate_blocks(cs, lambda x: (x[0], x[1], x[4] >= 0.0),
-                             create_projection)
+                self.sim.Projection(source, target, connector,
+                                    receptor_type=recep)
 
     def _connect_connectors(self, populations, connections):
         """
@@ -1115,7 +1101,8 @@ class Cypress:
         populations = self._build_populations(
             network["populations"], network["signals"])
         self._set_population_parameters(populations, network)
-        self._connect(populations, network["list_connections"])
+        self._connect(populations, network[
+                      "list_connection_header"], network["list_connections"])
         self._connect_connectors(populations, network["group_connections"])
 
         # Round up the duration to the timestep -- fixes a problem with
