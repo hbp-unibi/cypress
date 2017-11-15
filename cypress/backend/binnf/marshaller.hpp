@@ -50,7 +50,7 @@ namespace binnf {
  * the output stream.
  * @param os is the output stream to which the input network is written.
  */
-void marshall_network(NetworkBase &net, std::ostream &os);
+void marshall_network(NetworkBase &net, std::ostream &os, std::string base_filename );
 
 /**
  * Ten waits for a response from the simulator on the the given input stream and

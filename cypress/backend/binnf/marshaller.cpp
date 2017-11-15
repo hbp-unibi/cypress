@@ -17,6 +17,8 @@
  */
 
 #include <algorithm>
+#include <fstream>
+#include <iostream>
 #include <string>
 #include <unordered_set>
 #include <vector>
@@ -174,9 +176,11 @@ struct custom_conn_descr {
 struct list_con_header {
 	uint32_t pid_src = 0;
 	uint32_t pid_tar = 0;
+	uint32_t inhibitory = 0;
 	uint32_t file = 0;
-	list_con_header(uint32_t pid_src, uint32_t pid_tar, uint32_t file)
-	    : pid_src(pid_src), pid_tar(pid_tar), file(file)
+	list_con_header(uint32_t pid_src, uint32_t pid_tar, uint32_t inhibitory,
+	                uint32_t file)
+	    : pid_src(pid_src), pid_tar(pid_tar), inhibitory(inhibitory), file(file)
 	{
 	}
 };
@@ -199,19 +203,56 @@ custom_conn_descr convert_non_list_connection(GroupConnction conn)
 }
 
 /**
+* Writes a vector of Local Connection (without population IDs) to file, which is
+* readable by PyNN's "FromFileConnector". This is probably slower, but will save
+* some RAM on the host machine
+*
+* @param filename name of the file to write to
+* @param conns List of local connections
+*/
+void write_local_connections_to_file(std::string filename,
+                                     const std::vector<LocalConnection> &conns)
+{
+	std::ofstream file;
+	file.open(filename);
+	if (!file.good()) {
+		throw std::runtime_error("Could not write connections!");
+	}
+	file << "#columns={\"weight\", \"delay\"}" << std::endl;
+	// TODO: compatibility hack for NEST: Delay must be above timestep. Doing so
+	// in Python is pain/not possible, so do it here. Change adaptivley to
+	// current used value missing
+	if (filename.find("nest") != std::string::npos) {
+		for (auto i : conns) {
+			file << i.src << " " << i.tar << " " << i.synapse.weight << " "
+			     << std::max(i.synapse.delay, 0.1) << std::endl;
+		}
+	}
+	else {
+		for (auto i : conns) {
+			file << i.src << " " << i.tar << " " << i.synapse.weight << " "
+			     << i.synapse.delay << std::endl;
+		}
+	}
+	file.close();
+}
+
+/**
  * Write list connections, split connections into excitatory and inhibitory
  * connections as a compatibility hack
  *
  * @param descrs list of Connection descriptions
  * @param os output stream
+ * @param base_filename name of files to write to
  */
 static void write_list_connections(
-    const std::vector<ConnectionDescriptor> &descrs, std::ostream &os)
+    const std::vector<ConnectionDescriptor> &descrs, std::ostream &os,
+    const std::string base_filename)
 {
 	static const Header LOCAL_CONNECTION_HEADER = {
 	    {"nid_src", "nid_tar", "weight", "delay"}, {INT, INT, FLOAT, FLOAT}};
 	static const Header LIST_CONNECTIONS_HEADER = {
-	    {"pid_src", "pid_tar", "file"}, {INT, INT, INT}};
+	    {"pid_src", "pid_tar", "inh", "file"}, {INT, INT, INT, INT}};
 
 	std::vector<list_con_header> pids;
 
@@ -221,23 +262,55 @@ static void write_list_connections(
 		des.connect(conns_full);
 		for (auto i : conns_full) {
 			if (i.n.synapse.weight < 0) {
-				conns_inh.emplace_back(i.n);
+				conns_inh.emplace_back(i.n.absolute_connection());
 			}
 			else {
 				conns_exc.emplace_back(i.n);
 			}
 		}
+
 		if (conns_inh.size() > 0) {
-			serialise_matrix(os, "list_connection", LOCAL_CONNECTION_HEADER,
-			                 reinterpret_cast<uint8_t *>(&conns_inh[0]),
-			                 conns_inh.size());
-			pids.emplace_back(list_con_header(des.pid_src(), des.pid_tar(), 0));
+            // Choose, whether connections should be writenn to file 
+			if (conns_inh.size() < 100000 or base_filename == "") {
+				serialise_matrix(os, "list_connection", LOCAL_CONNECTION_HEADER,
+				                 reinterpret_cast<uint8_t *>(&conns_inh[0]),
+				                 conns_inh.size());
+				pids.emplace_back(
+				    list_con_header(des.pid_src(), des.pid_tar(), 1, 0));
+			}
+			else {
+				write_local_connections_to_file(
+				    base_filename + "_" + std::to_string(pids.size()),
+				    conns_inh);
+				pids.emplace_back(
+				    list_con_header(des.pid_src(), des.pid_tar(), 1, 1));
+				std::vector<LocalConnection> empty;
+				serialise_matrix(os, "list_connection", LOCAL_CONNECTION_HEADER,
+				                 reinterpret_cast<uint8_t *>(&empty),
+				                 empty.size());
+			}
 		}
+
 		if (conns_exc.size() > 0) {
-			serialise_matrix(os, "list_connection", LOCAL_CONNECTION_HEADER,
-			                 reinterpret_cast<uint8_t *>(&conns_exc[0]),
-			                 conns_exc.size());
-			pids.emplace_back(list_con_header(des.pid_src(), des.pid_tar(), 0));
+            // Choose, whether connections should be writenn to file 
+			if (conns_exc.size() < 100000 or base_filename == "") {
+				serialise_matrix(os, "list_connection", LOCAL_CONNECTION_HEADER,
+				                 reinterpret_cast<uint8_t *>(&conns_exc[0]),
+				                 conns_exc.size());
+				pids.emplace_back(
+				    list_con_header(des.pid_src(), des.pid_tar(), 0, 0));
+			}
+			else {
+				write_local_connections_to_file(
+				    base_filename + "_" + std::to_string(pids.size()),
+				    conns_exc);
+				pids.emplace_back(
+				    list_con_header(des.pid_src(), des.pid_tar(), 0, 1));
+				std::vector<LocalConnection> empty;
+				serialise_matrix(os, "list_connection", LOCAL_CONNECTION_HEADER,
+				                 reinterpret_cast<uint8_t *>(&empty),
+				                 empty.size());
+			}
 		}
 	}
 	serialise_matrix(os, "list_connection_header", LIST_CONNECTIONS_HEADER,
@@ -252,7 +325,8 @@ static void write_list_connections(
  * of PyNN included connectors.
  */
 static void write_connections(const std::vector<ConnectionDescriptor> &descrs,
-                              std::ostream &os)
+                              std::ostream &os,
+                              const std::string &base_filename)
 {
 	static const Header LIST_CONNECTIONS_HEADER = {
 	    {"pid_src", "pid_tar", "nid_src", "nid_tar", "weight", "delay"},
@@ -269,7 +343,7 @@ static void write_connections(const std::vector<ConnectionDescriptor> &descrs,
 	for (auto desc : descrs) {
 		GroupConnction temp;
 		// Check wether connection can be used as grouped connection
-		if (desc.connector().group_connect(desc, temp)) {
+		if (false) {  // desc.connector().group_connect(desc, temp)) {
 			group_connections.emplace_back(convert_non_list_connection(temp));
 		}
 		else {
@@ -277,7 +351,7 @@ static void write_connections(const std::vector<ConnectionDescriptor> &descrs,
 		}
 	}
 
-	write_list_connections(list_connections, os);
+	write_list_connections(list_connections, os, base_filename);
 
 	serialise_matrix(os, "group_connections", GROUP_CONNECTIONS_HEADER,
 	                 reinterpret_cast<uint8_t *>(&group_connections[0]),
@@ -365,14 +439,15 @@ static void write_parameters(const PopulationBase &population, std::ostream &os)
 	}
 }
 
-void marshall_network(NetworkBase &net, std::ostream &os)
+void marshall_network(NetworkBase &net, std::ostream &os,
+                      std::string base_filename)
 {
 	// Write the populations
 	const std::vector<PopulationBase> populations = net.populations();
 	write_populations(populations, os);
 
 	// Write the connections
-	write_connections(net.connections(), os);
+	write_connections(net.connections(), os, base_filename);
 
 	// Write the population parameters
 	for (const auto &population : populations) {

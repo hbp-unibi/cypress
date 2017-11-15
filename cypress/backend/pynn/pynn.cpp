@@ -338,7 +338,8 @@ namespace {
 /**
  * Helper function to write network description into a file
  */
-void pipe_write_helper(std::string file, NetworkBase &source)
+void pipe_write_helper(std::string file, NetworkBase &source,
+                       std::string base_file)
 {
 	std::filebuf fb_in;
 	fb_in.open(file, std::ios::out);
@@ -348,7 +349,7 @@ void pipe_write_helper(std::string file, NetworkBase &source)
 	}
 	// Send the network description to the simulator, inject the connection
 	// transformation to rewrite the connections
-	binnf::marshall_network(source, data_in);
+	binnf::marshall_network(source, data_in, base_file);
 	fb_in.close();
 }
 
@@ -416,7 +417,7 @@ void PyNN::write_binnf(NetworkBase &source, std::string base_filename)
 {
 	// Generate file names for temporary files
 	auto filenames = fifo_filenames(base_filename);
-	pipe_write_helper(filenames["in"], source);
+	pipe_write_helper(filenames["in"], source, base_filename);
 }
 
 void PyNN::read_back_binnf(NetworkBase &source, std::string base_filename,
@@ -460,7 +461,8 @@ void PyNN::do_run(NetworkBase &source, Real duration) const
 
 		// Get ready to write network description to fifo. This blocks until
 		// python process starts reading
-		std::thread data_in(pipe_write_helper, fifos["in"], std::ref(source));
+		std::thread data_in(pipe_write_helper, fifos["in"], std::ref(source),
+		                    log_path);
 #else
 		std::vector<std::string> params(
 		    {Resources::PYNN_INTERFACE.open(), "dump"});
@@ -509,8 +511,9 @@ void PyNN::do_run(NetworkBase &source, Real duration) const
 			// Explicitly state if the process was killed by a signal
 			if (res < 0) {
 				source.logger().error(
-				    "cypress", "Simulator child process killed by signal " +
-				                   std::to_string(-res));
+				    "cypress",
+				    "Simulator child process killed by signal " +
+				        std::to_string(-res));
 			}
 
 			for (auto i : fifos) {

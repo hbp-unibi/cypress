@@ -70,9 +70,12 @@ pynn_logger.setLevel(logging.DEBUG)
 logger = logging.getLogger("cypress")
 logger.setLevel(logging.DEBUG)
 
+base_filename = "_"
+
 
 def do_run(args):
     import json
+    global base_filename
 
     # Fetch the input/output file
     in_filename = getattr(args, "in")
@@ -87,6 +90,7 @@ def do_run(args):
         # Redirect stdout, so that it cannot be closed by other subprocesses
         os.close(1)
         os.open(stdout_filename, os.O_WRONLY)
+        base_filename = stdout_filename.split('_stdin')[0]
 
     # Pipe for stderr
     err_path = getattr(args, "err")
@@ -96,6 +100,8 @@ def do_run(args):
         # Redirect stderr, so that it cannot be closed by other subprocesses
         os.close(2)
         os.open(err_path, os.O_WRONLY)
+        if base_filename == "_":
+            base_filename = err_path.split('_stderr')[0]
 
     # Pipe for Results/Logs
     out_filename = getattr(args, "out")
@@ -107,12 +113,16 @@ def do_run(args):
         handler.log_fd = out_fd
         os.close(1)
         os.open(os.devnull, os.O_WRONLY)
-        
+        if base_filename == "_":
+            base_filename = out_filename.split('_res')[0]
+
     log_filename = getattr(args, "logs")
     if log_filename != '-':
         if not os.path.isfile(log_filename):
             os.mkfifo(log_filename, 0666)
         handler.log_fd = open(log_filename, "wb", 0)
+        if base_filename == "_":
+            base_filename = log_filename.split('_log')[0]
 
     logger.info(
         "Running simulation with the following parameters: simulator=" +

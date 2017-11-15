@@ -336,7 +336,7 @@ def read_network(fd):
         "target": ["pid", "nid"],
         "spike_times": ["times"],
         "list_connection": ["nid_src", "nid_tar", "weight", "delay"],
-        "list_connection_header": ["pid_src", "pid_tar", "file"],
+        "list_connection_header": ["pid_src", "pid_tar", "inh", "file"],
         "group_connections":
         ["pid_src", "nid_src_start", "nid_src_end", "pid_tar", "nid_tar_start",
          "nid_tar_end", "connector_id", "weight", "delay", "parameter"],

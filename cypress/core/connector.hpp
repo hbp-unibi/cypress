@@ -120,6 +120,15 @@ struct LocalConnection {
 	 * Returns true if the synapse is inhibitory.
 	 */
 	bool inhibitory() const { return synapse.inhibitory(); }
+
+	/**
+	 * Returns a LocalConnection with absolute value of the weight
+	 */
+	LocalConnection absolute_connection()
+	{
+		return LocalConnection(src, tar, std::abs(synapse.weight),
+		                       synapse.delay);
+	}
 };
 
 struct Connection {
@@ -357,6 +366,8 @@ public:
 	 * type.
 	 */
 	virtual std::string name() const = 0;
+
+	virtual size_t size(size_t size_src_pop, size_t size_target_pop) const = 0;
 
 	/**
 	 * Creates an all-to-all connector and returns a pointer at the connector.
@@ -646,6 +657,12 @@ public:
 		    m_nid_src1, s.m_nid_src1)(m_nid_tar0, s.m_nid_tar0)(m_nid_tar1,
 		                                                        s.m_nid_tar1)();
 	}
+
+	size_t size()
+	{
+		return connector().size(m_nid_src1 - m_nid_src0,
+		                        m_nid_tar1 - m_nid_tar0);
+	}
 };
 
 /**
@@ -658,6 +675,9 @@ public:
  */
 std::vector<Connection> instantiate_connections(
     const std::vector<ConnectionDescriptor> &descrs);
+
+bool instantiate_connections_to_file(
+    std::string filename, const std::vector<ConnectionDescriptor> &descrs);
 
 /**
  * Abstract base class for connectors with a weight and an delay.
@@ -696,6 +716,11 @@ public:
 
 	bool valid(const ConnectionDescriptor &) const override { return true; }
 
+	size_t size(size_t size_src_pop, size_t size_target_pop) const override
+	{
+		return size_src_pop * size_target_pop;
+	}
+
 	std::string name() const override { return "AllToAllConnector"; }
 };
 
@@ -718,6 +743,11 @@ public:
 	bool valid(const ConnectionDescriptor &descr) const override
 	{
 		return descr.nsrc() == descr.ntar();
+	}
+
+	size_t size(size_t size_src_pop, size_t) const override
+	{
+		return size_src_pop;
 	}
 
 	std::string name() const override { return "OneToOneConnector"; }
@@ -752,6 +782,8 @@ public:
 	                   GroupConnction &tar) const override;
 
 	bool valid(const ConnectionDescriptor &) const override { return true; }
+
+	size_t size(size_t, size_t) const override { return m_connections.size(); }
 
 	std::string name() const override { return "FromListConnector"; }
 };
@@ -794,6 +826,11 @@ public:
 	}
 
 	bool valid(const ConnectionDescriptor &) const override { return true; }
+
+	size_t size(size_t size_src_pop, size_t size_target_pop) const override
+	{
+		return size_src_pop * size_target_pop;
+	}
 };
 
 class UniformFunctorConnectorBase : public UniformConnector {
@@ -806,6 +843,11 @@ public:
 	                   GroupConnction &) const override
 	{
 		return false;
+	}
+
+	size_t size(size_t size_src_pop, size_t size_target_pop) const override
+	{
+		return size_src_pop * size_target_pop;
 	}
 };
 
@@ -887,6 +929,11 @@ public:
 	bool valid(const ConnectionDescriptor &descr) const override
 	{
 		return m_connector->valid(descr);
+	}
+
+	size_t size(size_t size_src_pop, size_t size_target_pop) const override
+	{
+		return Real(size_src_pop * size_target_pop) * m_p;
 	}
 };
 
@@ -1030,6 +1077,11 @@ public:
 	}
 
 	std::string name() const override { return "FixedFanInConnector"; }
+
+	size_t size(size_t, size_t size_target_pop) const override
+	{
+		return m_n_fan_in * size_target_pop;
+	}
 };
 
 /**
@@ -1066,7 +1118,7 @@ public:
 	bool group_connect(const ConnectionDescriptor &descr,
 	                   GroupConnction &tar) const override
 	{
-        return false;
+		return false;
 		tar.psrc = descr.pid_src();
 		tar.src0 = descr.nid_src0();
 		tar.src1 = descr.nid_src1();
@@ -1090,6 +1142,11 @@ public:
 	}
 
 	std::string name() const override { return "FixedFanOutConnector"; }
+
+	size_t size(size_t size_src_pop, size_t) const override
+	{
+		return size_src_pop * m_n_fan_out;
+	}
 };
 
 /**

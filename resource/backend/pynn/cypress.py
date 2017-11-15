@@ -106,7 +106,7 @@ class Cypress:
     @staticmethod
     def _check_neo_version():
         """
-        Internally used to check the current neo version. Neo is used with 
+        Internally used to check the current neo version. Neo is used with
         PyNN>0.8
         """
         import neo as n
@@ -303,7 +303,7 @@ class Cypress:
             runtime = Runtime(marocco.default_wafer)
             setup["marocco_runtime"] = runtime
 
-            #marocco.hicann_configurator = PyMarocco.HICANNv4Configurator
+            # marocco.hicann_configurator = PyMarocco.HICANNv4Configurator
 
         # Pass the marocco object and the actual setup to the simulation setup
         # method
@@ -632,7 +632,7 @@ class Cypress:
                             pop.tset(key, ps[begin:end][key].tolist())
                     else:
                         for key in keys:
-                            pop.set(**{key : ps[begin:end][key].tolist()})
+                            pop.set(**{key: ps[begin:end][key].tolist()})
 
             iterate_pid_blocks(ps, block_set_params)
 
@@ -671,22 +671,33 @@ class Cypress:
 
         for i in xrange(0, len(conn_hdrs)):
             # Fetch source and target population objects
-            source = populations[int(conn_hdrs[i][0])]["obj"]
-            target = populations[int(conn_hdrs[i][1])]["obj"]
-            recep = "excitatory"
-            if(list_connections[i][0]["weight"] < 0):
-                recep = "inhibitory"
-                for conn in list_connections[i]:
-                    conn["weight"] = -conn["weight"]
-                    conn = list(conn)
-            connector = self.sim.FromListConnector(
-                list_connections[i])
+            source = populations[int(conn_hdrs[i]["pid_src"])]["obj"]
+            target = populations[int(conn_hdrs[i]["pid_tar"])]["obj"]
+            
+            # Fetch whether connection is inhibitory or excitatory
+            recep = "inhibitory" if int(conn_hdrs[i]["inh"]) else "excitatory"
+            if conn_hdrs[i]["file"] == 0:
+                # Note that the FromListConnector only takes positive weights!
+                if self.simulator in ["nest", "spikey"]:
+                    connector = self.sim.FromListConnector(
+                        list_connections[i].tolist())
+                else:
+                    connector = self.sim.FromListConnector(list_connections[i])
+            else:
+                connector = self.sim.FromFileConnector(
+                    base_filename + "_" + str(i))
+
             if self.version < 8:
                 self.sim.Projection(source, target, connector,
                                     target=recep)
             else:
-                self.sim.Projection(source, target, connector,
-                                    receptor_type=recep)
+                # Bug in PyNN.nest, works only the second time...
+                try:
+                    self.sim.Projection(source, target, connector,
+                                        receptor_type=recep)
+                except:
+                    self.sim.Projection(source, target, connector,
+                                        receptor_type=recep)
 
     def _connect_connectors(self, populations, connections):
         """
@@ -785,7 +796,8 @@ class Cypress:
                     # simulation timestep
                     dt = self.get_time_step()
                     delay = np.maximum(np.round(delay / dt), 1.0) * dt
-                synapse = self.sim.StaticSynapse(weight=float(weight), delay=float(delay))
+                synapse = self.sim.StaticSynapse(
+                    weight=float(weight), delay=float(delay))
                 self.sim.Projection(pop1, pop2, connector=get_connector_new(
                     conn_id, parameter), synapse_type=synapse)
                 # Note: In PyNN 0.8 using both negative weights AND
@@ -886,7 +898,7 @@ class Cypress:
 
         for i in xrange(size):
             res[i] = np.array(zip(res[i][0], res[i][1]), dtype=[
-                              ("times", np.float64), ("values", np.float64)])
+                ("times", np.float64), ("values", np.float64)])
         return res
 
     def _fetch_spikey_voltage(self, population):
@@ -899,7 +911,7 @@ class Cypress:
         res[getattr(population, "__spikey_record_v")] = np.array((ts, vs))
         for i in xrange(population.size):
             res[i] = np.array(zip(res[i][0], res[i][1]), dtype=[
-                              ("times", np.float64), ("values", np.float64)])
+                ("times", np.float64), ("values", np.float64)])
         return res
 
     def _fetch_spikes(self, population):
