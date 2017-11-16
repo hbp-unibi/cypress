@@ -58,6 +58,7 @@ TYPE_MAP = {
     TYPE_INT64: "int64",
     TYPE_FLOAT64: "float64"
 }
+
 INV_TYPE_MAP = {v: k for k, v in TYPE_MAP.iteritems()}
 
 SEV_DEBUG = 10
@@ -262,6 +263,7 @@ def serialise_log(fd, time, severity, module, msg):
     _write_int(fd, BLOCK_END_SEQUENCE)
 
 
+
 def deserialise_matrix(fd):
     # Read the name
     name = _read_str(fd)
@@ -351,7 +353,7 @@ def read_network(fd):
             for n in EXPECTED_FIELDS[name]:
                 if not (n in fields):
                     raise BinnfException("Expected mandatory header field \"" +
-                                         name + "\" of type \"" + _type + "\"")
+                                         name + "\"")
 
     # Construct the network descriptor from the binnf data
     network = {"parameters": [], "spike_times": [],
@@ -408,6 +410,7 @@ def read_network(fd):
             target = None
         else:
             raise BinnfException("Unsupported matrix type \"" + name + "\"")
+
     return network
 
 # Headers used during serialisation
