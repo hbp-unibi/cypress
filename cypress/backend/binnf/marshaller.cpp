@@ -271,7 +271,7 @@ static void write_list_connections(
 
 		if (conns_inh.size() > 0) {
             // Choose, whether connections should be writenn to file 
-			if (conns_inh.size() < 100000 or base_filename == "") {
+			if (conns_inh.size() < 1000000000 or base_filename == "") {
 				serialise_matrix(os, "list_connection", LOCAL_CONNECTION_HEADER,
 				                 reinterpret_cast<uint8_t *>(&conns_inh[0]),
 				                 conns_inh.size());
@@ -293,7 +293,7 @@ static void write_list_connections(
 
 		if (conns_exc.size() > 0) {
             // Choose, whether connections should be writenn to file 
-			if (conns_exc.size() < 100000 or base_filename == "") {
+			if (conns_exc.size() < 1000000000 or base_filename == "") {
 				serialise_matrix(os, "list_connection", LOCAL_CONNECTION_HEADER,
 				                 reinterpret_cast<uint8_t *>(&conns_exc[0]),
 				                 conns_exc.size());
