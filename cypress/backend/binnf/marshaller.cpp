@@ -343,7 +343,7 @@ static void write_connections(const std::vector<ConnectionDescriptor> &descrs,
 	for (auto desc : descrs) {
 		GroupConnction temp;
 		// Check wether connection can be used as grouped connection
-		if (false) {  // desc.connector().group_connect(desc, temp)) {
+		if (desc.connector().group_connect(desc, temp)) {
 			group_connections.emplace_back(convert_non_list_connection(temp));
 		}
 		else {
