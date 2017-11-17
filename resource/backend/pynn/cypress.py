@@ -679,8 +679,9 @@ class Cypress:
             if conn_hdrs[i]["file"] == 0:
                 # Note that the FromListConnector only takes positive weights!
                 if self.simulator in ["nest", "spikey", "nmpm1", "spinnaker"]:
+                    list_connections[i] = list_connections[i].tolist()
                     connector = self.sim.FromListConnector(
-                        list_connections[i].tolist())
+                        list_connections[i])
                 else:
                     connector = self.sim.FromListConnector(list_connections[i])
             else:
