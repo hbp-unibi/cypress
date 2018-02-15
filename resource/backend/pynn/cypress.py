@@ -678,12 +678,9 @@ class Cypress:
             recep = "inhibitory" if int(conn_hdrs[i]["inh"]) else "excitatory"
             if conn_hdrs[i]["file"] == 0:
                 # Note that the FromListConnector only takes positive weights!
-                if self.simulator in ["nest", "spikey", "nmpm1", "spinnaker"]:
-                    list_connections[i] = list_connections[i].tolist()
-                    connector = self.sim.FromListConnector(
+                list_connections[i] = list_connections[i].tolist()
+                connector = self.sim.FromListConnector(
                         list_connections[i])
-                else:
-                    connector = self.sim.FromListConnector(list_connections[i])
             else:
                 connector = self.sim.FromFileConnector(
                     base_filename + "_" + str(i))
