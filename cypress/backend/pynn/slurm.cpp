@@ -121,6 +121,10 @@ void Slurm::do_run(NetworkBase &network, Real duration) const
 			if (m_setup.find("hicann") != m_setup.end()) {
 				Json j_hicann = m_setup["hicann"];
 				hicann = j_hicann.dump(-1);
+                if (hicann[0] == '\"' || hicann[0] == '\''){
+                    hicann.erase(hicann.begin());
+                    hicann.erase(hicann.end() - 1);
+                }
 				if (j_hicann.is_array()) {
 					hicann.erase(hicann.begin());
 					hicann.erase(hicann.end() - 1);

@@ -105,7 +105,7 @@ public:
 
 	/**
 	 * Type used to represent the data matrices containing the recorded data for
-	 * a single neuron, each vector enetry corresponds to a signal.
+	 * a single neuron, each vector entry corresponds to a signal.
 	 */
 	using DataType = std::vector<std::shared_ptr<Matrix<Real>>>;
 
