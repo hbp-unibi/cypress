@@ -218,7 +218,7 @@ void write_local_connections_to_file(std::string filename,
 	if (!file.good()) {
 		throw std::runtime_error("Could not write connections!");
 	}
-	file << "#columns={\"weight\", \"delay\"}" << std::endl;
+	file << "#columns=[\"weight\", \"delay\"]" << std::endl;
 	// TODO: compatibility hack for NEST: Delay must be above timestep. Doing so
 	// in Python is pain/not possible, so do it here. Change adaptivley to
 	// current used value missing
@@ -270,7 +270,10 @@ static void write_list_connections(
 		}
 
 		if (conns_inh.size() > 0) {
-            // Choose, whether connections should be writenn to file 
+            // Choose, whether connections should be written to file 
+            /* Currently disabled, as the FromFileConnector is slower, and 
+             * also does not stream data; TODO as soon as 
+             * https://github.com/NeuralEnsemble/PyNN/issues/549 gets closed*/
 			if (conns_inh.size() < 1000000000 or base_filename == "") {
 				serialise_matrix(os, "list_connection", LOCAL_CONNECTION_HEADER,
 				                 reinterpret_cast<uint8_t *>(&conns_inh[0]),
