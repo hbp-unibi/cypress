@@ -126,7 +126,7 @@ class Cypress:
         Internally used to load the simulator with the specified name. Raises
         an CypressException if the specified simulator cannot be loaded.
 
-        :param libarary: simulator library name as passed to the constructor.
+        :param library: simulator library name as passed to the constructor.
         """
 
         # Try to load the simulator module
@@ -209,7 +209,7 @@ class Cypress:
             marocco.neuron_placement.default_neuron_size(4)
         marocco = PyMarocco()
 
-        # Reserve a OutputBuffer fod DNC inputs and output
+        # Reserve an OutputBuffer for DNC inputs and output
         marocco.neuron_placement.restrict_rightmost_neuron_blocks(True)
         # Restrict number of logical neurons/neuron block
         marocco.neuron_placement.minimize_number_of_sending_repeaters(True)
@@ -266,7 +266,7 @@ class Cypress:
             marocco.pll_freq = 125e6
 
             marocco.backend = PyMarocco.Hardware
-            marocco.calib_backend = PyMarocco.XML
+            marocco.calib_backend = PyMarocco.Binary
 
             # Chose calibration files
             if "calib_path" in setup:
@@ -276,7 +276,7 @@ class Cypress:
                             str(setup["calib_path"]))
                 del setup["calib_path"]
             else:
-                marocco.defects.path = marocco.calib_path = "/wang/data/calibration/guidebook"
+                marocco.defects.path = marocco.calib_path = "/wang/data/calibration/brainscales/default-2017-09-26-1"
             marocco.defects.backend = Defects.XML
 
             # Chose Wafer and HICANN. Have to be in accordance with parameters
@@ -699,14 +699,14 @@ class Cypress:
 
     def _connect_connectors(self, populations, connections):
         """
-        Instead of using the from lsit connector, this function uses pre defined
-        connectors from pyNN, for which the mapping process is (hoopefully) optimized.
+        Instead of using the from list connector, this function uses pre defined
+        connectors from pyNN, for which the mapping process is (hopefully) optimized.
         :param populations: is the list of already created population objects.
         :param connections: is the list containing the connection descriptions.
         """
 
         def check_full_pop(pop, start, end):
-            # Check wether the full population is used
+            # Check whether the full population is used
             return (start == 0) and (end == len(pop))
 
         def get_connector_new(conn_id, parameter, allow_self_conn=False):
@@ -714,7 +714,7 @@ class Cypress:
             returns a connector according to conn_id (which is identical to
             those in cypress c++ part.
             :param conn_id: int representing a connection type
-            :param parameter: optional parameter for the conneciton
+            :param parameter: optional parameter for the connection
             :param allow_self_conn: Allows self connections of a neuron. Disabled
             by default (not valid on some backends)
             """
