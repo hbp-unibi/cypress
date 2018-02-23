@@ -244,6 +244,9 @@ class Cypress:
                 float(setup["bandwidth"]))
             del setup["bandwidth"]
 
+        # Flag for setting digital weights
+        set_digital_weight = False
+
         if simulator == "ess":
             marocco.backend = PyMarocco.ESS
             marocco.experiment_time_offset = 5.e-7
@@ -303,6 +306,10 @@ class Cypress:
             runtime = Runtime(marocco.default_wafer)
             setup["marocco_runtime"] = runtime
 
+            if "digital_weight"in setup:
+                set_digital_weight = True
+                del setup["digital_weight"]
+
             # marocco.hicann_configurator = PyMarocco.HICANNv4Configurator
 
         # Pass the marocco object and the actual setup to the simulation setup
@@ -311,7 +318,8 @@ class Cypress:
 
         # Return used neuron size
 
-        return {"marocco": marocco, "hicann": hicann, "runtime": runtime}
+        return {"marocco": marocco, "hicann": hicann, "runtime": runtime,
+                "digital_weight": set_digital_weight}
 
     @staticmethod
     def _setup_spikey(setup, sim):
@@ -680,22 +688,22 @@ class Cypress:
                 # Note that the FromListConnector only takes positive weights!
                 list_connections[i] = list_connections[i].tolist()
                 connector = self.sim.FromListConnector(
-                        list_connections[i])
+                    list_connections[i])
             else:
                 connector = self.sim.FromFileConnector(
                     base_filename + "_" + str(i))
 
             if self.version < 8:
-                self.sim.Projection(source, target, connector,
-                                    target=recep)
+                self.projections.append(self.sim.Projection(source, target, connector,
+                                                            target=recep))
             else:
                 # Bug in PyNN.nest, works only the second time...
                 try:
-                    self.sim.Projection(source, target, connector,
-                                        receptor_type=recep)
+                    self.projections.append(self.sim.Projection(source, target, connector,
+                                                                receptor_type=recep))
                 except:
-                    self.sim.Projection(source, target, connector,
-                                        receptor_type=recep)
+                    self.projections.append(self.sim.Projection(source, target, connector,
+                                                                receptor_type=recep))
 
     def _connect_connectors(self, populations, connections):
         """
@@ -785,8 +793,8 @@ class Cypress:
             if self.version < 8:
                 # Weight*s*, delay*s* are part of the connector, use option
                 # "target"
-                proj = self.sim.Projection(pop1, pop2, get_connector_old(
-                    conn_id, np.abs(float(weight)), float(delay), parameter), target=mechanism)
+                self.projections.append(self.sim.Projection(pop1, pop2, get_connector_old(
+                    conn_id, np.abs(float(weight)), float(delay), parameter), target=mechanism))
             else:
                 # Weight, delay is part of a synapse object
                 if self.simulator == "nest":
@@ -796,8 +804,8 @@ class Cypress:
                     delay = np.maximum(np.round(delay / dt), 1.0) * dt
                 synapse = self.sim.StaticSynapse(
                     weight=float(weight), delay=float(delay))
-                self.sim.Projection(pop1, pop2, connector=get_connector_new(
-                    conn_id, parameter), synapse_type=synapse)
+                self.projections.append(self.sim.Projection(pop1, pop2, connector=get_connector_new(
+                    conn_id, parameter), synapse_type=synapse))
                 # Note: In PyNN 0.8 using both negative weights AND
                 # receptor_type="inhibitory" will create an excitatory synapse.
                 # Using receptor_type="excitatory" and negative weights will
@@ -1038,6 +1046,9 @@ class Cypress:
     # Additional objects required by other backends
     backend_data = {}
 
+    # List of Projections for setting digital (low-level) weights on
+    # BrainScaleS
+    projections = []
     # Currently loaded pyNN version (as an integer, either 7 or 8 for 0.7 and
     # 0.8 respectively)
     version = 0
@@ -1136,6 +1147,20 @@ class Cypress:
             self.backend_data["marocco"].backend = PyMarocco.Hardware
             self.backend_data[
                 "marocco"].hicann_configurator = PyMarocco.HICANNv4Configurator
+            if self.backend_data["digital_weight"]:
+                from pyhalbe import HICANN
+                logger.warn("Setting digital weight for FromListConnector sets"
+                            + "all connections to the same weight")
+                # TODO Proj and digital_weight
+                for proj in self.projections:
+                    proj_item, = self.backend_data["runtime"].results(
+                    ).synapse_routing.synapses().find(proj)
+                    synapse = proj_item.hardware_synapse()
+                    digital_weight = proj.get_weights()[0]
+
+                    proxy = self.backend_data["runtime"].wafer(
+                    )[synapse.toHICANNOnWafer()].synapses[synapse]
+                    proxy.weight = HICANN.SynapseWeight(digital_weight)
 
         # Run the simulation
         t2 = time.time()
