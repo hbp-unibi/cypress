@@ -1146,21 +1146,23 @@ class Cypress:
             self.backend_data["marocco"].skip_mapping = True
             self.backend_data["marocco"].backend = PyMarocco.Hardware
             self.backend_data[
-                "marocco"].hicann_configurator = PyMarocco.HICANNv4Configurator
+                "marocco"].hicann_configurator = PyMarocco.ParallelHICANNv4Configurator
             if self.backend_data["digital_weight"]:
                 from pyhalbe import HICANN
+                from pymarocco.results import Marocco
                 logger.warn("Setting digital weight for FromListConnector sets"
-                            + "all connections to the same weight")
-                # TODO Proj and digital_weight
+                            + " all connections to the same weight")
+                # TODO FromList Connections
                 for proj in self.projections:
-                    proj_item, = self.backend_data["runtime"].results(
-                    ).synapse_routing.synapses().find(proj)
-                    synapse = proj_item.hardware_synapse()
-                    digital_weight = proj.get_weights()[0]
+                    proj_items = self.backend_data["runtime"].results(
+                        ).synapse_routing.synapses().find(proj)
+                    for proj_item in proj_items:
+                        synapse = proj_item.hardware_synapse()
+                        digital_weight = int(proj.getWeights()[0])
 
-                    proxy = self.backend_data["runtime"].wafer(
-                    )[synapse.toHICANNOnWafer()].synapses[synapse]
-                    proxy.weight = HICANN.SynapseWeight(digital_weight)
+                        proxy = self.backend_data["runtime"].wafer(
+                        )[synapse.toHICANNOnWafer()].synapses[synapse]
+                        proxy.weight = HICANN.SynapseWeight(digital_weight)
 
         # Run the simulation
         t2 = time.time()
