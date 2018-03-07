@@ -307,7 +307,7 @@ class Cypress:
             setup["marocco_runtime"] = runtime
 
             if "digital_weight"in setup:
-                set_digital_weight = True
+                set_digital_weight = setup["digital_weight"]
                 del setup["digital_weight"]
 
             # marocco.hicann_configurator = PyMarocco.HICANNv4Configurator
