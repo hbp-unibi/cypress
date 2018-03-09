@@ -94,7 +94,7 @@ bool file_is_empty(std::string filename)
 	std::ifstream file(filename);
 	return file.good() && (file.peek() == std::ifstream::traits_type::eof());
 }
-}
+}  // namespace
 
 void Slurm::do_run(NetworkBase &network, Real duration) const
 {
@@ -121,10 +121,10 @@ void Slurm::do_run(NetworkBase &network, Real duration) const
 			if (m_setup.find("hicann") != m_setup.end()) {
 				Json j_hicann = m_setup["hicann"];
 				hicann = j_hicann.dump(-1);
-                if (hicann[0] == '\"' || hicann[0] == '\''){
-                    hicann.erase(hicann.begin());
-                    hicann.erase(hicann.end() - 1);
-                }
+				if (hicann[0] == '\"' || hicann[0] == '\'') {
+					hicann.erase(hicann.begin());
+					hicann.erase(hicann.end() - 1);
+				}
 				if (j_hicann.is_array()) {
 					hicann.erase(hicann.begin());
 					hicann.erase(hicann.end() - 1);
@@ -146,7 +146,13 @@ void Slurm::do_run(NetworkBase &network, Real duration) const
 			}
 
 			params = std::vector<std::string>({
-			    "-p", "experiment", "--wmod", wafer, "--hicann", hicann, "bash",
+			    "-p",
+			    "experiment",
+			    "--wmod",
+			    wafer,
+			    "--hicann",
+			    hicann,
+			    "bash",
 			    "-c",
 			});
 		}
@@ -159,14 +165,19 @@ void Slurm::do_run(NetworkBase &network, Real duration) const
 				network.logger().warn("cypress", "Using default spikey 538!");
 			}
 			params = std::vector<std::string>({
-			    "-p", "spikey", "--gres", "station" + std::to_string(station),
-			    "bash", "-c",
+			    "-p",
+			    "spikey",
+			    "--gres",
+			    "station" + std::to_string(station),
+			    "bash",
+			    "-c",
 			});
 		}
 
 		else if (m_normalised_simulator == "ess") {
 			params = std::vector<std::string>({
-                "-c","sbatch -p simulation -c 8 --mem 30G"/* 
+			    "-c",
+			    "sbatch -p simulation -c 8 --mem 30G" /* 
 			    "-p", "simulation", "-c", "8", "--mem", "30G", "bash", "-c"*/,
 			});
 		}
@@ -176,7 +187,7 @@ void Slurm::do_run(NetworkBase &network, Real duration) const
 		}
 
 		// Add the bash script executed by srun
-		std::string script = 
+		std::string script =
 		    "ls > /dev/null; python " +
 		    Resources::PYNN_INTERFACE.open_local(m_filename + ".py") + " run " +
 		    "--simulator " + m_normalised_simulator + " --library " + import +
@@ -189,15 +200,15 @@ void Slurm::do_run(NetworkBase &network, Real duration) const
 		system("ls > /dev/null");
 
 		// Run the srun (non-blocking at this point)
-        std::string slurm;
-        if (m_normalised_simulator == "ess"){
-            slurm = "bash";
-            params.back().append(" -W <<EOF\n#!/bin/sh\n" + script+"\nEOF");
-        }
-        else{
-            params.push_back(script);
-            slurm = "srun";
-        }
+		std::string slurm;
+		if (m_normalised_simulator == "ess") {
+			slurm = "bash";
+			params.back().append(" -W <<EOF\n#!/bin/sh\n" + script + "\nEOF");
+		}
+		else {
+			params.push_back(script);
+			slurm = "srun";
+		}
 		Process proc(slurm, params);
 
 		std::ofstream log_stream(m_filename);
@@ -245,4 +256,4 @@ void Slurm::do_run(NetworkBase &network, Real duration) const
 }
 
 Slurm::~Slurm() = default;
-}
+}  // namespace cypress
