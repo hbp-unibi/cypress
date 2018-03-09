@@ -145,6 +145,12 @@ void Slurm::do_run(NetworkBase &network, Real duration) const
 				network.logger().warn("cypress", "Using default wafer!");
 			}
 
+			// Temporary solution to avoid L1 locking issues when using several
+			// hicanns
+			if (m_setup["hicann"].is_array() && m_setup["hicann"].size() >= 3) {
+				system(("sthal_init_reticles.py " + wafer + " -z &").c_str());
+			}
+
 			params = std::vector<std::string>({
 			    "-p",
 			    "experiment",
