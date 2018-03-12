@@ -331,6 +331,20 @@ class Cypress:
         if hasattr(pylogging, "append_to_logging"):
             pylogging.append_to_logging("PyNN")
         sim.setup(**setup)
+        
+    @staticmethod
+    def _setup_spinnaker(setup, sim):
+        num_neurons = 0
+        if "neurons_per_core" in setup:
+            num_neurons = int(setup["neurons_per_core"])
+            del setup["neurons_per_core"]
+        sim.setup(**setup)
+        if num_neurons>0:
+            sim.set_number_of_neurons_per_core(sim.IF_cond_exp, 
+                                               num_neurons)
+            logger.warn("Set neurons per core to " + 
+                        str(num_neurons))
+
 
     def _setup_simulator(self, setup, sim, simulator, version):
         """
@@ -361,6 +375,8 @@ class Cypress:
             self.backend_data = self._setup_nmpm1(setup, sim, simulator)
         elif (simulator == "spikey"):
             self._setup_spikey(setup, sim)
+        elif (simulator == "nmmc1"):
+            self._setup_spinnaker(setup, sim)
         else:
             sim.setup(**setup)
         return setup
