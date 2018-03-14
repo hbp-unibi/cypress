@@ -115,9 +115,14 @@ void Slurm::do_run(NetworkBase &network, Real duration) const
 		// Get the current working directory
 		std::string current_dir = std::string(get_current_dir_name()) + "/";
 
+		// Flag for temporary workaround for allocating several hicanns
+		bool init_reticles = false;
+		std::string wafer;
+
 		// Set simulator dependent options for slurm
 		if (m_normalised_simulator == "nmpm1") {
-			std::string hicann = "367", wafer = "33";
+			std::string hicann = "367";
+			wafer = "33";
 			if (m_setup.find("hicann") != m_setup.end()) {
 				Json j_hicann = m_setup["hicann"];
 				hicann = j_hicann.dump(-1);
@@ -148,7 +153,7 @@ void Slurm::do_run(NetworkBase &network, Real duration) const
 			// Temporary solution to avoid L1 locking issues when using several
 			// hicanns
 			if (m_setup["hicann"].is_array() && m_setup["hicann"].size() >= 3) {
-				system(("sthal_init_reticles.py " + wafer + " -z &").c_str());
+				init_reticles = true;
 			}
 
 			params = std::vector<std::string>({
@@ -193,14 +198,20 @@ void Slurm::do_run(NetworkBase &network, Real duration) const
 		}
 
 		// Add the bash script executed by srun
-		std::string script =
-		    "ls > /dev/null; python " +
+		std::string script = "ls > /dev/null;";
+		if (init_reticles) {
+			script.append("sthal_init_reticles.py " + wafer +
+			              " -z >text.txt &\n");
+		}
+
+		script.append(
+		    "python " +
 		    Resources::PYNN_INTERFACE.open_local(m_filename + ".py") + " run " +
 		    "--simulator " + m_normalised_simulator + " --library " + import +
 		    " --setup " + "'" + m_setup.dump() + "'" + " --duration " +
 		    std::to_string(duration) + " --in " + current_dir + m_filename +
 		    "_stdin" + " --out " + current_dir + m_filename + "_res" +
-		    " --logs " + current_dir + m_filename + "_log; ls >/dev/null";
+		    " --logs " + current_dir + m_filename + "_log; ls >/dev/null;wait");
 
 		// Synchronize files on servers (Heidelberg setup...)
 		system("ls > /dev/null");
@@ -215,40 +226,47 @@ void Slurm::do_run(NetworkBase &network, Real duration) const
 			params.push_back(script);
 			slurm = "srun";
 		}
-		Process proc(slurm, params);
 
-		std::ofstream log_stream(m_filename);
+		for (size_t i = 0; i < 3; i++) {
+			Process proc(slurm, params);
 
-		// This process is only meant to cover the first milliseconds before
-		// all communication is switched to files.
-		std::thread log_thread_beg(Process::generic_pipe,
-		                           std::ref(proc.child_stdout()),
-		                           std::ref(std::cout));
+			std::ofstream log_stream(m_filename);
 
-		// Continiously track stderr of child
-		std::thread err_thread(Process::generic_pipe,
-		                       std::ref(proc.child_stderr()),
-		                       std::ref(log_stream));
+			// This process is only meant to cover the first milliseconds before
+			// all communication is switched to files.
+			std::thread log_thread_beg(Process::generic_pipe,
+			                           std::ref(proc.child_stdout()),
+			                           std::ref(std::cout));
 
-		// Wait for process to finish
-		int res = proc.wait();
-		// Synchronize files on servers (Heidelberg setup...)
-		system("ls > /dev/null");
-		if (res != 0 || file_is_empty(m_filename + "_res")) {
+			// Continiously track stderr of child
+			std::thread err_thread(Process::generic_pipe,
+			                       std::ref(proc.child_stderr()),
+			                       std::ref(log_stream));
+
+			// Wait for process to finish
+			int res = proc.wait();
+			// Synchronize files on servers (Heidelberg setup...)
+			system("ls > /dev/null");
+			if (res != 0 || file_is_empty(m_filename + "_res")) {
+				err_thread.join();
+				log_thread_beg.join();
+				if (i < 2) {
+					continue;
+				}
+				// Explicitly state if the process was killed by a signal
+				if (res < 0) {
+					network.logger().error(
+					    "cypress", "Simulator child process killed by signal " +
+					                   std::to_string(-res));
+				}
+				throw ExecutionError(
+				    std::string("Error while executing the simulator, see ") +
+				    m_filename + " for the simulators stderr output");
+			}
 			err_thread.join();
 			log_thread_beg.join();
-			// Explicitly state if the process was killed by a signal
-			if (res < 0) {
-				network.logger().error(
-				    "cypress", "Simulator child process killed by signal " +
-				                   std::to_string(-res));
-			}
-			throw ExecutionError(
-			    std::string("Error while executing the simulator, see ") +
-			    m_filename + " for the simulators stderr output");
+			break;
 		}
-		err_thread.join();
-		log_thread_beg.join();
 	}
 
 	if (m_read_results) {
