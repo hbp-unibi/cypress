@@ -223,7 +223,7 @@ class Cypress:
         # but changes the range of hardware parameters, especially weights.
         if "big_capacitor" in setup:
             logger.info("Using big capacitors")
-            marocco.param_trafo.use_big_capacitors = True
+            marocco.param_trafo.use_big_capacitors = setup["big_capacitor"]
             del setup["big_capacitor"]
         else:
             marocco.param_trafo.use_big_capacitors = False
