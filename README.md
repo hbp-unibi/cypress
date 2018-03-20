@@ -28,8 +28,6 @@ sudo pip install pyNN requests pyminifier
 
 In order to run network simulations you also need to install NEST or PyNN with an appropriate simulator backend (for example sPyNNaker). See http://www.nest-simulator.org/ for information on how to install NEST.
 
-Note that for now building is only tested on Fedora 23 and Debian 8. Patches for other Linux distributions and other platforms are highly welcome.
-
 Once the above requirements are fulfilled, simply run
 ```bash
 git clone https://github.com/hbp-sanncs/cypress
@@ -81,7 +79,7 @@ Then run it with the native NEST backing using
 ```
 Other backends include `pynn.X` where `X` is the name of a PyNN backend, or
 `nmpi.X` or `nmpi.pynn.X` where `X` is the name of a PyNN backend that should
-be executed on the NMPI platform.
+be executed on the NMPI platform. See below for details.
 
 Features
 --------
@@ -105,8 +103,8 @@ n2.connect_to(view, Connector::all_to_all(0.1, 0.1));
 ### Execute on various simulators
 
 Cypress utilises PyNN to provide a multitude of simulation platforms, including the
-digital manycore system NM-MC1 developed at the University of Manchester and the
-analogue physical model system NM-PM1 developed at the Kirchhoff Institute for Physics
+digital manycore system SpiNNaker (early codename NM-MC1) developed at the University of Manchester and the
+analogue physical model system BrainScaleS (early codename NM-PM1) developed at the Kirchhoff Institute for Physics
 at Heidelberg University.
 
 ### Harness the power of C++
@@ -115,6 +113,34 @@ Especially when procedurally constructing large neural networks, Python might be
 a major bottleneck. However, constructing networks in C++ is extremely fast. Furthermore,
 this amazing alien C++ technology-thingy allows to detect most errors in your code before actually
 executing it. Who would have thought of that?
+
+### Supported Backends
+
+Currently we support the following backends:
+ * `pynn.nest` is using the NESt simulator via PyNN (see http://www.nest-simulator.org/ for installation instructions) 
+ * `nest` **experimental** implementation of NEST SLI 
+ * `spinnaker` uses the digital SpiNNaker architecture (see https://spinnakermanchester.github.io/)
+ * `nmpm1` is using the BrainScaleS system (https://brainscales.kip.uni-heidelberg.de/) and its executable system specification `ESS`
+ * `spikey`, the predecessor of BrainScaleS (https://www.kip.uni-heidelberg.de/vision/research/spikey/)
+
+Futhermore, backends available through the Neuromorphic Platform Service nmpi can be used via `nmpi.backend`. If you have access to the Heidelberg server environment, jobs can be executed from the entry server or one of the computation nodes by using `slurm.x`, with which resources are automatically allocated. 
+
+Backend specific performance and setup knobs
+------------
+There are several optimization knobs you can use to tune the simulation. These can be used by amending the backend string, e.g. ```spinnaker='{"option" : value, "option2" : value2, ...}'```. This is used for backend specific options expected from ```pynn.setup(...)```, but also for some additional option which are listed here.
+
+### BrainScaleS and ESS
+ * `neuron_size` Number of neuron circuits combined to one neuron. Possible values: 2,4,6,...; Default: 4
+ * `big_capacitor`  Using big capacitors on HICANNs. Possible values: true, false; Default: false
+ * `bandwidth`  Consider the firing rate of input neurons and only use the partial maximal bandwidth. The smaller the value, the less neurons are mapped to a single HICANN. Possible values: [0,1]; Default: None
+ * `calib_path` Path to calibration files. Possible values: "path/to/calib" ; Default: Current default calib path
+
+Only on the hardware:
+ * `hicann` and `wafer`:  Choose the Wafer and the HICANN for your network emulation. Possible values: Available HICANNs and Wafers, also list of HICANNs; Default: 367 and 33
+ * `digital_weight`:  Directly set the digital weight instead of PyNN weights. Currently not supports ListConnectors with varying weights. Possible values: true, false; Default: false
+
+### SpiNNaker
+ * `neurons_per_core` Sets the maximal number of neurons for the IaF neuron with conductance based synapses. Possible values: 1, ..., 255, ... ; Default: None (255?)
 
 FAQ
 ------------
@@ -126,7 +152,7 @@ A: Try building without static linking (comment line 52 in CMakeLists.txt) ```SE
 
 This project has been initiated by Andreas Stöckel in 2016 while working
 at Bielefeld University in the [Cognitronics and Sensor Systems Group](http://www.ks.cit-ec.uni-bielefeld.de/) which is
-part of the [Human Brain Project, SP 9](https://www.humanbrainproject.eu/neuromorphic-computing-platform).
+part of the [Human Brain Project, SP 9](https://www.humanbrainproject.eu/neuromorphic-computing-platform) and has been continued by Christoph Jenzen.
 
 ## License
 
