@@ -32,6 +32,7 @@ add_executable(test_cypress_core
 	core/test_connector
 	core/test_transformation
 )
+add_dependencies(test_cypress_core googletest)
 target_link_libraries(test_cypress_core
 	cypress
 	${GTEST_LIBRARIES}
@@ -46,6 +47,7 @@ add_executable(test_cypress_nef
 	nef/test_delta_sigma
 	nef/test_tuning_curve
 )
+add_dependencies(test_cypress_nef googletest)
 target_link_libraries(test_cypress_nef
 	cypress
 	${GTEST_LIBRARIES}
@@ -64,6 +66,7 @@ add_executable(test_cypress_util
 	util/test_range
 	util/test_resource
 )
+add_dependencies(test_cypress_util googletest)
 target_link_libraries(test_cypress_util
 	cypress
 	${GTEST_LIBRARIES}
@@ -78,6 +81,7 @@ add_executable(test_cypress_backend
 	backend/binnf/test_binnf
 	backend/pynn/test_pynn
 )
+add_dependencies(test_cypress_backend googletest)
 target_link_libraries(test_cypress_backend
 	cypress
 	${GTEST_LIBRARIES}
@@ -91,6 +95,8 @@ add_test(test_cypress_backend test_cypress_backend)
 add_executable(test_cypress_integration
 	integration/test_v_init
 )
+
+add_dependencies(test_cypress_integration googletest)
 target_link_libraries(test_cypress_integration
 	cypress
 	${GTEST_LIBRARIES}
@@ -104,6 +110,7 @@ add_test(test_cypress_integration test_cypress_integration)
 add_executable(test_cypress_transformations
 	transformations/test_spikey_if_cond_exp
 )
+add_dependencies(test_cypress_transformations googletest)
 target_link_libraries(test_cypress_transformations
 	cypress
 	${GTEST_LIBRARIES}
