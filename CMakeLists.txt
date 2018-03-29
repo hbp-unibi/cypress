@@ -137,8 +137,15 @@ add_library(cypress
 	cypress/util/resource
 	cypress/util/terminal
 )
-
-target_link_libraries(cypress pthread)
+if(STATIC_LINKING)
+	if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+		target_link_libraries(cypress -pthread -Wl,--whole-archive -lpthread -Wl,--no-whole-archive)
+	else()
+		target_link_libraries(cypress pthread)
+	endif()
+else()
+	target_link_libraries(cypress pthread)
+endif()
 
 # Installation configuration
 install(TARGETS cypress ARCHIVE DESTINATION lib)
