@@ -109,3 +109,5 @@ script:
   - cd build_gcc 
   - cmake .. -DSTATIC_LINKING=FALSE
   - make && make test ARGS=-V
+  - cmake .. -DSTATIC_LINKING=TRUE
+  - make && make test ARGS=-V
