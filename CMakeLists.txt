@@ -138,11 +138,7 @@ add_library(cypress
 	cypress/util/terminal
 )
 if(STATIC_LINKING)
-	if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
-		target_link_libraries(cypress -pthread -Wl,--whole-archive -lpthread -Wl,--no-whole-archive)
-	else()
-		target_link_libraries(cypress pthread)
-	endif()
+	target_link_libraries(cypress -pthread -Wl,--whole-archive -lpthread -Wl,--no-whole-archive)
 else()
 	target_link_libraries(cypress pthread)
 endif()
