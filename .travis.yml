@@ -49,6 +49,19 @@ matrix:
         apt:
           sources:
             - ubuntu-toolchain-r-test
+          packages:
+            - g++-7
+      env: MATRIX_EVAL="CC=gcc-7 && CXX=g++-7"
+      before_install: 
+        - sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-7 50
+        - sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-7 50
+
+    - os: linux
+      dist: trusty
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
             - llvm-toolchain-trusty-3.8
           packages:
             - g++-6
@@ -72,6 +85,21 @@ matrix:
       before_install:
         export CXX="clang++-4.0" CC="clang-4.0"
         sudo export CXX="clang++-4.0" CC="clang-4.0"
+
+    - os: linux
+      dist: trusty
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+            - llvm-toolchain-trusty-4.0
+          packages:
+            - g++-6
+            - clang-5.0
+      env: MATRIX_EVAL="CC=clang-5.0 && CXX=clang++-5.0"
+      before_install:
+        export CXX="clang++-5.0" CC="clang-5.0"
+        sudo export CXX="clang++-5.0" CC="clang-5.0"
 
     - os: linux
       dist: trusty
