@@ -33,6 +33,7 @@
 #include <unistd.h>
 
 #include "pybind11/embed.h"
+#include "pybind11/numpy.h"
 #include "pybind11/pybind11.h"
 #include "pybind11/pytypes.h"
 #include "pybind11/stl.h"  //Type conversions
@@ -468,6 +469,17 @@ std::string get_neuron_class(const NeuronType &neuron_type)
 	}
 }
 
+py::object get_pop_view(py::module pynn, py::object py_pop,
+                        PopulationBase c_pop, size_t start, size_t end)
+{
+	if (start == 0 && end == c_pop.size()) {
+		return py_pop;
+	}
+	else {
+		return pynn.attr("PopulationView")(py_pop, py::slice(start, end, 1));
+	}
+}
+
 /**
  * Creates a PyNN 0.9 Connector
  *
@@ -577,7 +589,8 @@ void PyNN_::do_run(NetworkBase &source, Real duration) const
 			for (auto neuron : populations[i]) {
 				const std::vector<Real> &temp =
 				    neuron.parameters().parameters();
-				spikes.append(py::list(py::cast(temp)));
+				spikes.append(py::array_t<Real>({temp.size()}, {sizeof(Real)},
+				                                temp.data()));
 			}
 
 			auto neuron_type =
@@ -585,9 +598,9 @@ void PyNN_::do_run(NetworkBase &source, Real duration) const
 
 			pypopulations.push_back(pynn.attr("Population")(
 			    "size"_a = populations[i].size(), "cellclass"_a = neuron_type));
-			// TODO directly create numpy arrays
 		}
 		else {
+			// TODO INITIAL VALUES ?
 			bool homogeneous = populations[i].homogeneous_parameters();
 
 			py::dict neuron_params;
@@ -604,54 +617,156 @@ void PyNN_::do_run(NetworkBase &source, Real duration) const
 			        pynn.attr(get_neuron_class(populations[i].type()).c_str())(
 			            **neuron_params)));
 			if (!homogeneous) {
-				// TODO
-				std::cerr << "not implemented" << std::endl;
-				throw;
+				for (size_t id = 0; id < params.size(); id++) {
+					std::vector<Real> new_params;
+					for (auto neuron : populations[i]) {
+						new_params.push_back(neuron.parameters()[i]);
+					}
+					pypopulations.back().attr("set")(
+					    py::arg(param_names[id].c_str()) = py::array_t<Real>(
+					        {new_params.size()}, {sizeof(Real)},
+					        new_params.data()));
+				}
 			}
 			const bool homogeneous_rec = populations[i].homogeneous_record();
 			if (homogeneous_rec) {
 				std::vector<std::string> signals =
 				    populations[i].type().signal_names;
 				for (size_t j = 0; j < signals.size(); j++) {
-					std::cout << j << "  " << signals[j] << std::endl;
 					if (populations[i].signals().is_recording(j)) {
-						std::cout << "record " << signals[j] << std::endl;
 						pypopulations.back().attr("record")(signals[j].c_str());
 					}
 				}
 			}
 			else {
-				// TODO
-				std::cerr << "not implemented" << std::endl;
-				throw;
+				std::vector<std::string> signals =
+				    populations[i].type().signal_names;
+				for (size_t j = 0; j < signals.size(); j++) {
+					std::vector<size_t> neuron_ids;
+					for (size_t k = 0; k < populations[i].size(); k++) {
+						if (populations[i][k].signals().is_recording(j)) {
+							neuron_ids.push_back(k);
+						}
+					}
+					py::object popview = pynn.attr("PopulationView")(
+					    pypopulations.back(),
+					    py::array_t<size_t>({neuron_ids.size()},
+					                        {sizeof(size_t)},
+					                        neuron_ids.data()));
+					popview.attr("record")(signals[j].c_str());
+				}
 			}
 		}
 	}
 
 	auto buildpop = std::chrono::system_clock::now();
 	for (auto conn : source.connections()) {
-		py::print("connections2");
 		auto it = SUPPORTED_CONNECTIONS.find(conn.connector().name());
-		if (it == SUPPORTED_CONNECTIONS.end()) {
-			// LIST connections TODO
-			std::cerr << "not implemented" << std::endl;
-			throw;
-		}
-		else {
+		GroupConnction group_conn;
+		if (it != SUPPORTED_CONNECTIONS.end() &&
+		    conn.connector().group_connect(conn, group_conn)) {
 			// Group connections
-			// TODO nid source and tar
-			GroupConnction group_conn;
-			conn.connector().group_connect(conn, group_conn);
+			py::object source = get_pop_view(
+			    pynn, pypopulations[conn.pid_src()],
+			    populations[conn.pid_src()], group_conn.src0, group_conn.src1);
 
-			// TODO excitatory inhibitory
+			py::object target = get_pop_view(
+			    pynn, pypopulations[conn.pid_tar()],
+			    populations[conn.pid_tar()], group_conn.tar0, group_conn.tar1);
+
+			std::string receptor = "excitatory";
+			if (group_conn.synapse.weight < 0) {
+				receptor = "inhibitory";
+			}
 			auto proj = pynn.attr("Projection")(
-			    pypopulations[conn.pid_src()], pypopulations[conn.pid_tar()],
+			    source, target,
 			    get_connector(it->second, pynn,
 			                  group_conn.additional_parameter),
 			    "synapse_type"_a = pynn.attr("StaticSynapse")(
-			        "weight"_a = group_conn.synapse.weight,
+			        "weight"_a = abs(group_conn.synapse.weight),
 			        "delay"_a = group_conn.synapse.delay),
-			    "receptor_type"_a = "excitatory");
+			    "receptor_type"_a = receptor);
+		}
+		else {
+			std::vector<Connection> conns_full;
+			size_t num_inh = 0;
+			conn.connect(conns_full);
+			for (auto i : conns_full) {
+				if (i.n.synapse.weight < 0) {
+					num_inh++;
+				}
+			}
+
+			Matrix<Real> conns_exc(conns_full.size() - num_inh, 4),
+			    conns_inh(num_inh, 4);
+			size_t counter_ex = 0, counter_in = 0;
+			Real timestep = 0;
+			if (m_simulator == "nest") {
+				global_logger().info(
+				    "cypress",
+				    "Delays are rounded to multiples of the timestep");
+				timestep = py::cast<Real>(pynn.attr("get_time_step")());
+			}
+			for (auto i : conns_full) {
+				if (i.n.synapse.weight > 0) {
+					conns_exc(counter_ex, 0) = i.n.src;
+					conns_exc(counter_ex, 1) = i.n.tar;
+					conns_exc(counter_ex, 2) = i.n.synapse.weight;
+					if (timestep != 0) {
+						Real delay =
+						    std::max(round(i.n.synapse.delay / timestep), 1.0) *
+						    timestep;
+						conns_exc(counter_ex, 3) = delay;
+					}
+					else {
+						conns_exc(counter_ex, 3) = i.n.synapse.delay;
+					}
+					counter_ex++;
+				}
+				else {
+					conns_inh(counter_in, 0) = i.n.src;
+					conns_inh(counter_in, 1) = i.n.tar;
+					conns_inh(counter_in, 2) = -i.n.synapse.weight;
+					if (timestep != 0) {
+						;
+						Real delay =
+						    std::max(round(i.n.synapse.delay / timestep), 1.0) *
+						    timestep;
+						conns_inh(counter_in, 3) = delay;
+					}
+					else {
+						conns_inh(counter_in, 3) = i.n.synapse.delay;
+					}
+					counter_in++;
+				}
+			}
+
+			if (conns_full.size() - num_inh > 0) {
+				py::detail::any_container<ssize_t> shape(
+				    {static_cast<long>(conns_exc.rows()), 4});
+				py::array_t<Real> temp(shape, {4 * sizeof(Real), sizeof(Real)},
+				                       conns_exc.data());
+				py::object connector = pynn.attr("FromListConnector")(temp);
+				pynn.attr("Projection")(
+				    pypopulations[conn.pid_src()],
+				    pypopulations[conn.pid_tar()], connector,
+				    "synapse_type"_a = pynn.attr("StaticSynapse")(
+				        "weight"_a = 0, "delay"_a = 1),
+				    "receptor_type"_a = "excitatory");
+			}
+			if (num_inh > 0) {
+				py::detail::any_container<ssize_t> shape(
+				    {static_cast<long>(conns_inh.rows()), 4});
+				py::array_t<Real> temp(shape, {4 * sizeof(Real), sizeof(Real)},
+				                       conns_inh.data());
+				py::object connector = pynn.attr("FromListConnector")(temp);
+				pynn.attr("Projection")(
+				    pypopulations[conn.pid_src()],
+				    pypopulations[conn.pid_tar()], connector,
+				    "synapse_type"_a = pynn.attr("StaticSynapse")(
+				        "weight"_a = 0, "delay"_a = 1),
+				    "receptor_type"_a = "inhibitory");
+			}
 		}
 	}
 
@@ -699,7 +814,7 @@ void PyNN_::do_run(NetworkBase &source, Real duration) const
 							auto data = std::make_shared<Matrix<Real>>(len, 1);
 							size_t counter = 0;
 							for (size_t l = 0; l < neuron_ids.size(); l++) {
-								if (neuron_ids[l] == k + offset) {
+								if (size_t(neuron_ids[l]) == k + offset) {
 									assert(counter < len);
 									(*data)(counter, 0) = spikes[l];
 									counter++;
@@ -709,7 +824,23 @@ void PyNN_::do_run(NetworkBase &source, Real duration) const
 						}
 					}
 					else {
-						// TODO
+                        
+						py::module nest = py::module::import("nest");
+                        /*SCALE_FACTORS = {'v': 1, 'gsyn_exc': 0.001, 'gsyn_inh': 0.001}
+                        VARIABLE_MAP = {'v': 'V_m', 'gsyn_exc': 'g_ex', 'gsyn_inh': 'g_in'}*/
+                        py::dict nest_data = py::tuple(
+						    nest.attr("GetStatus")(pypopulations[i]
+						                               .attr("recorder")
+                                                       .attr("_multimeter")
+                                                       .attr("device"),
+						                           "events"))[0];
+                                                   
+                        //which neuron
+                        py::buffer buffer(nest_data["senders"].attr("data"));
+                        //when
+                        py::buffer buffer2(nest_data["times"].attr("data"));
+                        // actual data
+                        py::buffer buffer3(nest_data["V_m"].attr("data"));
 						std::cerr << "not implemented" << std::endl;
 						throw;
 					}
