@@ -28,8 +28,8 @@
 #ifndef CYPRESS_UTIL_MATRIX_HPP
 #define CYPRESS_UTIL_MATRIX_HPP
 
-#include <cassert>
 #include <algorithm>
+#include <cassert>
 #include <memory>
 #include <ostream>
 #include <vector>
@@ -60,6 +60,11 @@ private:
 	 * Number of rows and number of columns.
 	 */
 	size_t m_rows, m_cols;
+
+	/**
+	 * Flag which sets the freeing in the destructor active
+	 */
+	bool m_destroy = true;
 
 #ifndef NDEBUG
 	/**
@@ -134,6 +139,26 @@ public:
 		}
 	}
 
+	Matrix(const std::vector<std::vector<T>> &init)
+	    : Matrix(init.size(), init[0].size())
+	{
+		for (size_t i = 1; i < init.size(); i++) {
+			assert(init[0].size() == init[i].size());
+		}
+		for (size_t i = 0; i < init.size(); i++) {
+			for (size_t j = 0; j < init[0]; j++) {
+				(*this)(i, j) = init[i][j];
+			}
+		}
+	}
+
+	Matrix(const std::vector<T> &init) : Matrix(init.size(), 1)
+	{
+		for (size_t i = 0; i < init.size(); i++) {
+			(*this)(i, 1) = init[i];
+		}
+	}
+
 	/**
 	 * Constructor of the Matrix type, creates a new matrix with the given
 	 * extent.
@@ -160,11 +185,24 @@ public:
 	 * @param data is a pointer at a pre-existing data region from which the
 	 * data will be copied.
 	 */
-	Matrix(size_t rows, size_t cols, const T* data)
+	Matrix(size_t rows, size_t cols, const T *data)
 	    : m_buf(new T[rows * cols]), m_rows(rows), m_cols(cols)
 	{
 		std::copy(data, data + (rows * cols), begin());
 	}
+
+	/**
+	 * Constructor of the Matrix type from an existing data structure without a
+	 * copy
+	 *
+	 * @param rows is the number of rows in the matrix.
+	 * @param cols is the number of columns in the matrix.
+	 * @param data is a pointer at a pre-existing data region
+	 * @param destroy True: destructor will free memory, False: Destructor will
+	 * do nothing
+	 */
+	Matrix(size_t rows, size_t cols, T *data, bool destroy)
+	    : m_buf(data), m_rows(rows), m_cols(cols), m_destroy(destroy){};
 
 	Matrix(const Matrix &o)
 	    : m_buf(new T[o.rows() * o.cols()]), m_rows(o.rows()), m_cols(o.cols())
@@ -172,9 +210,8 @@ public:
 		std::copy(o.begin(), o.end(), begin());
 	}
 
-	Matrix(Matrix &&o) noexcept : m_buf(o.m_buf),
-	                              m_rows(o.rows()),
-	                              m_cols(o.cols())
+	Matrix(Matrix &&o) noexcept
+	    : m_buf(o.m_buf), m_rows(o.rows()), m_cols(o.cols())
 	{
 		o.m_buf = nullptr;
 		o.m_rows = 0;
@@ -203,15 +240,17 @@ public:
 		return *this;
 	}
 
-	~Matrix() { delete[] m_buf; }
+	~Matrix()
+	{
+		if (m_destroy) {
+			delete[] m_buf;
+		}
+	}
 
 	/**
 	 * Conversion to a std::vector
 	 */
-	operator std::vector<T>() const
-	{
-		return std::vector<T>(begin(), end());
-	}
+	operator std::vector<T>() const { return std::vector<T>(begin(), end()); }
 
 	/**
 	 * Tests equality between two matrices.
@@ -384,6 +423,7 @@ public:
 	}
 	void resize(size_t s) { resize(s, 1); }
 };
-}
+
+}  // namespace cypress
 
 #endif /* CYPRESS_UTIL_MATRIX_HPP */
