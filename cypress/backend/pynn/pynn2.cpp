@@ -638,6 +638,8 @@ py::object PyNN_::get_connector8(const std::string &connector_name,
 		    "n"_a = int(group_conn.additional_parameter),
 		    "allow_self_connections"_a = py::cast(false));
 	}
+	throw NotSupportedException("Requested group connection " + connector_name +
+	                            " is not supported");
 }
 
 py::object PyNN_::get_connector(const std::string &connector_name,
