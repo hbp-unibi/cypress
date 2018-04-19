@@ -25,6 +25,10 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR}/cmake)
 include(gtest_external)
 include(json_external)
 
+SET(PYBIND11_PYTHON_VERSION "2.7")
+add_subdirectory(external/pybind11)
+find_package(PythonLibs 2.7 REQUIRED )
+
 # Enable C++14 support
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=gnu++14")
 
@@ -49,18 +53,20 @@ endif()
 # Add configuration option for static linking 
 set(STATIC_LINKING TRUE CACHE BOOL "True for static linking")
 
+
 # Link statically
 if(STATIC_LINKING)
 	SET(CMAKE_FIND_LIBRARY_SUFFIXES ".a")
 	SET(BUILD_SHARED_LIBRARIES OFF)
 	if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
-        SET(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static -Wl,--no-export-dynamic")
+        SET(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libstdc++ -static-libgcc  -Wl,--no-export-dynamic")
         SET(CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE} -s -Wl,--no-export-dynamic")
     else()
-        SET(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static")
+        SET(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libstdc++ -static-libgcc ")
         SET(CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE} -s")
     endif()
 endif()
+
 
 include_directories(
 	${CMAKE_SOURCE_DIR}
@@ -68,6 +74,7 @@ include_directories(
 	PRIVATE
 		${CMAKE_BINARY_DIR}
 )
+
 
 # Add configuration option for setting the width of the floating point values
 set(CYPRESS_REAL_WIDTH 8 CACHE STRING "Width of the floating point values in bytes (one of 4, 8, 10, 16)")
@@ -106,6 +113,7 @@ add_library(cypress
 	cypress/backend/power/netio4
 	cypress/backend/power/power
 	cypress/backend/pynn/pynn
+	cypress/backend/pynn/pynn2
 	cypress/backend/pynn/slurm
 	cypress/core/backend
 	cypress/core/connector
@@ -137,10 +145,17 @@ add_library(cypress
 	cypress/util/resource
 	cypress/util/terminal
 )
+
+
 if(STATIC_LINKING)
-	target_link_libraries(cypress -pthread -Wl,--whole-archive -lpthread -Wl,--no-whole-archive)
+	set_target_properties(cypress PROPERTIES POSITION_INDEPENDENT_CODE TRUE)
+	target_link_libraries(cypress
+            pybind11::embed
+            -pthread
+            #-Wl,--whole-archive -lpthread -Wl,--no-whole-archive
+            )
 else()
-	target_link_libraries(cypress pthread)
+	target_link_libraries(cypress pthread pybind11::embed)
 endif()
 
 # Installation configuration
