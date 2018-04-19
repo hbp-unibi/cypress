@@ -505,8 +505,8 @@ py::object PyNN_::create_source_population(const PopulationBase &pop,
 	                               "cellclass"_a = neuron_type);
 }
 
-py::object PyNN_::create_homogenous_pop(const PopulationBase &pop,
-                                        py::module &pynn, bool &init_available)
+py::object PyNN_::create_homogeneous_pop(const PopulationBase &pop,
+                                         py::module &pynn, bool &init_available)
 {
 	py::dict neuron_params;
 	const auto &params = pop[0].parameters();
@@ -539,8 +539,8 @@ py::object PyNN_::create_homogenous_pop(const PopulationBase &pop,
 	return pypop;
 }
 
-void PyNN_::set_inhomogenous_parameters(const PopulationBase &pop,
-                                        py::object &pypop, bool init_available)
+void PyNN_::set_inhomogeneous_parameters(const PopulationBase &pop,
+                                         py::object &pypop, bool init_available)
 {
 	auto idx = pop[0].type().signal_index("v_rest");
 	const auto &params = pop[0].parameters();
@@ -847,7 +847,7 @@ Matrix<T> PyNN_::matrix_from_numpy(py::object object)
 	py::buffer_info buffer_data = py::buffer(object.attr("data")).request();
 
 	return Matrix<T>(shape[0], second_dim,
-	                 reinterpret_cast<T *>(buffer_data.ptr), true);
+	                 reinterpret_cast<T *>(buffer_data.ptr), false);
 }
 
 void PyNN_::fetch_data_nest(const std::vector<PopulationBase> &populations,
@@ -1065,10 +1065,10 @@ void PyNN_::do_run(NetworkBase &source, Real duration) const
 			bool homogeneous = populations[i].homogeneous_parameters();
 			bool init_available = false;
 			pypopulations.push_back(
-			    create_homogenous_pop(populations[i], pynn, init_available));
+			    create_homogeneous_pop(populations[i], pynn, init_available));
 
 			if (!homogeneous) {
-				set_inhomogenous_parameters(
+				set_inhomogeneous_parameters(
 				    populations[i], pypopulations.back(), init_available);
 			}
 			const bool homogeneous_rec = populations[i].homogeneous_record();
