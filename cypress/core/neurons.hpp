@@ -172,7 +172,7 @@ public:
  */
 
 /**
- * Virtual neuron which produces spikes with spike times drawn fomr a poisson
+ * Virtual neuron which produces spikes with spike times drawn from a poisson
  * distribution.
  */
 class SpikeSourcePoisson final

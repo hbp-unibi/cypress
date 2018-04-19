@@ -30,6 +30,7 @@
 #include <cypress/backend/nest/nest.hpp>
 #include <cypress/backend/nmpi/nmpi.hpp>
 #include <cypress/backend/pynn/pynn.hpp>
+#include <cypress/backend/pynn/pynn2.hpp>
 #include <cypress/backend/pynn/slurm.hpp>
 
 #include <cypress/transformations/registry.hpp>
@@ -382,11 +383,11 @@ std::unique_ptr<Backend> NetworkBase::make_backend(std::string backend_id,
 			    "Expected another backend name following \"nmpi\"!");
 		}
 		auto backend = make_backend(join(elems, '.'), argc, argv, setup);
-		if (dynamic_cast<PyNN *>(backend.get()) == nullptr) {
+		if (dynamic_cast<PyNN_ *>(backend.get()) == nullptr) {
 			throw std::invalid_argument(
 			    "NMPI backend only works in conjunction with PyNN backends!");
 		}
-		std::unique_ptr<PyNN> pynn_backend(dynamic_cast<PyNN *>(backend.get()));
+		std::unique_ptr<PyNN_> pynn_backend(dynamic_cast<PyNN_ *>(backend.get()));
 		backend.release();
 		return std::make_unique<NMPI>(std::move(pynn_backend), argc, argv);
 	}
@@ -396,7 +397,7 @@ std::unique_ptr<Backend> NetworkBase::make_backend(std::string backend_id,
 			throw std::invalid_argument(
 			    "Expected another backend name following \"pynn\"!");
 		}
-		return std::make_unique<PyNN>(join(elems, '.'), setup);
+		return std::make_unique<PyNN_>(join(elems, '.'), setup);
 	}
 	else if (elems[0] == "slurm") {
 		elems.erase(elems.begin());  // Remove the first element
@@ -411,7 +412,7 @@ std::unique_ptr<Backend> NetworkBase::make_backend(std::string backend_id,
 		return std::make_unique<NEST>(setup);
 	}
 	else {
-		return std::make_unique<PyNN>(join(elems, '.'), setup);
+		return std::make_unique<PyNN_>(join(elems, '.'), setup);
 	}
 	return nullptr;
 }

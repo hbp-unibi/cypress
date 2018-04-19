@@ -21,7 +21,7 @@
 #include <unistd.h>
 
 #include <cypress/backend/nmpi/nmpi.hpp>
-#include <cypress/backend/pynn/pynn.hpp>
+#include <cypress/backend/pynn/pynn2.hpp>
 #include <cypress/backend/resources.hpp>
 #include <cypress/util/filesystem.hpp>
 #include <cypress/util/process.hpp>
@@ -68,7 +68,7 @@ static int run_broker(const std::vector<std::string> &args,
 	return Process::exec_no_redirect("python", params);
 }
 
-NMPI::NMPI(std::unique_ptr<PyNN> pynn, int &argc, const char *argv[],
+NMPI::NMPI(std::unique_ptr<PyNN_> pynn, int &argc, const char *argv[],
            const std::vector<std::string> &files, bool scan_args)
     : m_pynn(std::move(pynn))
 {
@@ -140,7 +140,7 @@ NMPI::NMPI(std::unique_ptr<PyNN> pynn, int &argc, const char *argv[],
 
 NMPI::NMPI(const std::string &pynn_backend, int &argc, const char *argv[],
            const std::vector<std::string> &files, bool scan_args)
-    : NMPI(std::make_unique<PyNN>(pynn_backend), argc, argv, files, scan_args)
+    : NMPI(std::make_unique<PyNN_>(pynn_backend), argc, argv, files, scan_args)
 {
 }
 

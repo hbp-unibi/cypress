@@ -129,6 +129,12 @@ struct LocalConnection {
 		return LocalConnection(src, tar, std::abs(synapse.weight),
 		                       synapse.delay);
 	}
+
+	std::vector<Real> uniform_absolute_connection()
+	{
+		return std::vector<Real>(
+		    {Real(src), Real(tar), std::abs(synapse.weight), synapse.delay});
+	}
 };
 
 struct Connection {
@@ -973,6 +979,8 @@ public:
 		tar.connection_name = "RandomConnector";
 		return true;
 	}
+
+	std::string name() const override { return "RandomConnector"; }
 };
 
 /**
@@ -1048,7 +1056,7 @@ public:
 		    descr.nid_tar1(), [&](size_t i, size_t r) {
 			    tar.emplace_back(descr.pid_src(), descr.pid_tar(), r, i,
 			                     Base::weight(), Base::delay());
-			});
+		    });
 	}
 
 	bool group_connect(const ConnectionDescriptor &descr,
@@ -1112,7 +1120,7 @@ public:
 		    descr.nid_src1(), [&](size_t i, size_t r) {
 			    tar.emplace_back(descr.pid_src(), descr.pid_tar(), i, r,
 			                     Base::weight(), Base::delay());
-			});
+		    });
 	}
 
 	bool group_connect(const ConnectionDescriptor &descr,
