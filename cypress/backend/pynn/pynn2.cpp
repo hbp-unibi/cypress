@@ -716,7 +716,7 @@ std::tuple<py::object, py::object> PyNN_::list_connect(
     const ConnectionDescriptor conn, const py::module &pynn,
     const Real timestep)
 {
-	std::tuple<py::object, py::object> ret({py::object(), py::object()});
+	std::tuple<py::object, py::object> ret = std::make_tuple(py::object(), py::object());
 	std::vector<Connection> conns_full;
 	size_t num_inh = 0;
 	conn.connect(conns_full);
@@ -797,7 +797,6 @@ Matrix<T> PyNN_::matrix_from_numpy(py::object object)
 {
 	// Check the data type
 	std::string type = py::cast<std::string>(object.attr("dtype").attr("name"));
-	std::cout << "TYPEs: " << typeid(T).name() << " and " << type << std::endl;
 	if (type == "int8") {
 		assert(typeid(T) == typeid(int8_t));
 	}
