@@ -625,17 +625,19 @@ py::object PyNN_::get_connector8(const std::string &connector_name,
 		    "allow_self_connections"_a = py::cast(false));
 	}
 	else if (connector_name == "FixedNumberPreConnector") {
+        py::module np = py::module::import("numpy");
 		return pynn.attr(connector_name.c_str())(
 		    "weights"_a = group_conn.synapse.weight,
 		    "delays"_a = group_conn.synapse.delay,
-		    "n"_a = int(group_conn.additional_parameter),
+		    "n"_a = np.attr("int")(group_conn.additional_parameter),
 		    "allow_self_connections"_a = py::cast(false));
 	}
 	else if (connector_name == "FixedNumberPostConnector") {
+        py::module np = py::module::import("numpy");
 		return pynn.attr(connector_name.c_str())(
 		    "weights"_a = group_conn.synapse.weight,
 		    "delays"_a = group_conn.synapse.delay,
-		    "n"_a = int(group_conn.additional_parameter),
+		    "n"_a = np.attr("int")(group_conn.additional_parameter),
 		    "allow_self_connections"_a = py::cast(false));
 	}
 	throw NotSupportedException("Requested group connection " + connector_name +
@@ -659,13 +661,15 @@ py::object PyNN_::get_connector(const std::string &connector_name,
 		    "allow_self_connections"_a = py::cast(false));
 	}
 	else if (connector_name == "FixedNumberPreConnector") {
+        py::module np = py::module::import("numpy");
 		return pynn.attr(connector_name.c_str())(
-		    "n"_a = int(additional_parameter),
+		    "n"_a = np.attr("int")(additional_parameter),
 		    "allow_self_connections"_a = py::cast(false));
 	}
 	else if (connector_name == "FixedNumberPostConnector") {
+        py::module np = py::module::import("numpy");
 		return pynn.attr(connector_name.c_str())(
-		    "n"_a = int(additional_parameter),
+		    "n"_a = np.attr("int")(additional_parameter),
 		    "allow_self_connections"_a = py::cast(false));
 	}
 	throw NotSupportedException("Requested group connection " + connector_name +
