@@ -25,10 +25,14 @@
 #include <string>
 #include <vector>
 
+#include <pybind11/pybind11.h>
+
 #include <cypress/core/backend.hpp>
+#include <cypress/core/network_base_objects.hpp>
 #include <cypress/util/json.hpp>
 
 namespace cypress {
+namespace py = pybind11;
 /**
  * The Backend class is an abstract base class which provides the facilities
  * for network execution.
@@ -134,20 +138,184 @@ public:
 	                              const std::string &simulator);
 
 	/**
-	 * Searilises a network description in binnf format to base_filename_stdin
-	 * @param source network description
-	 * @param base_filename basic filenam
+	 * Converting a Json object to a py::dict. Make sure that the python
+	 * interpreter is already started before calling this function
+	 *
+	 * @param json The json object which will be converted
+	 * @return python dictionary
 	 */
-	static void write_binnf(NetworkBase &source, std::string base_filename);
+	static py::dict json_to_dict(Json json);
 
 	/**
-	 * After a PyNN simulation has finished and written the results back to a
-	 * file (@base_filename + _res), this function will parse the results
-	 * into @source and logging output to the logger in @source. if @log is set, the function expects a log file to exist (@base_filename + _log)
+	 * Given a NeuronType, this function returns the name of the PyNN
+	 * neuron_type
+	 *
+	 * @param neuron_type Reference to the NeuronType of the population
+	 * @return PyNN class name of the neuron type
 	 */
-	static void read_back_binnf(NetworkBase &source, std::string base_filename,
-	                            bool log = true);
+	static std::string get_neuron_class(const NeuronType &neuron_type);
+
+	/**
+	 * Intitialize the logger, still TODO
+	 *
+	 */
+	static void init_logger();
+
+	/**
+	 * Creates a PyNN source population
+	 *
+	 * @param pop The cypress population
+	 * @param pynn the PyNN instance
+	 * @return handler for the PyNN population
+	 */
+	static py::object create_source_population(const PopulationBase &pop,
+	                                           py::module &pynn);
+	/**
+	 * Creates a PyNN population with homogeneous parameters, inhomogeneous
+	 * parameters can be set with set_inhomogeneous_parameters afterwards.
+	 *
+	 * @param pop The cypress population
+	 * @param pynn the PyNN instance
+	 * @return handler for the PyNN population
+	 */
+	static py::object create_homogeneous_pop(const PopulationBase &pop,
+	                                         py::module &pynn,
+	                                         bool &init_available);
+
+	/**
+	 * Sets parameters of an existing population
+	 *
+	 * @param pop Source cypress population
+	 * @param pypop Target PyNN population
+	 * @param init_available flag for initializing the population
+	 */
+	static void set_inhomogeneous_parameters(const PopulationBase &pop,
+	                                         py::object &pypop,
+	                                         bool init_available = false);
+
+	/**
+	 * Set recording for a full population
+	 *
+	 * @param pop Source cypress population
+	 * @param pypop Target PyNN population
+	 */
+	static void set_homogeneous_rec(const PopulationBase &pop,
+	                                py::object &pypop);
+
+	/**
+	 * Set mixed recordings for a population
+	 *
+	 * @param pop Source cypress population
+	 * @param pypop Target PyNN population
+	 */
+	static void set_inhomogenous_rec(const PopulationBase &pop,
+	                                 py::object &pypop, py::module &pynn);
+
+	/**
+	 * Get a handler for a part of a population
+	 *
+	 * @param pynn handler for the PyNN instance
+	 * @param py_pop PyNN population
+	 * @param c_pop Cypress population
+	 * @param start id of the first neuron
+	 * @param end id of the last neuron
+	 * @return handler for PopulationView object
+	 */
+	static py::object get_pop_view(const py::module &pynn,
+	                               const py::object &py_pop,
+	                               const PopulationBase &c_pop,
+	                               const size_t &start, const size_t &end);
+
+	/**
+	 * Creates a PyNN 0.8 Connector
+	 *
+	 * @param connector_name name of the pyNN connector
+	 * @param group_conn Group connection description
+	 * @param pynn Reference to the pynn module
+	 * @return py::object reference to the connector
+	 */
+	static py::object get_connector8(const std::string &connector_name,
+	                                 const GroupConnction group_conn,
+	                                 const py::module &pynn);
+
+	/**
+	 * Creates a PyNN 0.9 Connector
+	 *
+	 * @param connector_name name of the pyNN connector
+	 * @param pynn Reference to the pynn module
+	 * @param additional_parameter Additional parameter
+	 * needed by the connector
+	 * @return py::object reference to the connector
+	 */
+	static py::object get_connector(const std::string &connector_name,
+	                                const py::module &pynn,
+	                                const Real &additional_parameter);
+
+	/**
+	 * Connect based on an existing PyNN connector
+	 *
+	 * @param populations vector of cypress populations
+	 * @param pypopulations vector of PyNN populations
+	 * @param conn Cypress connection descriptor
+	 * @param group_conn Cypress group connection descriptor
+	 * @param pynn Handler for PyNN module
+	 * @param conn_name PyNN name of the connector
+	 * @param timestep timestep of the simulator
+	 * @return Handler for the connector
+	 */
+	static py::object group_connect(
+	    const std::vector<PopulationBase> &populations,
+	    const std::vector<py::object> &pypopulations,
+	    const ConnectionDescriptor conn, const GroupConnction &group_conn,
+	    const py::module &pynn, const std::string &conn_name,
+	    const Real timestep = 0.0);
+
+	/**
+	 * Creates a PyNN FromList Connection
+	 *
+	 * @param pypopulations list of python populations
+	 * @param conn ConnectionDescriptor of the List connection
+	 * @param pynn Handler for PyNN python module
+	 * @param timestep Timestep of the simulator, default 0
+	 * @return tuple of the excitatory,inhibitory connection. List is separated
+	 * for compatibility reasons
+	 */
+	static std::tuple<py::object, py::object> list_connect(
+	    const std::vector<py::object> &pypopulations,
+	    const ConnectionDescriptor conn, const py::module &pynn,
+	    const Real timestep = 0.0);
+
+	template <typename T>
+	/**
+	 * Given a numpy object, this method creates a matrix without creating a
+	 * copy. The python dtype is checked and compared to @param T. Matrix sizes
+	 * are caught in Python, because the py::buffer_info seems to be misleading
+	 * in some cases
+	 *
+	 * @param T Type of the matrix
+	 * @param object handler for numpy array
+	 * @return C++ matrix of the numpy array
+	 */
+	static Matrix<T> matrix_from_numpy(py::object object);
+
+	/**
+	 * Fetch all data (spikes, traces) from nest. This is faster than using NEO.
+	 *
+	 * @param populations Cypress populations
+	 * @param pypopulations PyNN populations
+	 */
+	static void fetch_data_nest(const std::vector<PopulationBase> &populations,
+	                            const std::vector<py::object> &pypopulations);
+
+	/**
+	 * Fetch all data (spikes, traces) from NEO. This is a general method
+	 *
+	 * @param populations Cypress populations
+	 * @param pypopulations PyNN populations
+	 */
+	static void fetch_data_neo5(const std::vector<PopulationBase> &populations,
+	                            const std::vector<py::object> &pypopulations);
 };
-}
+}  // namespace cypress
 
 #endif /* CYPRESS_BACKEND_PYNN_HPP */
