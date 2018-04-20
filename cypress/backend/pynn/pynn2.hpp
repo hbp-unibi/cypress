@@ -21,10 +21,12 @@
 #ifndef CYPRESS_BACKEND_PYNN2_HPP
 #define CYPRESS_BACKEND_PYNN2_HPP
 
+#include <memory>
 #include <stdexcept>
 #include <string>
 #include <vector>
 
+#include <pybind11/embed.h>
 #include <pybind11/pybind11.h>
 
 #include <cypress/core/backend.hpp>
@@ -33,6 +35,31 @@
 
 namespace cypress {
 namespace py = pybind11;
+
+/**
+ * The Python interpreter is not completely isolated: importing numpy in 2
+ * consecutive runs will lead to a Segmentation fault (compare
+ * https://github.com/numpy/numpy/issues/3837). Thus, all simulations have to be
+ * executed in a single interpreter. This class makes sure that the python
+ * interpreter is started and is kept alive, as long as on instance of the
+ * object exists. When the last instance is destroyed, the interpreter will be
+ * safely shutdown before reaching the end of main, preventing a segfault at the
+ * end of the application.
+ *
+ * Note: Sub-interpreters and also this approach in general are not thread-safe.
+ * Instead of parallelizing simulations, you should use several threads in e.g.
+ * NEST (call pynn.nest='{"threads": 8}'), or combine several networks into one.
+ *
+ */
+class PythonInstance {
+private:
+	std::shared_ptr<py::scoped_interpreter> pointer;
+
+public:
+	PythonInstance();
+	~PythonInstance();
+};
+
 /**
  * The Backend class is an abstract base class which provides the facilities
  * for network execution.
@@ -47,6 +74,7 @@ protected:
 
 private:
 	void do_run(NetworkBase &network, Real duration) const override;
+	PythonInstance m_python;
 
 public:
 	/**
@@ -306,15 +334,17 @@ public:
 	 */
 	static void fetch_data_nest(const std::vector<PopulationBase> &populations,
 	                            const std::vector<py::object> &pypopulations);
-    
-    /**
-	 * Fetch all data (spikes, traces) from spiNNaker. This is faster than using NEO.
+
+	/**
+	 * Fetch all data (spikes, traces) from spiNNaker. This is faster than using
+	 * NEO.
 	 *
 	 * @param populations Cypress populations
 	 * @param pypopulations PyNN populations
 	 */
-    static void fetch_data_spinnaker(const std::vector<PopulationBase> &populations,
-                                 const std::vector<py::object> &pypopulations);
+	static void fetch_data_spinnaker(
+	    const std::vector<PopulationBase> &populations,
+	    const std::vector<py::object> &pypopulations);
 
 	/**
 	 * Fetch all data (spikes, traces) from NEO. This is a general method

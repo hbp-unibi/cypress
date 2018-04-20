@@ -33,6 +33,7 @@
 #include <cypress/backend/nest/nest.hpp>
 #include <cypress/backend/nmpi/nmpi.hpp>
 #include <cypress/backend/pynn/pynn.hpp>
+#include <cypress/backend/pynn/pynn2.hpp>
 #include <cypress/backend/resources.hpp>
 #include <cypress/core/backend.hpp>
 #include <cypress/core/connector.hpp>

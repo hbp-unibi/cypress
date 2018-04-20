@@ -48,12 +48,31 @@
 #include <cypress/util/logger.hpp>
 #include <cypress/util/process.hpp>
 
-// Enable to get a textual dump of the BiNNF instead of running the simulation
-//#define CYPRESS_DEBUG_BINNF
-
 namespace cypress {
+
 namespace py = pybind11;
 using namespace py::literals;
+namespace {
+std::shared_ptr<pybind11::scoped_interpreter> python_instance;
+size_t _python_counter = 0;
+}  // namespace
+
+PythonInstance::PythonInstance()
+{
+	if (_python_counter == 0) {
+		python_instance = std::make_shared<py::scoped_interpreter>(
+		    pybind11::scoped_interpreter{});
+	}
+	_python_counter++;
+};
+PythonInstance::~PythonInstance()
+{
+	_python_counter--;
+	if (_python_counter == 0) {
+		python_instance = std::shared_ptr<pybind11::scoped_interpreter>();
+	}
+};
+
 namespace {
 /**
  * Struct assining certain properties to the various hardware platforms.
@@ -1109,8 +1128,7 @@ void PyNN_::fetch_data_neo5(const std::vector<PopulationBase> &populations,
 
 void PyNN_::do_run(NetworkBase &source, Real duration) const
 {
-	// TODO : LOGGer
-	py::scoped_interpreter guard;
+
 	init_logger();
 
 	py::module sys = py::module::import("sys");
@@ -1249,7 +1267,7 @@ void PyNN_::do_run(NetworkBase &source, Real duration) const
 	if (!m_keep_log) {
 	    unlink(log_path.c_str());
 	}*/
-}  // namespace cypress
+}
 
 std::string PyNN_::nmpi_platform() const
 {

@@ -38,6 +38,8 @@ int main(int argc, const char *argv[])
 		std::cout << "Usage: " << argv[0] << " <SIMULATOR>" << std::endl;
 		return 1;
 	}
+	
+    auto python = PythonInstance();
 
 	// Sweep over the w and g_leak parameters and store all networks in the
 	// network pool
