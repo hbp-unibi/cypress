@@ -598,7 +598,14 @@ py::object PyNN_::get_pop_view(const py::module &pynn, const py::object &py_pop,
 		return py_pop;
 	}
 	else {
-		return pynn.attr("PopulationView")(py_pop, py::slice(start, end, 1));
+		try {
+			return pynn.attr("PopulationView")(py_pop,
+			                                   py::slice(start, end, 1));
+		}
+		catch (py::error_already_set) {
+			throw NotSupportedException(
+			    "Popviews are not supported by SpiNNaker");
+		}
 	}
 }
 
@@ -625,7 +632,7 @@ py::object PyNN_::get_connector8(const std::string &connector_name,
 		    "allow_self_connections"_a = py::cast(false));
 	}
 	else if (connector_name == "FixedNumberPreConnector") {
-        py::module np = py::module::import("numpy");
+		py::module np = py::module::import("numpy");
 		return pynn.attr(connector_name.c_str())(
 		    "weights"_a = group_conn.synapse.weight,
 		    "delays"_a = group_conn.synapse.delay,
@@ -633,7 +640,7 @@ py::object PyNN_::get_connector8(const std::string &connector_name,
 		    "allow_self_connections"_a = py::cast(false));
 	}
 	else if (connector_name == "FixedNumberPostConnector") {
-        py::module np = py::module::import("numpy");
+		py::module np = py::module::import("numpy");
 		return pynn.attr(connector_name.c_str())(
 		    "weights"_a = group_conn.synapse.weight,
 		    "delays"_a = group_conn.synapse.delay,
@@ -661,13 +668,13 @@ py::object PyNN_::get_connector(const std::string &connector_name,
 		    "allow_self_connections"_a = py::cast(false));
 	}
 	else if (connector_name == "FixedNumberPreConnector") {
-        py::module np = py::module::import("numpy");
+		py::module np = py::module::import("numpy");
 		return pynn.attr(connector_name.c_str())(
 		    "n"_a = np.attr("int")(additional_parameter),
 		    "allow_self_connections"_a = py::cast(false));
 	}
 	else if (connector_name == "FixedNumberPostConnector") {
-        py::module np = py::module::import("numpy");
+		py::module np = py::module::import("numpy");
 		return pynn.attr(connector_name.c_str())(
 		    "n"_a = np.attr("int")(additional_parameter),
 		    "allow_self_connections"_a = py::cast(false));
@@ -722,7 +729,8 @@ std::tuple<py::object, py::object> PyNN_::list_connect(
     const ConnectionDescriptor conn, const py::module &pynn,
     const Real timestep)
 {
-	std::tuple<py::object, py::object> ret = std::make_tuple(py::object(), py::object());
+	std::tuple<py::object, py::object> ret =
+	    std::make_tuple(py::object(), py::object());
 	std::vector<Connection> conns_full;
 	size_t num_inh = 0;
 	conn.connect(conns_full);
@@ -844,7 +852,7 @@ Matrix<T> PyNN_::matrix_from_numpy(py::object object)
 		second_dim = 1;
 	}
 	else if (shape.size() == 2) {
-		second_dim = 2;
+		second_dim = shape[1];
 	}
 	else {
 		throw;
@@ -948,6 +956,77 @@ void PyNN_::fetch_data_nest(const std::vector<PopulationBase> &populations,
 							}
 						}
 						neuron.signals().data(idx.value(), std::move(data));
+					}
+				}
+			}
+		}
+	}
+}
+
+void PyNN_::fetch_data_spinnaker(const std::vector<PopulationBase> &populations,
+                                 const std::vector<py::object> &pypopulations)
+{
+	for (size_t i = 0; i < populations.size(); i++) {
+		std::vector<std::string> signals = populations[i].type().signal_names;
+		for (size_t j = 0; j < signals.size(); j++) {
+			if (populations[i].signals().is_recording(j)) {
+				py::object data =
+				    pypopulations[i].attr("spinnaker_get_data")(signals[j]);
+				Matrix<double> datac = matrix_from_numpy<double>(data);
+
+				if (signals[j] == "spikes") {
+					for (size_t k = 0; k < populations[i].size(); k++) {
+						auto neuron = populations[i][k];
+						auto idx = neuron.type().signal_index("spikes");
+						size_t len = 0;
+						for (size_t l = 0; l < datac.rows(); l++) {
+							if (size_t(datac(l, 0)) == k) {
+								len++;
+							}
+						}
+
+						if (len == 0) {
+							;
+							continue;
+						}
+						auto res = std::make_shared<Matrix<Real>>(len, 1);
+						size_t counter = 0;
+						for (size_t l = 0; l < datac.rows(); l++) {
+							if (size_t(datac(l, 0)) == k) {
+								assert(counter < len);
+								(*res)(counter, 0) = Real(datac(l, 1));
+								counter++;
+							}
+						}
+						neuron.signals().data(idx.value(), std::move(res));
+					}
+				}
+				else {
+					for (size_t k = 0; k < populations[i].size(); k++) {
+						auto neuron = populations[i][k];
+						auto idx = neuron.type().signal_index(signals[j]);
+
+						size_t len = 0;
+						for (size_t l = 0; l < datac.rows(); l++) {
+							if (size_t(datac(l, 0)) == k) {
+								len++;
+							}
+						}
+						std::cout << k << ", " << len << std::endl;
+						if (len == 0) {
+							continue;
+						}
+						auto res = std::make_shared<Matrix<Real>>(len, 2);
+						size_t counter = 0;
+						for (size_t l = 0; l < datac.rows(); l++) {
+							if (size_t(datac(l, 0)) == k) {
+								assert(counter < len);
+								(*res)(counter, 0) = Real(datac(l, 1));
+								(*res)(counter, 1) = Real(datac(l, 2));
+								counter++;
+							}
+						}
+						neuron.signals().data(idx.value(), std::move(res));
 					}
 				}
 			}
@@ -1065,6 +1144,14 @@ void PyNN_::do_run(NetworkBase &source, Real duration) const
 		if (&populations[i].type() == &SpikeSourceArray::inst()) {
 			pypopulations.push_back(
 			    create_source_population(populations[i], pynn));
+			const bool homogeneous_rec = populations[i].homogeneous_record();
+			if (homogeneous_rec) {
+				set_homogeneous_rec(populations[i], pypopulations.back());
+			}
+			else {
+				set_inhomogenous_rec(populations[i], pypopulations.back(),
+				                     pynn);
+			}
 		}
 		else {
 			bool homogeneous = populations[i].homogeneous_parameters();
@@ -1089,12 +1176,15 @@ void PyNN_::do_run(NetworkBase &source, Real duration) const
 
 	auto buildpop = std::chrono::system_clock::now();
 	Real timestep = 0;
-	if (m_simulator == "nest") {
+	if (m_simulator == "nest" || m_simulator == "spinnaker") {
 		global_logger().info("cypress",
 		                     "Delays are rounded to "
 		                     "multiples of the "
 		                     "timestep");
 		timestep = py::cast<Real>(pynn.attr("get_time_step")());
+		if (m_simulator == "spinnaker") {  // timestep to milliseconds
+			timestep = timestep / 1000.0;
+		}
 	}
 	for (auto conn : source.connections()) {
 		auto it = SUPPORTED_CONNECTIONS.find(conn.connector().name());
@@ -1111,12 +1201,16 @@ void PyNN_::do_run(NetworkBase &source, Real duration) const
 	}
 
 	auto buildconn = std::chrono::system_clock::now();
-	pynn.attr("run")(duration);
+	int duration_rounded = int((duration + timestep) / timestep) * timestep;
+	pynn.attr("run")(duration_rounded);
 	auto execrun = std::chrono::system_clock::now();
 
 	// fetch data
 	if (m_simulator == "nest") {
 		fetch_data_nest(populations, pypopulations);
+	}
+	if (m_simulator == "spinnaker") {
+		fetch_data_spinnaker(populations, pypopulations);
 	}
 	else {
 		fetch_data_neo5(populations, pypopulations);

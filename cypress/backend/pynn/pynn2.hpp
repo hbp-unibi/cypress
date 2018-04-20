@@ -306,6 +306,15 @@ public:
 	 */
 	static void fetch_data_nest(const std::vector<PopulationBase> &populations,
 	                            const std::vector<py::object> &pypopulations);
+    
+    /**
+	 * Fetch all data (spikes, traces) from spiNNaker. This is faster than using NEO.
+	 *
+	 * @param populations Cypress populations
+	 * @param pypopulations PyNN populations
+	 */
+    static void fetch_data_spinnaker(const std::vector<PopulationBase> &populations,
+                                 const std::vector<py::object> &pypopulations);
 
 	/**
 	 * Fetch all data (spikes, traces) from NEO. This is a general method
