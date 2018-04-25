@@ -165,6 +165,20 @@ public:
 	static std::string get_import(const std::vector<std::string> &imports,
 	                              const std::string &simulator);
 
+    /**
+    * Returns the PyNN version, 8 represents version 0.8.x
+    * 
+    * @return integer representing the pyNN version
+    */
+    static int get_pynn_version();
+    
+    /**
+    * Returns the neo version, 5 represents version 0.5.x
+    * 
+    * @return integer representing the neo version
+    */
+    static int get_neo_version();
+
 	/**
 	 * Converting a Json object to a py::dict. Make sure that the python
 	 * interpreter is already started before calling this function

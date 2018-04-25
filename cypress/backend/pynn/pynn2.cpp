@@ -416,6 +416,49 @@ std::string PyNN_::get_import(const std::vector<std::string> &imports,
 	return import;
 }
 
+int PyNN_::get_pynn_version(){
+    py::module pynn = py::module::import("pyNN");
+    std::string version = py::cast<std::string>(pynn.attr("__version__"));
+    std::stringstream ss(version);
+    std::string main, submain;
+    std::getline(ss, main, '.');
+    std::getline(ss, submain, '.');
+    int main_n = std::stoi(main);
+    int submain_n = std::stoi(submain);
+    
+    if(main_n !=0 || !((submain_n ==8)  || (submain_n== 9))){
+        throw NotSupportedException("PyNN version " + main + "." + submain + "is not supported");
+    }
+    return submain_n;
+}
+
+int PyNN_::get_neo_version(){
+    int pynn_v = get_pynn_version();
+    if(pynn_v <8){
+        // No neo necessary or expected
+        return 0;
+    }
+    try{
+        py::module neo = py::module::import("neo");
+    }
+    catch(...){
+        throw NotSupportedException("PyNN version " + std::to_string(pynn_v) + "."  + " requires neo");
+    }
+    py::module neo = py::module::import("neo");
+    std::string version = py::cast<std::string>(neo.attr("__version__"));
+    std::stringstream ss(version);
+    std::string main, submain;
+    std::getline(ss, main, '.');
+    std::getline(ss, submain, '.');
+    int main_n = std::stoi(main);
+    int submain_n = std::stoi(submain);
+    
+    if(main_n !=0 || !((submain_n ==4)  || (submain_n== 5))){
+        throw NotSupportedException("PyNN version " + main + "." + submain + "is not supported");
+    }
+    return submain_n;
+}
+
 py::dict PyNN_::json_to_dict(Json json)
 {
 	py::dict dict;
