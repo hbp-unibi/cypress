@@ -21,10 +21,9 @@ include(ExternalProject)
 # linking
 ExternalProject_Add(
 	googletest
-	URL https://github.com/google/googletest/archive/release-1.7.0.tar.gz
-	URL_HASH SHA512=c623d5720c4ed574e95158529872815ecff478c03bdcee8b79c9b042a603533f93fe55f939bcfe2cd745ce340fd626ad6d9a95981596f1a4d05053d874cd1dfc
+	URL https://github.com/google/googletest/archive/release-1.8.0.tar.gz
+	URL_HASH SHA512=1dbece324473e53a83a60601b02c92c089f5d314761351974e097b2cf4d24af4296f9eb8653b6b03b1e363d9c5f793897acae1f0c7ac40149216035c4d395d9d
 	INSTALL_COMMAND ""
-	PATCH_COMMAND cat "${CMAKE_CURRENT_SOURCE_DIR}/cmake/gtest-port.h.patch" >> include/gtest/internal/gtest-port.h
 )
 ExternalProject_Get_Property(googletest SOURCE_DIR BINARY_DIR)
 set(GTEST_INCLUDE_DIRS ${SOURCE_DIR}/include)
