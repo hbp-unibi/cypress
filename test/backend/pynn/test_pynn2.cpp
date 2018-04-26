@@ -133,8 +133,14 @@ TEST(pynn2, get_pynn_version)
 		pynn.attr("__version__") = backup;
 	}
 	else {
-		EXPECT_ANY_THROW(PyNN_::get_pynn_version());
-		std::cout << " ... Skipping test" << std::endl;
+        try{ 
+            py::module pynn = py::module::import("pyNN");
+            EXPECT_NO_THROW(PyNN_::get_pynn_version());
+        }
+        catch( ... ) {
+            EXPECT_ANY_THROW(PyNN_::get_pynn_version());
+            std::cout << " ... Skipping test" << std::endl;
+        }
 	}
 }
 
@@ -166,8 +172,14 @@ TEST(pynn2, get_neo_version)
 		neo.attr("__version__") = backup;
 	}
 	else {
-		EXPECT_ANY_THROW(PyNN_::get_neo_version());
-		std::cout << " ... Skipping test" << std::endl;
+        try{ 
+            py::module neo = py::module::import("neo");
+            EXPECT_NO_THROW(PyNN_::get_neo_version());
+        }
+        catch( ... ) {
+            EXPECT_ANY_THROW(PyNN_::get_neo_version());
+            std::cout << " ... Skipping test" << std::endl;
+        }
 	}
 }
 
