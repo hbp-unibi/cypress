@@ -588,9 +588,9 @@ py::object PyNN_::create_homogeneous_pop(const PopulationBase &pop,
 	        pynn.attr(get_neuron_class(pop.type()).c_str())(**neuron_params));
 	init_available = false;
 	try {
-		auto idx = pop[0].type().signal_index("v_rest");
+		auto idx = pop[0].type().signal_index("v");
 		if (idx.valid()) {
-			pypop.attr("initialize")(**py::dict("v"_a = params[idx.value()]));
+			pypop.attr("initialize")("v"_a = params[idx.value()]);
 			init_available = true;
 		}
 	}
