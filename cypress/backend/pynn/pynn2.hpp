@@ -269,14 +269,14 @@ public:
 	                               const size_t &start, const size_t &end);
 
 	/**
-	 * Creates a PyNN 0.8 Connector
+	 * Creates a PyNN 0.7 Connector
 	 *
 	 * @param connector_name name of the pyNN connector
 	 * @param group_conn Group connection description
 	 * @param pynn Reference to the pynn module
 	 * @return py::object reference to the connector
 	 */
-	static py::object get_connector8(const std::string &connector_name,
+	static py::object get_connector7(const std::string &connector_name,
 	                                 const GroupConnction group_conn,
 	                                 const py::module &pynn);
 

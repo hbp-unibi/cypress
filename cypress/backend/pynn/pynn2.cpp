@@ -674,7 +674,7 @@ py::object PyNN_::get_pop_view(const py::module &pynn, const py::object &py_pop,
 	}
 }
 
-py::object PyNN_::get_connector8(const std::string &connector_name,
+py::object PyNN_::get_connector7(const std::string &connector_name,
                                  const GroupConnction group_conn,
                                  const py::module &pynn)
 {
