@@ -938,9 +938,19 @@ void PyNN_::fetch_data_nest(const std::vector<PopulationBase> &populations,
                             const std::vector<py::object> &pypopulations)
 {
 	for (size_t i = 0; i < populations.size(); i++) {
+        if(populations[i].size()==0){
+            continue;
+        }
 		std::vector<std::string> signals = populations[i].type().signal_names;
-		for (size_t j = 0; j < signals.size(); j++) {
-			if (populations[i].signals().is_recording(j)) {
+		for (size_t j = 0; j < signals.size(); j++) {bool is_recording = false;
+			for(auto neuron: populations[i]){
+				if(neuron.signals().is_recording(j)){
+				is_recording = true;
+				break;
+				}
+			}
+				
+			if (is_recording) {
 				if (signals[j] == "spikes") {
 					py::module nest = py::module::import("nest");
 					py::dict nest_data =
@@ -1038,9 +1048,20 @@ void PyNN_::fetch_data_spinnaker(const std::vector<PopulationBase> &populations,
                                  const std::vector<py::object> &pypopulations)
 {
 	for (size_t i = 0; i < populations.size(); i++) {
+        if(populations[i].size()==0){
+            continue;
+        }
 		std::vector<std::string> signals = populations[i].type().signal_names;
 		for (size_t j = 0; j < signals.size(); j++) {
-			if (populations[i].signals().is_recording(j)) {
+            bool is_recording = false;
+			for(auto neuron: populations[i]){
+				if(neuron.signals().is_recording(j)){
+				is_recording = true;
+				break;
+				}
+			}
+				
+			if (is_recording) {
 				py::object data =
 				    pypopulations[i].attr("spinnaker_get_data")(signals[j]);
 				Matrix<double> datac = matrix_from_numpy<double>(data);
@@ -1109,10 +1130,21 @@ void PyNN_::fetch_data_neo5(const std::vector<PopulationBase> &populations,
                             const std::vector<py::object> &pypopulations)
 {
 	for (size_t i = 0; i < populations.size(); i++) {
+        if(populations[i].size()==0){
+            continue;
+        }
 		std::vector<std::string> signals = populations[i].type().signal_names;
 		py::object neo_block = pypopulations[i].attr("get_data")();
 		for (size_t j = 0; j < signals.size(); j++) {
-			if (populations[i].signals().is_recording(j)) {
+			bool is_recording = false;
+			for(auto neuron: populations[i]){
+				if(neuron.signals().is_recording(j)){
+				is_recording = true;
+				break;
+				}
+			}
+				
+			if (is_recording) {
 				if (signals[j] == "spikes") {
 					py::list spiketrains =
 					    (py::list(neo_block.attr("segments"))[0])
