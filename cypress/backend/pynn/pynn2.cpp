@@ -463,14 +463,14 @@ py::dict PyNN_::json_to_dict(Json json)
 {
 	py::dict dict;
 	for (Json::iterator i = json.begin(); i != json.end(); ++i) {
-		auto key = py::arg(i.key().c_str());
 		Json value = i.value();
 		if (value.is_object()) {
-			dict = py::dict(key = **json_to_dict(value), **dict);
+			dict = py::dict(py::arg(i.key().c_str()) = **json_to_dict(value),
+			                **dict);
 		}
 		else if (value.is_string()) {
 			std::string temp = value;
-			dict = py::dict(key = temp, **dict);
+			dict = py::dict(py::arg(i.key().c_str()) = temp, **dict);
 		}
 		else if (value.is_array()) {  // structured
 			py::list list;
@@ -489,23 +489,25 @@ py::dict PyNN_::json_to_dict(Json json)
 					std::string temp = entry;
 					list.append(temp);
 				}
-				else{
-                    throw NotSupportedException("Datatype is not supported for conversion to python dict!");
-                }
+				else {
+					throw NotSupportedException(
+					    "Datatype is not supported for conversion to python "
+					    "dict!");
+				}
 			}
-			dict = py::dict(key = list, **dict);
+			dict = py::dict(py::arg(i.key().c_str()) = list, **dict);
 		}
 		else if (value.is_boolean()) {
 			bool temp = value;
-			dict = py::dict(key = temp, **dict);
+			dict = py::dict(py::arg(i.key().c_str()) = temp, **dict);
 		}
 		else if (value.is_number_float()) {
 			float temp = value;
-			dict = py::dict(key = temp, **dict);
+			dict = py::dict(py::arg(i.key().c_str()) = temp, **dict);
 		}
 		else if (value.is_number_integer() or value.is_number_unsigned()) {
 			int temp = value;
-			dict = py::dict(key = temp, **dict);
+			dict = py::dict(py::arg(i.key().c_str()) = temp, **dict);
 		}
 		else {
 			global_logger().info(
