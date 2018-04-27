@@ -1279,7 +1279,7 @@ void PyNN_::do_run(NetworkBase &source, Real duration) const
 	if (m_simulator == "nest") {
 		fetch_data_nest(populations, pypopulations);
 	}
-	if (m_simulator == "spinnaker") {
+	else if (m_simulator == "spinnaker") {
 		fetch_data_spinnaker(populations, pypopulations);
 	}
 	else {
