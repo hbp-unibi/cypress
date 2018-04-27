@@ -64,14 +64,14 @@ PythonInstance::PythonInstance()
 		    pybind11::scoped_interpreter{});
 	}
 	_python_counter++;
-};
+}
 PythonInstance::~PythonInstance()
 {
 	_python_counter--;
 	if (_python_counter == 0) {
 		python_instance = std::shared_ptr<pybind11::scoped_interpreter>();
 	}
-};
+}
 
 namespace {
 /**
