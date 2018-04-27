@@ -721,7 +721,8 @@ TEST(pynn2, group_connect)
 		std::vector<py::object> pypops{
 		    PyNN_::create_homogeneous_pop(pops[0], pynn, temp),
 		    PyNN_::create_homogeneous_pop(pops[1], pynn, temp)};
-		GroupConnction conn = {0, 1, 0, 16, 0, 16, {0.15, 1}, 3, "asd"};
+		GroupConnction conn = GroupConnction::create_group_connection(
+		    0, 1, 0, 16, 0, 16, 0.15, 1, 3, "asd");
 		EXPECT_NO_THROW(PyNN_::group_connect(pops, pypops, conn, pynn,
 		                                     "AllToAllConnector", 0.1));
 		EXPECT_NO_THROW(PyNN_::group_connect(pops, pypops, conn, pynn,

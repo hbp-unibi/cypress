@@ -278,6 +278,29 @@ struct GroupConnction {
 	 * Returns true if the synapse is inhibitory.
 	 */
 	bool inhibitory() const { return synapse.inhibitory(); }
+
+	static GroupConnction create_group_connection(uint32_t psrc, uint32_t ptar,
+	                                       NeuronIndex src0, NeuronIndex src1,
+	                                       NeuronIndex tar0, NeuronIndex tar1,
+	                                       Real weight, Real delay,
+	                                       Real additional_parameter,
+	                                       std::string name)
+	{
+		GroupConnction temp;
+		temp.psrc = psrc;
+		temp.ptar = ptar;
+		temp.src0 = src0;
+		temp.src1 = src1;
+		temp.tar0 = tar0;
+		temp.tar1 = tar1;
+		Synapse syn;
+		syn.weight = weight;
+		syn.delay = delay;
+		temp.synapse = syn;
+		temp.additional_parameter = additional_parameter;
+		temp.connection_name = name;
+		return temp;
+	}
 };
 
 #pragma pack(pop)
