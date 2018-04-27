@@ -52,9 +52,6 @@ namespace py = pybind11;
  *
  */
 class PythonInstance {
-private:
-	std::shared_ptr<py::scoped_interpreter> pointer;
-
 public:
 	PythonInstance();
 	~PythonInstance();
