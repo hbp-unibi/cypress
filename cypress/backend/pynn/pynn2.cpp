@@ -416,47 +416,52 @@ std::string PyNN_::get_import(const std::vector<std::string> &imports,
 	return import;
 }
 
-int PyNN_::get_pynn_version(){
-    py::module pynn = py::module::import("pyNN");
-    std::string version = py::cast<std::string>(pynn.attr("__version__"));
-    std::stringstream ss(version);
-    std::string main, submain;
-    std::getline(ss, main, '.');
-    std::getline(ss, submain, '.');
-    int main_n = std::stoi(main);
-    int submain_n = std::stoi(submain);
-    
-    if(main_n !=0 || !((submain_n ==8)  || (submain_n== 9))){
-        throw NotSupportedException("PyNN version " + main + "." + submain + "is not supported");
-    }
-    return submain_n;
+int PyNN_::get_pynn_version()
+{
+	py::module pynn = py::module::import("pyNN");
+	std::string version = py::cast<std::string>(pynn.attr("__version__"));
+	std::stringstream ss(version);
+	std::string main, submain;
+	std::getline(ss, main, '.');
+	std::getline(ss, submain, '.');
+	int main_n = std::stoi(main);
+	int submain_n = std::stoi(submain);
+
+	if (main_n != 0 || !((submain_n == 8) || (submain_n == 9))) {
+		throw NotSupportedException("PyNN version " + main + "." + submain +
+		                            "is not supported");
+	}
+	return submain_n;
 }
 
-int PyNN_::get_neo_version(){
-    int pynn_v = get_pynn_version();
-    if(pynn_v <8){
-        // No neo necessary or expected
-        return 0;
-    }
-    try{
-        py::module neo = py::module::import("neo");
-    }
-    catch(...){
-        throw NotSupportedException("PyNN version " + std::to_string(pynn_v) + "."  + " requires neo");
-    }
-    py::module neo = py::module::import("neo");
-    std::string version = py::cast<std::string>(neo.attr("__version__"));
-    std::stringstream ss(version);
-    std::string main, submain;
-    std::getline(ss, main, '.');
-    std::getline(ss, submain, '.');
-    int main_n = std::stoi(main);
-    int submain_n = std::stoi(submain);
-    
-    if(main_n !=0 || !((submain_n ==4)  || (submain_n== 5))){
-        throw NotSupportedException("PyNN version " + main + "." + submain + "is not supported");
-    }
-    return submain_n;
+int PyNN_::get_neo_version()
+{
+	int pynn_v = get_pynn_version();
+	if (pynn_v < 8) {
+		// No neo necessary or expected
+		return 0;
+	}
+	try {
+		py::module neo = py::module::import("neo");
+	}
+	catch (...) {
+		throw NotSupportedException("PyNN version " + std::to_string(pynn_v) +
+		                            "." + " requires neo");
+	}
+	py::module neo = py::module::import("neo");
+	std::string version = py::cast<std::string>(neo.attr("__version__"));
+	std::stringstream ss(version);
+	std::string main, submain;
+	std::getline(ss, main, '.');
+	std::getline(ss, submain, '.');
+	int main_n = std::stoi(main);
+	int submain_n = std::stoi(submain);
+
+	if (main_n != 0 || !((submain_n == 4) || (submain_n == 5))) {
+		throw NotSupportedException("PyNN version " + main + "." + submain +
+		                            "is not supported");
+	}
+	return submain_n;
 }
 
 py::dict PyNN_::json_to_dict(Json json)
@@ -752,18 +757,17 @@ py::object PyNN_::get_connector(const std::string &connector_name,
 
 py::object PyNN_::group_connect(const std::vector<PopulationBase> &populations,
                                 const std::vector<py::object> &pypopulations,
-                                const ConnectionDescriptor conn,
                                 const GroupConnction &group_conn,
                                 const py::module &pynn,
                                 const std::string &conn_name,
                                 const Real timestep)
 {
-	py::object source = get_pop_view(pynn, pypopulations[conn.pid_src()],
-	                                 populations[conn.pid_src()],
+	py::object source = get_pop_view(pynn, pypopulations[group_conn.psrc],
+	                                 populations[group_conn.psrc],
 	                                 group_conn.src0, group_conn.src1);
 
-	py::object target = get_pop_view(pynn, pypopulations[conn.pid_tar()],
-	                                 populations[conn.pid_tar()],
+	py::object target = get_pop_view(pynn, pypopulations[group_conn.ptar],
+	                                 populations[group_conn.ptar],
 	                                 group_conn.tar0, group_conn.tar1);
 
 	std::string receptor = "excitatory";
@@ -1258,7 +1262,7 @@ void PyNN_::do_run(NetworkBase &source, Real duration) const
 		if (it != SUPPORTED_CONNECTIONS.end() &&
 		    conn.connector().group_connect(conn, group_conn)) {
 			// Group connections
-			group_connect(populations, pypopulations, conn, group_conn, pynn,
+			group_connect(populations, pypopulations, group_conn, pynn,
 			              it->second, timestep);
 		}
 		else {

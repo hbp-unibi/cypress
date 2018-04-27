@@ -307,8 +307,7 @@ public:
 	 */
 	static py::object group_connect(
 	    const std::vector<PopulationBase> &populations,
-	    const std::vector<py::object> &pypopulations,
-	    const ConnectionDescriptor conn, const GroupConnction &group_conn,
+	    const std::vector<py::object> &pypopulations, const GroupConnction &group_conn,
 	    const py::module &pynn, const std::string &conn_name,
 	    const Real timestep = 0.0);
 
