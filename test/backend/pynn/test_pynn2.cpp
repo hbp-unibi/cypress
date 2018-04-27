@@ -204,7 +204,6 @@ TEST(pynn2, json_to_dict)
 	              }},
 	         }},
 	        {"key3", "Hello World2"}};
-
 	py::dict o1_py = PyNN_::json_to_dict(o1);
 	py::dict o2_py = PyNN_::json_to_dict(o2);
 
@@ -219,7 +218,6 @@ TEST(pynn2, json_to_dict)
 	EXPECT_EQ(int(o1["key2"]["key23"]), py::cast<int>(dict["key23"]));
 
 	EXPECT_EQ(o1["key3"], py::cast<std::string>(o1_py["key3"]));
-
 	dict = py::dict(o2_py["key2"]);
 	auto dict2 = py::dict(dict["key24"]);
 	EXPECT_EQ(int(o2["key2"]["key23"]), py::cast<int>(dict["key23"]));
@@ -227,7 +225,6 @@ TEST(pynn2, json_to_dict)
 	          py::cast<int>(dict2["key241"]));
 	EXPECT_EQ(int(o2["key2"]["key24"]["key242"]),
 	          py::cast<int>(dict2["key242"]));
-
 	EXPECT_EQ(o2["key3"], py::cast<std::string>(o2_py["key3"]));
 }
 
@@ -572,12 +569,20 @@ TEST(pynn2, set_inhomogenous_rec)
 		    .record_gsyn_inh()
 		    .record_spikes()
 		    .record_v();
+            
+        auto pop4 = netw.create_population<EifCondExpIsfaIsta>(
+		    16, EifCondExpIsfaIstaParameters());
+		pop4[14]
+		    .signals()
+		    .record_gsyn_exc();
 		if (import == "pyNN.nest") {
 			py::object pypop = PyNN_::create_homogeneous_pop(pop1, pynn, temp);
 			EXPECT_NO_THROW(PyNN_::set_inhomogenous_rec(pop1, pypop, pynn));
 
 			pypop = PyNN_::create_homogeneous_pop(pop3, pynn, temp);
 			EXPECT_NO_THROW(PyNN_::set_inhomogenous_rec(pop3, pypop, pynn));
+			pypop = PyNN_::create_homogeneous_pop(pop4, pynn, temp);
+			EXPECT_NO_THROW(PyNN_::set_inhomogenous_rec(pop4, pypop, pynn));
 		}
 		else if (import == "pyNN.spiNNaker") {
 			// Not supporterd by spinnaker
@@ -680,7 +685,116 @@ TEST(pynn2, get_connector7)
 	// TODO SPIKEY + BRAINSCALES
 }
 
+void check_projection(py::object projection, GroupConnction &conn)
+{
+	py::list weights = py::list(projection.attr("getWeights")());
+	py::list delays = py::list(projection.attr("getDelays")());
+	for (auto i : delays) {
+		EXPECT_EQ(conn.synapse.delay, py::cast<Real>(i));
+	}
+	if (conn.synapse.weight >= 0) {
+		EXPECT_EQ("excitatory",
+		          py::cast<std::string>(projection.attr("receptor_type")));
+		for (auto i : weights) {
+			EXPECT_EQ(conn.synapse.weight, py::cast<Real>(i));
+		}
+	}
+	else {
+		EXPECT_EQ("inhibitory",
+		          py::cast<std::string>(projection.attr("receptor_type")));
+		for (auto i : weights) {
+			EXPECT_EQ(-conn.synapse.weight, py::cast<Real>(i));
+		}
+	}
+}
 
+TEST(pynn2, group_connect)
+{
+	Network netw;
+	std::vector<PopulationBase> pops{
+	    netw.create_population<IfCondExp>(16, IfCondExpParameters()),
+	    netw.create_population<IfCondExp>(16, IfCondExpParameters())};
+	for (auto import : all_avail_imports) {
+		py::module pynn = py::module::import(import.c_str());
+		pynn.attr("setup")();
+		bool temp;
+		std::vector<py::object> pypops{
+		    PyNN_::create_homogeneous_pop(pops[0], pynn, temp),
+		    PyNN_::create_homogeneous_pop(pops[1], pynn, temp)};
+		GroupConnction conn{0, 1, 0, 16, 0, 16, Synapse{0.15, 1}, 3, "asd"};
+		EXPECT_NO_THROW(PyNN_::group_connect(pops, pypops, conn, pynn,
+		                                     "AllToAllConnector", 0.1));
+		EXPECT_NO_THROW(PyNN_::group_connect(pops, pypops, conn, pynn,
+		                                     "OneToOneConnector", 0.1));
+		EXPECT_NO_THROW(PyNN_::group_connect(pops, pypops, conn, pynn,
+		                                     "FixedNumberPreConnector", 0.1));
+		EXPECT_NO_THROW(PyNN_::group_connect(pops, pypops, conn, pynn,
+		                                     "FixedNumberPostConnector", 0.1));
+		conn.additional_parameter = 0.5;
+		EXPECT_NO_THROW(PyNN_::group_connect(pops, pypops, conn, pynn,
+		                                     "FixedProbabilityConnector", 0.1));
+
+		if (import == "pyNN.nest") {
+			conn.src1 = 10;
+			conn.tar0 = 5;
+			conn.additional_parameter = 3;
+			EXPECT_NO_THROW(PyNN_::group_connect(pops, pypops, conn, pynn,
+			                                     "AllToAllConnector", 0.1));
+			EXPECT_NO_THROW(PyNN_::group_connect(pops, pypops, conn, pynn,
+			                                     "OneToOneConnector", 0.1));
+			EXPECT_NO_THROW(PyNN_::group_connect(
+			    pops, pypops, conn, pynn, "FixedNumberPreConnector", 0.1));
+			EXPECT_NO_THROW(PyNN_::group_connect(
+			    pops, pypops, conn, pynn, "FixedNumberPostConnector", 0.1));
+			conn.additional_parameter = 0.5;
+			EXPECT_NO_THROW(PyNN_::group_connect(
+			    pops, pypops, conn, pynn, "FixedProbabilityConnector", 0.1));
+
+			check_projection(PyNN_::group_connect(pops, pypops, conn, pynn,
+			                                      "AllToAllConnector", 0.1),
+			                 conn);
+			check_projection(PyNN_::group_connect(pops, pypops, conn, pynn,
+			                                      "OneToOneConnector", 0.1),
+			                 conn);
+			conn.additional_parameter = 3;
+			check_projection(
+			    PyNN_::group_connect(pops, pypops, conn, pynn,
+			                         "FixedNumberPreConnector", 0.1),
+			    conn);
+			check_projection(
+			    PyNN_::group_connect(pops, pypops, conn, pynn,
+			                         "FixedNumberPostConnector", 0.1),
+			    conn);
+			conn.additional_parameter = 0.5;
+			check_projection(
+			    PyNN_::group_connect(pops, pypops, conn, pynn,
+			                         "FixedProbabilityConnector", 0.1),
+			    conn);
+
+			conn.synapse.weight = -0.015;
+			check_projection(PyNN_::group_connect(pops, pypops, conn, pynn,
+			                                      "AllToAllConnector", 0.1),
+			                 conn);
+			check_projection(PyNN_::group_connect(pops, pypops, conn, pynn,
+			                                      "OneToOneConnector", 0.1),
+			                 conn);
+			conn.additional_parameter = 3;
+			check_projection(
+			    PyNN_::group_connect(pops, pypops, conn, pynn,
+			                         "FixedNumberPreConnector", 0.1),
+			    conn);
+			check_projection(
+			    PyNN_::group_connect(pops, pypops, conn, pynn,
+			                         "FixedNumberPostConnector", 0.1),
+			    conn);
+			conn.additional_parameter = 0.5;
+			check_projection(
+			    PyNN_::group_connect(pops, pypops, conn, pynn,
+			                         "FixedProbabilityConnector", 0.1),
+			    conn);
+		}
+	}
+}
 
 }  // namespace cypress
 
