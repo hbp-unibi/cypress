@@ -96,7 +96,7 @@ add_dependencies(test_pynn2_backend googletest)
 # Only link gtest to define own main function
 target_link_libraries(test_pynn2_backend
 	cypress
-	${BINARY_DIR}/libgtest.a
+	${BINARY_DIR}/googlemock/gtest/libgtest.a
 )
 add_test(test_pynn2_backend test_pynn2_backend)
 
