@@ -655,6 +655,9 @@ void PyNN_::set_inhomogenous_rec(const PopulationBase &pop, py::object &pypop,
 				neuron_ids.push_back(k);
 			}
 		}
+		if(neuron_ids.size()== 0 ){
+            continue;
+		}
 		py::object popview = pynn.attr("PopulationView")(
 		    pypop, py::array_t<size_t>({neuron_ids.size()}, {sizeof(size_t)},
 		                               neuron_ids.data()));
