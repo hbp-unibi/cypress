@@ -569,12 +569,10 @@ TEST(pynn2, set_inhomogenous_rec)
 		    .record_gsyn_inh()
 		    .record_spikes()
 		    .record_v();
-            
-        auto pop4 = netw.create_population<EifCondExpIsfaIsta>(
+
+		auto pop4 = netw.create_population<EifCondExpIsfaIsta>(
 		    16, EifCondExpIsfaIstaParameters());
-		pop4[14]
-		    .signals()
-		    .record_gsyn_exc();
+		pop4[14].signals().record_gsyn_exc();
 		if (import == "pyNN.nest") {
 			py::object pypop = PyNN_::create_homogeneous_pop(pop1, pynn, temp);
 			EXPECT_NO_THROW(PyNN_::set_inhomogenous_rec(pop1, pypop, pynn));
@@ -708,6 +706,33 @@ void check_projection(py::object projection, GroupConnction &conn)
 	}
 }
 
+void check_all_to_all_list_projection(py::object projection,
+                                      GroupConnction &conn)
+{
+	//"getWeights"/ "getDelays" only returns a list of set synapses. It is
+	// therefor unfeasible to keep track which synapse in python belongs to
+	// which  synapse. Thus, this test is limited to all_to_all connections
+	py::list weights = py::list(projection.attr("getWeights")());
+	py::list delays = py::list(projection.attr("getDelays")());
+	for (auto i : delays) {
+		EXPECT_EQ(conn.synapse.delay, py::cast<Real>(i));
+	}
+	if (conn.synapse.weight >= 0) {
+		EXPECT_EQ("excitatory",
+		          py::cast<std::string>(projection.attr("receptor_type")));
+		for (auto i : weights) {
+			EXPECT_EQ(conn.synapse.weight, py::cast<Real>(i));
+		}
+	}
+	else {
+		EXPECT_EQ("inhibitory",
+		          py::cast<std::string>(projection.attr("receptor_type")));
+		for (auto i : weights) {
+			EXPECT_EQ(-conn.synapse.weight, py::cast<Real>(i));
+		}
+	}
+}
+
 TEST(pynn2, group_connect)
 {
 	Network netw;
@@ -794,6 +819,78 @@ TEST(pynn2, group_connect)
 			                         "FixedProbabilityConnector", 0.1),
 			    conn);
 		}
+	}
+}
+
+TEST(pynn2, list_connect)
+{
+	Network netw;
+	std::vector<PopulationBase> pops{
+	    netw.create_population<IfCondExp>(16, IfCondExpParameters()),
+	    netw.create_population<IfCondExp>(16, IfCondExpParameters())};
+
+	for (auto import : all_avail_imports) {
+		py::module pynn = py::module::import(import.c_str());
+		pynn.attr("setup")();
+		bool temp;
+		std::vector<py::object> pypops{
+		    PyNN_::create_homogeneous_pop(pops[0], pynn, temp),
+		    PyNN_::create_homogeneous_pop(pops[1], pynn, temp)};
+
+		// excitatory
+		ConnectionDescriptor conn(0, 0, 15, 1, 0, 15,
+		                          Connector::all_to_all(0.015, 1));
+		GroupConnction group_conn;
+		conn.connector().group_connect(conn, group_conn);
+		auto connection = PyNN_::list_connect(pypops, conn, pynn, 0.1);
+		py::object exc = std::get<0>(connection);
+		py::object inh = std::get<1>(connection);
+		check_all_to_all_list_projection(exc, group_conn);
+		EXPECT_EQ(py::object(), inh);
+		EXPECT_NE(py::object(), exc);
+
+		// inhibitory
+		conn = ConnectionDescriptor(0, 0, 15, 1, 0, 15,
+		                            Connector::all_to_all(-0.015, 1));
+		conn.connector().group_connect(conn, group_conn);
+		connection = PyNN_::list_connect(pypops, conn, pynn, 0.1);
+		exc = std::get<0>(connection);
+		inh = std::get<1>(connection);
+
+		check_all_to_all_list_projection(inh, group_conn);
+		EXPECT_EQ(py::object(), exc);
+		EXPECT_NE(py::object(), inh);
+
+		std::vector<LocalConnection> conn_list(
+		    {LocalConnection(0, 1, 0.015, 1), LocalConnection(0, 2, 2.0, 3),
+		     LocalConnection(0, 3, -0.015, 1), LocalConnection(0, 4, -2.0, 3)});
+		conn = ConnectionDescriptor(0, 0, 15, 1, 0, 15,
+		                            Connector::from_list(conn_list));
+		conn.connector().group_connect(conn, group_conn);
+		connection = PyNN_::list_connect(pypops, conn, pynn, 0.1);
+		exc = std::get<0>(connection);
+		inh = std::get<1>(connection);
+		EXPECT_NE(py::object(), exc);
+		EXPECT_NE(py::object(), inh);
+
+		py::list weights = py::list(exc.attr("getWeights")());
+		py::list delays = py::list(exc.attr("getDelays")());
+		py::list weights_i = py::list(inh.attr("getWeights")());
+		py::list delays_i = py::list(inh.attr("getDelays")());
+
+		EXPECT_NEAR(0.015, py::cast<Real>(weights[0]), 1e-6);
+		EXPECT_NEAR(2.0, py::cast<Real>(weights[1]), 1e-6);
+		EXPECT_NEAR(1.0, py::cast<Real>(delays[0]), 1e-6);
+		EXPECT_NEAR(3.0, py::cast<Real>(delays[1]), 1e-6);
+		EXPECT_EQ("excitatory",
+		          py::cast<std::string>(exc.attr("receptor_type")));
+
+		EXPECT_NEAR(0.015, py::cast<Real>(weights_i[0]), 1e-6);
+		EXPECT_NEAR(2.0, py::cast<Real>(weights_i[1]), 1e-6);
+		EXPECT_NEAR(1.0, py::cast<Real>(delays_i[0]), 1e-6);
+		EXPECT_NEAR(3.0, py::cast<Real>(delays_i[1]), 1e-6);
+		EXPECT_EQ("inhibitory",
+		          py::cast<std::string>(inh.attr("receptor_type")));
 	}
 }
 
