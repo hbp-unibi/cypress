@@ -677,7 +677,7 @@ py::object PyNN_::get_pop_view(const py::module &pynn, const py::object &py_pop,
 			return pynn.attr("PopulationView")(py_pop,
 			                                   py::slice(start, end, 1));
 		}
-		catch (py::error_already_set&) {
+		catch (py::error_already_set &) {
 			throw NotSupportedException(
 			    "Popviews are not supported by SpiNNaker");
 		}
@@ -879,17 +879,20 @@ std::tuple<py::object, py::object> PyNN_::list_connect(
 	}
 	return ret;
 }
-namespace{
-    template <typename T, typename T2>
-    void inline assert_types(){
-        if(typeid(T) != typeid(T2)){
-            throw ExecutionError("C type " + std::string(typeid(T).name()) + "does not match python type " + std::string(typeid(T2).name()) + "! ");
-        }
-    }
+namespace {
+template <typename T, typename T2>
+void inline assert_types()
+{
+	if (typeid(T) != typeid(T2)) {
+		throw ExecutionError("C type " + std::string(typeid(T).name()) +
+		                     "does not match python type " +
+		                     std::string(typeid(T2).name()) + "! ");
+	}
 }
+}  // namespace
 
 template <typename T>
-Matrix<T> PyNN_::matrix_from_numpy(py::object object)
+Matrix<T> PyNN_::matrix_from_numpy(const py::object &object)
 {
 	// Check the data type
 	std::string type = py::cast<std::string>(object.attr("dtype").attr("name"));

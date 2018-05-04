@@ -334,7 +334,7 @@ public:
 	 * @param object handler for numpy array
 	 * @return C++ matrix of the numpy array
 	 */
-	static Matrix<T> matrix_from_numpy(py::object object);
+	static Matrix<T> matrix_from_numpy(const py::object& object);
 
 	/**
 	 * Fetch all data (spikes, traces) from nest. This is faster than using NEO.
