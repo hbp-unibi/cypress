@@ -879,6 +879,14 @@ std::tuple<py::object, py::object> PyNN_::list_connect(
 	}
 	return ret;
 }
+namespace{
+    template <typename T, typename T2>
+    void inline assert_types(){
+        if(typeid(T) != typeid(T2)){
+            throw ExecutionError("C type " + std::string(typeid(T).name()) + "does not match python type " + std::string(typeid(T2).name()) + "! ");
+        }
+    }
+}
 
 template <typename T>
 Matrix<T> PyNN_::matrix_from_numpy(py::object object)
@@ -886,34 +894,34 @@ Matrix<T> PyNN_::matrix_from_numpy(py::object object)
 	// Check the data type
 	std::string type = py::cast<std::string>(object.attr("dtype").attr("name"));
 	if (type == "int8") {
-		assert(typeid(T) == typeid(int8_t));
+		assert_types<T, int8_t>();
 	}
 	else if (type == "int16") {
-		assert(typeid(T) == typeid(int16_t));
+		assert_types<T, int16_t>();
 	}
 	else if (type == "int32") {
-		assert(typeid(T) == typeid(int32_t));
+		assert_types<T, int32_t>();
 	}
 	else if (type == "int64") {
-		assert(typeid(T) == typeid(int64_t));
+		assert_types<T, int64_t>();
 	}
 	else if (type == "uint8") {
-		assert(typeid(T) == typeid(uint8_t));
+		assert_types<T, uint8_t>();
 	}
 	else if (type == "uint16") {
-		assert(typeid(T) == typeid(uint16_t));
+		assert_types<T, uint16_t>();
 	}
 	else if (type == "uint32") {
-		assert(typeid(T) == typeid(uint32_t));
+		assert_types<T, uint32_t>();
 	}
 	else if (type == "uint64") {
-		assert(typeid(T) == typeid(uint64_t));
+		assert_types<T, uint64_t>();
 	}
 	else if (type == "float64") {
-		assert(typeid(T) == typeid(double));
+		assert_types<T, double>();
 	}
 	else if (type == "float32") {
-		assert(typeid(T) == typeid(float));
+		assert_types<T, float>();
 	}
 	else {
 		throw;

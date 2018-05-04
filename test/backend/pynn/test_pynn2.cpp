@@ -894,6 +894,182 @@ TEST(pynn2, list_connect)
 	}
 }
 
+TEST(pynn2, matrix_from_numpy)
+{
+	try {
+		py::module::import("numpy");
+	}
+	catch (...) {
+		std::cout << "No numpy installed...\n"
+		          << " ... Skipping test" << std::endl;
+		return;
+	}
+	py::module numpy = py::module::import("numpy");
+	py::list list;
+	list.append(0);
+	list.append(1);
+	list.append(2);
+	py::object array =
+	    numpy.attr("array")(list, "dtype"_a = numpy.attr("int64"));
+	EXPECT_ANY_THROW(PyNN_::matrix_from_numpy<int8_t>(array));
+	EXPECT_ANY_THROW(PyNN_::matrix_from_numpy<int16_t>(array));
+	EXPECT_ANY_THROW(PyNN_::matrix_from_numpy<int32_t>(array));
+	EXPECT_NO_THROW(PyNN_::matrix_from_numpy<int64_t>(array));
+	EXPECT_ANY_THROW(PyNN_::matrix_from_numpy<uint8_t>(array));
+	EXPECT_ANY_THROW(PyNN_::matrix_from_numpy<uint16_t>(array));
+	EXPECT_ANY_THROW(PyNN_::matrix_from_numpy<uint32_t>(array));
+	EXPECT_ANY_THROW(PyNN_::matrix_from_numpy<uint64_t>(array));
+	EXPECT_ANY_THROW(PyNN_::matrix_from_numpy<double>(array));
+	EXPECT_ANY_THROW(PyNN_::matrix_from_numpy<float>(array));
+	auto mat = PyNN_::matrix_from_numpy<int64_t>(array);
+	EXPECT_EQ(mat(0, 0), py::cast<int64_t>(list[0]));
+	EXPECT_EQ(mat(1, 0), py::cast<int64_t>(list[1]));
+	EXPECT_EQ(mat(2, 0), py::cast<int64_t>(list[2]));
+
+	array = numpy.attr("array")(list, "dtype"_a = numpy.attr("int32"));
+	EXPECT_ANY_THROW(PyNN_::matrix_from_numpy<int8_t>(array));
+	EXPECT_ANY_THROW(PyNN_::matrix_from_numpy<int16_t>(array));
+	EXPECT_NO_THROW(PyNN_::matrix_from_numpy<int32_t>(array));
+	EXPECT_ANY_THROW(PyNN_::matrix_from_numpy<int64_t>(array));
+	EXPECT_ANY_THROW(PyNN_::matrix_from_numpy<uint8_t>(array));
+	EXPECT_ANY_THROW(PyNN_::matrix_from_numpy<uint16_t>(array));
+	EXPECT_ANY_THROW(PyNN_::matrix_from_numpy<uint32_t>(array));
+	EXPECT_ANY_THROW(PyNN_::matrix_from_numpy<uint64_t>(array));
+	EXPECT_ANY_THROW(PyNN_::matrix_from_numpy<double>(array));
+	EXPECT_ANY_THROW(PyNN_::matrix_from_numpy<float>(array));
+	auto mat1 = PyNN_::matrix_from_numpy<int32_t>(array);
+	EXPECT_EQ(mat1(0, 0), py::cast<int32_t>(list[0]));
+	EXPECT_EQ(mat1(1, 0), py::cast<int32_t>(list[1]));
+	EXPECT_EQ(mat1(2, 0), py::cast<int32_t>(list[2]));
+
+	array = numpy.attr("array")(list, "dtype"_a = numpy.attr("int16"));
+	EXPECT_ANY_THROW(PyNN_::matrix_from_numpy<int8_t>(array));
+	EXPECT_NO_THROW(PyNN_::matrix_from_numpy<int16_t>(array));
+	EXPECT_ANY_THROW(PyNN_::matrix_from_numpy<int32_t>(array));
+	EXPECT_ANY_THROW(PyNN_::matrix_from_numpy<int64_t>(array));
+	EXPECT_ANY_THROW(PyNN_::matrix_from_numpy<uint8_t>(array));
+	EXPECT_ANY_THROW(PyNN_::matrix_from_numpy<uint16_t>(array));
+	EXPECT_ANY_THROW(PyNN_::matrix_from_numpy<uint32_t>(array));
+	EXPECT_ANY_THROW(PyNN_::matrix_from_numpy<uint64_t>(array));
+	EXPECT_ANY_THROW(PyNN_::matrix_from_numpy<double>(array));
+	EXPECT_ANY_THROW(PyNN_::matrix_from_numpy<float>(array));
+	auto mat2 = PyNN_::matrix_from_numpy<int16_t>(array);
+	EXPECT_EQ(mat2(0, 0), py::cast<int16_t>(list[0]));
+	EXPECT_EQ(mat2(1, 0), py::cast<int16_t>(list[1]));
+	EXPECT_EQ(mat2(2, 0), py::cast<int16_t>(list[2]));
+
+	array = numpy.attr("array")(list, "dtype"_a = numpy.attr("int8"));
+	EXPECT_NO_THROW(PyNN_::matrix_from_numpy<int8_t>(array));
+	EXPECT_ANY_THROW(PyNN_::matrix_from_numpy<int16_t>(array));
+	EXPECT_ANY_THROW(PyNN_::matrix_from_numpy<int32_t>(array));
+	EXPECT_ANY_THROW(PyNN_::matrix_from_numpy<int64_t>(array));
+	EXPECT_ANY_THROW(PyNN_::matrix_from_numpy<uint8_t>(array));
+	EXPECT_ANY_THROW(PyNN_::matrix_from_numpy<uint16_t>(array));
+	EXPECT_ANY_THROW(PyNN_::matrix_from_numpy<uint32_t>(array));
+	EXPECT_ANY_THROW(PyNN_::matrix_from_numpy<uint64_t>(array));
+	EXPECT_ANY_THROW(PyNN_::matrix_from_numpy<double>(array));
+	EXPECT_ANY_THROW(PyNN_::matrix_from_numpy<float>(array));
+	auto mat3 = PyNN_::matrix_from_numpy<int8_t>(array);
+	EXPECT_EQ(mat3(0, 0), py::cast<int8_t>(list[0]));
+	EXPECT_EQ(mat3(1, 0), py::cast<int8_t>(list[1]));
+	EXPECT_EQ(mat3(2, 0), py::cast<int8_t>(list[2]));
+
+	array = numpy.attr("array")(list, "dtype"_a = numpy.attr("uint8"));
+	EXPECT_ANY_THROW(PyNN_::matrix_from_numpy<int8_t>(array));
+	EXPECT_ANY_THROW(PyNN_::matrix_from_numpy<int16_t>(array));
+	EXPECT_ANY_THROW(PyNN_::matrix_from_numpy<int32_t>(array));
+	EXPECT_ANY_THROW(PyNN_::matrix_from_numpy<int64_t>(array));
+	EXPECT_NO_THROW(PyNN_::matrix_from_numpy<uint8_t>(array));
+	EXPECT_ANY_THROW(PyNN_::matrix_from_numpy<uint16_t>(array));
+	EXPECT_ANY_THROW(PyNN_::matrix_from_numpy<uint32_t>(array));
+	EXPECT_ANY_THROW(PyNN_::matrix_from_numpy<uint64_t>(array));
+	EXPECT_ANY_THROW(PyNN_::matrix_from_numpy<double>(array));
+	EXPECT_ANY_THROW(PyNN_::matrix_from_numpy<float>(array));
+	auto mat4 = PyNN_::matrix_from_numpy<uint8_t>(array);
+	EXPECT_EQ(mat4(0, 0), py::cast<uint8_t>(list[0]));
+	EXPECT_EQ(mat4(1, 0), py::cast<uint8_t>(list[1]));
+	EXPECT_EQ(mat4(2, 0), py::cast<uint8_t>(list[2]));
+
+	array = numpy.attr("array")(list, "dtype"_a = numpy.attr("uint16"));
+	EXPECT_ANY_THROW(PyNN_::matrix_from_numpy<int8_t>(array));
+	EXPECT_ANY_THROW(PyNN_::matrix_from_numpy<int16_t>(array));
+	EXPECT_ANY_THROW(PyNN_::matrix_from_numpy<int32_t>(array));
+	EXPECT_ANY_THROW(PyNN_::matrix_from_numpy<int64_t>(array));
+	EXPECT_ANY_THROW(PyNN_::matrix_from_numpy<uint8_t>(array));
+	EXPECT_NO_THROW(PyNN_::matrix_from_numpy<uint16_t>(array));
+	EXPECT_ANY_THROW(PyNN_::matrix_from_numpy<uint32_t>(array));
+	EXPECT_ANY_THROW(PyNN_::matrix_from_numpy<uint64_t>(array));
+	EXPECT_ANY_THROW(PyNN_::matrix_from_numpy<double>(array));
+	EXPECT_ANY_THROW(PyNN_::matrix_from_numpy<float>(array));
+	auto mat5 = PyNN_::matrix_from_numpy<uint16_t>(array);
+	EXPECT_EQ(mat5(0, 0), py::cast<uint16_t>(list[0]));
+	EXPECT_EQ(mat5(1, 0), py::cast<uint16_t>(list[1]));
+	EXPECT_EQ(mat5(2, 0), py::cast<uint16_t>(list[2]));
+
+	array = numpy.attr("array")(list, "dtype"_a = numpy.attr("uint32"));
+	EXPECT_ANY_THROW(PyNN_::matrix_from_numpy<int8_t>(array));
+	EXPECT_ANY_THROW(PyNN_::matrix_from_numpy<int16_t>(array));
+	EXPECT_ANY_THROW(PyNN_::matrix_from_numpy<int32_t>(array));
+	EXPECT_ANY_THROW(PyNN_::matrix_from_numpy<int64_t>(array));
+	EXPECT_ANY_THROW(PyNN_::matrix_from_numpy<uint8_t>(array));
+	EXPECT_ANY_THROW(PyNN_::matrix_from_numpy<uint16_t>(array));
+	EXPECT_NO_THROW(PyNN_::matrix_from_numpy<uint32_t>(array));
+	EXPECT_ANY_THROW(PyNN_::matrix_from_numpy<uint64_t>(array));
+	EXPECT_ANY_THROW(PyNN_::matrix_from_numpy<double>(array));
+	EXPECT_ANY_THROW(PyNN_::matrix_from_numpy<float>(array));
+	auto mat6 = PyNN_::matrix_from_numpy<uint32_t>(array);
+	EXPECT_EQ(mat6(0, 0), py::cast<uint32_t>(list[0]));
+	EXPECT_EQ(mat6(1, 0), py::cast<uint32_t>(list[1]));
+	EXPECT_EQ(mat6(2, 0), py::cast<uint32_t>(list[2]));
+
+	array = numpy.attr("array")(list, "dtype"_a = numpy.attr("uint64"));
+	EXPECT_ANY_THROW(PyNN_::matrix_from_numpy<int8_t>(array));
+	EXPECT_ANY_THROW(PyNN_::matrix_from_numpy<int16_t>(array));
+	EXPECT_ANY_THROW(PyNN_::matrix_from_numpy<int32_t>(array));
+	EXPECT_ANY_THROW(PyNN_::matrix_from_numpy<int64_t>(array));
+	EXPECT_ANY_THROW(PyNN_::matrix_from_numpy<uint8_t>(array));
+	EXPECT_ANY_THROW(PyNN_::matrix_from_numpy<uint16_t>(array));
+	EXPECT_ANY_THROW(PyNN_::matrix_from_numpy<uint32_t>(array));
+	EXPECT_NO_THROW(PyNN_::matrix_from_numpy<uint64_t>(array));
+	EXPECT_ANY_THROW(PyNN_::matrix_from_numpy<double>(array));
+	EXPECT_ANY_THROW(PyNN_::matrix_from_numpy<float>(array));
+	auto mat7 = PyNN_::matrix_from_numpy<uint64_t>(array);
+	EXPECT_EQ(mat7(0, 0), py::cast<uint64_t>(list[0]));
+	EXPECT_EQ(mat7(1, 0), py::cast<uint64_t>(list[1]));
+	EXPECT_EQ(mat7(2, 0), py::cast<uint64_t>(list[2]));
+
+	array = numpy.attr("array")(list, "dtype"_a = numpy.attr("float64"));
+	EXPECT_ANY_THROW(PyNN_::matrix_from_numpy<int8_t>(array));
+	EXPECT_ANY_THROW(PyNN_::matrix_from_numpy<int16_t>(array));
+	EXPECT_ANY_THROW(PyNN_::matrix_from_numpy<int32_t>(array));
+	EXPECT_ANY_THROW(PyNN_::matrix_from_numpy<int64_t>(array));
+	EXPECT_ANY_THROW(PyNN_::matrix_from_numpy<uint8_t>(array));
+	EXPECT_ANY_THROW(PyNN_::matrix_from_numpy<uint16_t>(array));
+	EXPECT_ANY_THROW(PyNN_::matrix_from_numpy<uint32_t>(array));
+	EXPECT_ANY_THROW(PyNN_::matrix_from_numpy<uint64_t>(array));
+	EXPECT_NO_THROW(PyNN_::matrix_from_numpy<double>(array));
+	EXPECT_ANY_THROW(PyNN_::matrix_from_numpy<float>(array));
+	auto mat8 = PyNN_::matrix_from_numpy<double>(array);
+	EXPECT_NEAR(mat8(0, 0), py::cast<double>(list[0]), 1e-8);
+	EXPECT_NEAR(mat8(1, 0), py::cast<double>(list[1]), 1e-8);
+	EXPECT_NEAR(mat8(2, 0), py::cast<double>(list[2]), 1e-8);
+
+	array = numpy.attr("array")(list, "dtype"_a = numpy.attr("float32"));
+	EXPECT_ANY_THROW(PyNN_::matrix_from_numpy<int8_t>(array));
+	EXPECT_ANY_THROW(PyNN_::matrix_from_numpy<int16_t>(array));
+	EXPECT_ANY_THROW(PyNN_::matrix_from_numpy<int32_t>(array));
+	EXPECT_ANY_THROW(PyNN_::matrix_from_numpy<int64_t>(array));
+	EXPECT_ANY_THROW(PyNN_::matrix_from_numpy<uint8_t>(array));
+	EXPECT_ANY_THROW(PyNN_::matrix_from_numpy<uint16_t>(array));
+	EXPECT_ANY_THROW(PyNN_::matrix_from_numpy<uint32_t>(array));
+	EXPECT_ANY_THROW(PyNN_::matrix_from_numpy<uint64_t>(array));
+	EXPECT_ANY_THROW(PyNN_::matrix_from_numpy<double>(array));
+	EXPECT_NO_THROW(PyNN_::matrix_from_numpy<float>(array));
+	auto mat9 = PyNN_::matrix_from_numpy<float>(array);
+	EXPECT_NEAR(mat9(0, 0), py::cast<float>(list[0]), 1e-8);
+	EXPECT_NEAR(mat9(1, 0), py::cast<float>(list[1]), 1e-8);
+	EXPECT_NEAR(mat9(2, 0), py::cast<float>(list[2]), 1e-8);
+}
 }  // namespace cypress
 
 int main(int argc, char **argv)
