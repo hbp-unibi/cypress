@@ -952,18 +952,19 @@ void PyNN_::fetch_data_nest(const std::vector<PopulationBase> &populations,
                             const std::vector<py::object> &pypopulations)
 {
 	for (size_t i = 0; i < populations.size(); i++) {
-        if(populations[i].size()==0){
-            continue;
-        }
+		if (populations[i].size() == 0) {
+			continue;
+		}
 		std::vector<std::string> signals = populations[i].type().signal_names;
-		for (size_t j = 0; j < signals.size(); j++) {bool is_recording = false;
-			for(auto neuron: populations[i]){
-				if(neuron.signals().is_recording(j)){
-				is_recording = true;
-				break;
+		for (size_t j = 0; j < signals.size(); j++) {
+			bool is_recording = false;
+			for (auto neuron : populations[i]) {
+				if (neuron.signals().is_recording(j)) {
+					is_recording = true;
+					break;
 				}
 			}
-				
+
 			if (is_recording) {
 				if (signals[j] == "spikes") {
 					py::module nest = py::module::import("nest");
@@ -1062,19 +1063,19 @@ void PyNN_::fetch_data_spinnaker(const std::vector<PopulationBase> &populations,
                                  const std::vector<py::object> &pypopulations)
 {
 	for (size_t i = 0; i < populations.size(); i++) {
-        if(populations[i].size()==0){
-            continue;
-        }
+		if (populations[i].size() == 0) {
+			continue;
+		}
 		std::vector<std::string> signals = populations[i].type().signal_names;
 		for (size_t j = 0; j < signals.size(); j++) {
-            bool is_recording = false;
-			for(auto neuron: populations[i]){
-				if(neuron.signals().is_recording(j)){
-				is_recording = true;
-				break;
+			bool is_recording = false;
+			for (auto neuron : populations[i]) {
+				if (neuron.signals().is_recording(j)) {
+					is_recording = true;
+					break;
 				}
 			}
-				
+
 			if (is_recording) {
 				py::object data =
 				    pypopulations[i].attr("spinnaker_get_data")(signals[j]);
@@ -1118,7 +1119,6 @@ void PyNN_::fetch_data_spinnaker(const std::vector<PopulationBase> &populations,
 								len++;
 							}
 						}
-						std::cout << k << ", " << len << std::endl;
 						if (len == 0) {
 							continue;
 						}
@@ -1144,20 +1144,20 @@ void PyNN_::fetch_data_neo5(const std::vector<PopulationBase> &populations,
                             const std::vector<py::object> &pypopulations)
 {
 	for (size_t i = 0; i < populations.size(); i++) {
-        if(populations[i].size()==0){
-            continue;
-        }
+		if (populations[i].size() == 0) {
+			continue;
+		}
 		std::vector<std::string> signals = populations[i].type().signal_names;
 		py::object neo_block = pypopulations[i].attr("get_data")();
 		for (size_t j = 0; j < signals.size(); j++) {
 			bool is_recording = false;
-			for(auto neuron: populations[i]){
-				if(neuron.signals().is_recording(j)){
-				is_recording = true;
-				break;
+			for (auto neuron : populations[i]) {
+				if (neuron.signals().is_recording(j)) {
+					is_recording = true;
+					break;
 				}
 			}
-				
+
 			if (is_recording) {
 				if (signals[j] == "spikes") {
 					py::list spiketrains =
@@ -1194,28 +1194,30 @@ void PyNN_::fetch_data_neo5(const std::vector<PopulationBase> &populations,
 							break;
 						}
 					}
+					py::object py_neuron_ids = analogsignals[signal_index]
+					                               .attr("channel_index")
+					                               .attr("channel_ids");
 					Matrix<int64_t> neuron_ids =
-					    matrix_from_numpy<int64_t>(analogsignals[signal_index]
-					                                   .attr("channel_index")
-					                                   .attr("channel_ids"));
-					Matrix<double> time = matrix_from_numpy<double>(
-					    analogsignals[signal_index].attr("times"));
+					    matrix_from_numpy<int64_t>(py_neuron_ids);
+					py::object py_times =
+					    analogsignals[signal_index].attr("times");
+					Matrix<double> time = matrix_from_numpy<double>(py_times);
+					py::object py_pydata =
+					    analogsignals[signal_index].attr("as_array")();
+					Matrix<double> pydata =
+					    matrix_from_numpy<double>(py_pydata);
+
 					for (size_t k = 0; k < neuron_ids.size(); k++) {
 
-						Matrix<double> pydata = matrix_from_numpy<double>(
-						    py::list(analogsignals[signal_index].attr("T"))[k]);
-
 						auto data =
-						    std::make_shared<Matrix<Real>>(pydata.size(), 2);
-						for (size_t l = 0; l < pydata.size(); l++) {
-							(*data)(l, 0) = Real(time[l]);
-							(*data)(l, 1) = Real(pydata[l]);
+						    std::make_shared<Matrix<Real>>(pydata.rows(), 2);
+						for (size_t l = 0; l < pydata.rows(); l++) {
+							(*data)(l, 0) = time[l];
+							(*data)(l, 1) = pydata(l, k);
 						}
 
-						auto idx = populations[i][neuron_ids(k, 0)]
-						               .type()
-						               .signal_index(signals[j]);
 						auto neuron = populations[i][neuron_ids(k, 0)];
+						auto idx = neuron.type().signal_index(signals[j]);
 						neuron.signals().data(idx.value(), std::move(data));
 					}
 				}
