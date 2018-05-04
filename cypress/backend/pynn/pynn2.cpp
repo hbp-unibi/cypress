@@ -595,7 +595,7 @@ py::object PyNN_::create_homogeneous_pop(const PopulationBase &pop,
 	        pynn.attr(get_neuron_class(pop.type()).c_str())(**neuron_params));
 	init_available = false;
 	try {
-		auto idx = pop[0].type().signal_index("v");
+		auto idx = pop[0].type().parameter_index("v_rest");
 		if (idx.valid()) {
 			pypop.attr("initialize")("v"_a = params[idx.value()]);
 			init_available = true;
@@ -655,8 +655,8 @@ void PyNN_::set_inhomogenous_rec(const PopulationBase &pop, py::object &pypop,
 				neuron_ids.push_back(k);
 			}
 		}
-		if(neuron_ids.size()== 0 ){
-            continue;
+		if (neuron_ids.size() == 0) {
+			continue;
 		}
 		py::object popview = pynn.attr("PopulationView")(
 		    pypop, py::array_t<size_t>({neuron_ids.size()}, {sizeof(size_t)},
