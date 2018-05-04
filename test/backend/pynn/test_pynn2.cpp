@@ -846,8 +846,8 @@ TEST(pynn2, list_connect)
 		py::object exc = std::get<0>(connection);
 		py::object inh = std::get<1>(connection);
 		check_all_to_all_list_projection(exc, group_conn);
-		EXPECT_EQ(py::object(), inh);
-		EXPECT_NE(py::object(), exc);
+		EXPECT_TRUE(py::object().is(inh));
+		EXPECT_FALSE(py::object().is(exc));
 
 		// inhibitory
 		conn = ConnectionDescriptor(0, 0, 15, 1, 0, 15,
@@ -858,8 +858,8 @@ TEST(pynn2, list_connect)
 		inh = std::get<1>(connection);
 
 		check_all_to_all_list_projection(inh, group_conn);
-		EXPECT_EQ(py::object(), exc);
-		EXPECT_NE(py::object(), inh);
+		EXPECT_TRUE(py::object().is(exc));
+		EXPECT_FALSE(py::object().is(inh));
 
 		std::vector<LocalConnection> conn_list(
 		    {LocalConnection(0, 1, 0.015, 1), LocalConnection(0, 2, 2.0, 3),
@@ -870,8 +870,8 @@ TEST(pynn2, list_connect)
 		connection = PyNN_::list_connect(pypops, conn, pynn, 0.1);
 		exc = std::get<0>(connection);
 		inh = std::get<1>(connection);
-		EXPECT_NE(py::object(), exc);
-		EXPECT_NE(py::object(), inh);
+		EXPECT_FALSE(py::object().is(exc));
+		EXPECT_FALSE(py::object().is(inh));
 
 		py::list weights = py::list(exc.attr("getWeights")());
 		py::list delays = py::list(exc.attr("getDelays")());
