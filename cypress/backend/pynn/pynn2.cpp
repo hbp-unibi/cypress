@@ -677,7 +677,7 @@ py::object PyNN_::get_pop_view(const py::module &pynn, const py::object &py_pop,
 			return pynn.attr("PopulationView")(py_pop,
 			                                   py::slice(start, end, 1));
 		}
-		catch (py::error_already_set) {
+		catch (py::error_already_set&) {
 			throw NotSupportedException(
 			    "Popviews are not supported by SpiNNaker");
 		}
