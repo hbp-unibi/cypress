@@ -691,17 +691,21 @@ void check_projection(py::object projection, GroupConnction &conn)
 		EXPECT_EQ(conn.synapse.delay, py::cast<Real>(i));
 	}
 	if (conn.synapse.weight >= 0) {
-		EXPECT_EQ("excitatory",
-		          py::cast<std::string>(projection.attr("receptor_type")));
+		if (version > 8) {
+			EXPECT_EQ("excitatory",
+			          py::cast<std::string>(projection.attr("receptor_type")));
+		}
 		for (auto i : weights) {
-			EXPECT_EQ(conn.synapse.weight, py::cast<Real>(i));
+			EXPECT_NEAR(conn.synapse.weight, py::cast<Real>(i), 1e-4);
 		}
 	}
 	else {
-		EXPECT_EQ("inhibitory",
-		          py::cast<std::string>(projection.attr("receptor_type")));
+		if (version > 8) {
+			EXPECT_EQ("inhibitory",
+			          py::cast<std::string>(projection.attr("receptor_type")));
+		}
 		for (auto i : weights) {
-			EXPECT_EQ(-conn.synapse.weight, py::cast<Real>(i));
+			EXPECT_NEAR(-conn.synapse.weight, py::cast<Real>(i), 1e-4);
 		}
 	}
 }
@@ -718,17 +722,22 @@ void check_all_to_all_list_projection(py::object projection,
 		EXPECT_EQ(conn.synapse.delay, py::cast<Real>(i));
 	}
 	if (conn.synapse.weight >= 0) {
-		EXPECT_EQ("excitatory",
-		          py::cast<std::string>(projection.attr("receptor_type")));
+		if (version > 8) {
+			EXPECT_EQ("excitatory",
+			          py::cast<std::string>(projection.attr("receptor_type")));
+		}
 		for (auto i : weights) {
-			EXPECT_EQ(conn.synapse.weight, py::cast<Real>(i));
+			EXPECT_NEAR(conn.synapse.weight, py::cast<Real>(i), 1e-4);
 		}
 	}
 	else {
-		EXPECT_EQ("inhibitory",
-		          py::cast<std::string>(projection.attr("receptor_type")));
+
+		if (version > 8) {
+			EXPECT_EQ("inhibitory",
+			          py::cast<std::string>(projection.attr("receptor_type")));
+		}
 		for (auto i : weights) {
-			EXPECT_EQ(-conn.synapse.weight, py::cast<Real>(i));
+			EXPECT_NEAR(-conn.synapse.weight, py::cast<Real>(i), 1e-4);
 		}
 	}
 }
@@ -845,6 +854,9 @@ TEST(pynn2, list_connect)
 		auto connection = PyNN_::list_connect(pypops, conn, pynn, 0.1);
 		py::object exc = std::get<0>(connection);
 		py::object inh = std::get<1>(connection);
+		if (import == "pyNN.spiNNaker") {
+			pynn.attr("run")(10);
+		}
 		check_all_to_all_list_projection(exc, group_conn);
 		EXPECT_TRUE(py::object().is(inh));
 		EXPECT_FALSE(py::object().is(exc));
@@ -853,10 +865,16 @@ TEST(pynn2, list_connect)
 		conn = ConnectionDescriptor(0, 0, 15, 1, 0, 15,
 		                            Connector::all_to_all(-0.015, 1));
 		conn.connector().group_connect(conn, group_conn);
+		if (import == "pyNN.spiNNaker") {
+			pynn.attr("reset")();
+		}
 		connection = PyNN_::list_connect(pypops, conn, pynn, 0.1);
 		exc = std::get<0>(connection);
 		inh = std::get<1>(connection);
 
+		if (import == "pyNN.spiNNaker") {
+			pynn.attr("run")(10);
+		}
 		check_all_to_all_list_projection(inh, group_conn);
 		EXPECT_TRUE(py::object().is(exc));
 		EXPECT_FALSE(py::object().is(inh));
@@ -867,30 +885,45 @@ TEST(pynn2, list_connect)
 		conn = ConnectionDescriptor(0, 0, 15, 1, 0, 15,
 		                            Connector::from_list(conn_list));
 		conn.connector().group_connect(conn, group_conn);
+
+		if (import == "pyNN.spiNNaker") {
+			pynn.attr("reset")();
+		}
 		connection = PyNN_::list_connect(pypops, conn, pynn, 0.1);
 		exc = std::get<0>(connection);
 		inh = std::get<1>(connection);
 		EXPECT_FALSE(py::object().is(exc));
 		EXPECT_FALSE(py::object().is(inh));
 
+		if (import == "pyNN.spiNNaker") {
+			pynn.attr("run")(10);
+		}
 		py::list weights = py::list(exc.attr("getWeights")());
 		py::list delays = py::list(exc.attr("getDelays")());
 		py::list weights_i = py::list(inh.attr("getWeights")());
 		py::list delays_i = py::list(inh.attr("getDelays")());
 
-		EXPECT_NEAR(0.015, py::cast<Real>(weights[0]), 1e-6);
-		EXPECT_NEAR(2.0, py::cast<Real>(weights[1]), 1e-6);
-		EXPECT_NEAR(1.0, py::cast<Real>(delays[0]), 1e-6);
-		EXPECT_NEAR(3.0, py::cast<Real>(delays[1]), 1e-6);
-		EXPECT_EQ("excitatory",
-		          py::cast<std::string>(exc.attr("receptor_type")));
+		EXPECT_NEAR(0.015, py::cast<Real>(weights[0]), 1e-4);
+		EXPECT_NEAR(2.0, py::cast<Real>(weights[1]), 1e-4);
+		EXPECT_NEAR(1.0, py::cast<Real>(delays[0]), 1e-4);
+		EXPECT_NEAR(3.0, py::cast<Real>(delays[1]), 1e-4);
+		if (version > 8) {
+			EXPECT_EQ("excitatory",
+			          py::cast<std::string>(exc.attr("receptor_type")));
+		}
 
-		EXPECT_NEAR(0.015, py::cast<Real>(weights_i[0]), 1e-6);
-		EXPECT_NEAR(2.0, py::cast<Real>(weights_i[1]), 1e-6);
-		EXPECT_NEAR(1.0, py::cast<Real>(delays_i[0]), 1e-6);
-		EXPECT_NEAR(3.0, py::cast<Real>(delays_i[1]), 1e-6);
-		EXPECT_EQ("inhibitory",
-		          py::cast<std::string>(inh.attr("receptor_type")));
+		EXPECT_NEAR(0.015, py::cast<Real>(weights_i[0]), 1e-4);
+		EXPECT_NEAR(2.0, py::cast<Real>(weights_i[1]), 1e-4);
+		EXPECT_NEAR(1.0, py::cast<Real>(delays_i[0]), 1e-4);
+		EXPECT_NEAR(3.0, py::cast<Real>(delays_i[1]), 1e-4);
+		if (version > 8) {
+			EXPECT_EQ("inhibitory",
+			          py::cast<std::string>(inh.attr("receptor_type")));
+		}
+		if (import == "pyNN.spiNNaker") {
+			pynn.attr("reset")();
+            pynn.attr("end")();
+		}
 	}
 }
 
@@ -922,9 +955,9 @@ TEST(pynn2, matrix_from_numpy)
 	EXPECT_ANY_THROW(PyNN_::matrix_from_numpy<double>(array));
 	EXPECT_ANY_THROW(PyNN_::matrix_from_numpy<float>(array));
 	auto mat = PyNN_::matrix_from_numpy<int64_t>(array);
-	EXPECT_EQ(mat(0, 0), py::cast<int64_t>(list[0]));
-	EXPECT_EQ(mat(1, 0), py::cast<int64_t>(list[1]));
-	EXPECT_EQ(mat(2, 0), py::cast<int64_t>(list[2]));
+	EXPECT_EQ(mat[0], py::cast<int64_t>(list[0]));
+	EXPECT_EQ(mat[1], py::cast<int64_t>(list[1]));
+	EXPECT_EQ(mat[2], py::cast<int64_t>(list[2]));
 
 	array = numpy.attr("array")(list, "dtype"_a = numpy.attr("int32"));
 	EXPECT_ANY_THROW(PyNN_::matrix_from_numpy<int8_t>(array));
@@ -938,9 +971,9 @@ TEST(pynn2, matrix_from_numpy)
 	EXPECT_ANY_THROW(PyNN_::matrix_from_numpy<double>(array));
 	EXPECT_ANY_THROW(PyNN_::matrix_from_numpy<float>(array));
 	auto mat1 = PyNN_::matrix_from_numpy<int32_t>(array);
-	EXPECT_EQ(mat1(0, 0), py::cast<int32_t>(list[0]));
-	EXPECT_EQ(mat1(1, 0), py::cast<int32_t>(list[1]));
-	EXPECT_EQ(mat1(2, 0), py::cast<int32_t>(list[2]));
+	EXPECT_EQ(mat1[0], py::cast<int32_t>(list[0]));
+	EXPECT_EQ(mat1[1], py::cast<int32_t>(list[1]));
+	EXPECT_EQ(mat1[2], py::cast<int32_t>(list[2]));
 
 	array = numpy.attr("array")(list, "dtype"_a = numpy.attr("int16"));
 	EXPECT_ANY_THROW(PyNN_::matrix_from_numpy<int8_t>(array));
@@ -954,9 +987,9 @@ TEST(pynn2, matrix_from_numpy)
 	EXPECT_ANY_THROW(PyNN_::matrix_from_numpy<double>(array));
 	EXPECT_ANY_THROW(PyNN_::matrix_from_numpy<float>(array));
 	auto mat2 = PyNN_::matrix_from_numpy<int16_t>(array);
-	EXPECT_EQ(mat2(0, 0), py::cast<int16_t>(list[0]));
-	EXPECT_EQ(mat2(1, 0), py::cast<int16_t>(list[1]));
-	EXPECT_EQ(mat2(2, 0), py::cast<int16_t>(list[2]));
+	EXPECT_EQ(mat2[0], py::cast<int16_t>(list[0]));
+	EXPECT_EQ(mat2[1], py::cast<int16_t>(list[1]));
+	EXPECT_EQ(mat2[2], py::cast<int16_t>(list[2]));
 
 	array = numpy.attr("array")(list, "dtype"_a = numpy.attr("int8"));
 	EXPECT_NO_THROW(PyNN_::matrix_from_numpy<int8_t>(array));
@@ -969,10 +1002,10 @@ TEST(pynn2, matrix_from_numpy)
 	EXPECT_ANY_THROW(PyNN_::matrix_from_numpy<uint64_t>(array));
 	EXPECT_ANY_THROW(PyNN_::matrix_from_numpy<double>(array));
 	EXPECT_ANY_THROW(PyNN_::matrix_from_numpy<float>(array));
-	auto mat3 = PyNN_::matrix_from_numpy<int8_t>(array);
-	EXPECT_EQ(mat3(0, 0), py::cast<int8_t>(list[0]));
-	EXPECT_EQ(mat3(1, 0), py::cast<int8_t>(list[1]));
-	EXPECT_EQ(mat3(2, 0), py::cast<int8_t>(list[2]));
+	auto mat3 = PyNN_::matrix_from_numpy<int8_t>(array, true);
+	EXPECT_EQ(mat3[0], py::cast<int8_t>(list[0]));
+	EXPECT_EQ(mat3[1], py::cast<int8_t>(list[1]));
+	EXPECT_EQ(mat3[2], py::cast<int8_t>(list[2]));
 
 	array = numpy.attr("array")(list, "dtype"_a = numpy.attr("uint8"));
 	EXPECT_ANY_THROW(PyNN_::matrix_from_numpy<int8_t>(array));
@@ -985,10 +1018,10 @@ TEST(pynn2, matrix_from_numpy)
 	EXPECT_ANY_THROW(PyNN_::matrix_from_numpy<uint64_t>(array));
 	EXPECT_ANY_THROW(PyNN_::matrix_from_numpy<double>(array));
 	EXPECT_ANY_THROW(PyNN_::matrix_from_numpy<float>(array));
-	auto mat4 = PyNN_::matrix_from_numpy<uint8_t>(array);
-	EXPECT_EQ(mat4(0, 0), py::cast<uint8_t>(list[0]));
-	EXPECT_EQ(mat4(1, 0), py::cast<uint8_t>(list[1]));
-	EXPECT_EQ(mat4(2, 0), py::cast<uint8_t>(list[2]));
+	auto mat4 = PyNN_::matrix_from_numpy<uint8_t>(array, true);
+	EXPECT_EQ(mat4[0], py::cast<uint8_t>(list[0]));
+	EXPECT_EQ(mat4[1], py::cast<uint8_t>(list[1]));
+	EXPECT_EQ(mat4[2], py::cast<uint8_t>(list[2]));
 
 	array = numpy.attr("array")(list, "dtype"_a = numpy.attr("uint16"));
 	EXPECT_ANY_THROW(PyNN_::matrix_from_numpy<int8_t>(array));
@@ -1002,9 +1035,9 @@ TEST(pynn2, matrix_from_numpy)
 	EXPECT_ANY_THROW(PyNN_::matrix_from_numpy<double>(array));
 	EXPECT_ANY_THROW(PyNN_::matrix_from_numpy<float>(array));
 	auto mat5 = PyNN_::matrix_from_numpy<uint16_t>(array);
-	EXPECT_EQ(mat5(0, 0), py::cast<uint16_t>(list[0]));
-	EXPECT_EQ(mat5(1, 0), py::cast<uint16_t>(list[1]));
-	EXPECT_EQ(mat5(2, 0), py::cast<uint16_t>(list[2]));
+	EXPECT_EQ(mat5[0], py::cast<uint16_t>(list[0]));
+	EXPECT_EQ(mat5[1], py::cast<uint16_t>(list[1]));
+	EXPECT_EQ(mat5[2], py::cast<uint16_t>(list[2]));
 
 	array = numpy.attr("array")(list, "dtype"_a = numpy.attr("uint32"));
 	EXPECT_ANY_THROW(PyNN_::matrix_from_numpy<int8_t>(array));
@@ -1018,9 +1051,9 @@ TEST(pynn2, matrix_from_numpy)
 	EXPECT_ANY_THROW(PyNN_::matrix_from_numpy<double>(array));
 	EXPECT_ANY_THROW(PyNN_::matrix_from_numpy<float>(array));
 	auto mat6 = PyNN_::matrix_from_numpy<uint32_t>(array);
-	EXPECT_EQ(mat6(0, 0), py::cast<uint32_t>(list[0]));
-	EXPECT_EQ(mat6(1, 0), py::cast<uint32_t>(list[1]));
-	EXPECT_EQ(mat6(2, 0), py::cast<uint32_t>(list[2]));
+	EXPECT_EQ(mat6[0], py::cast<uint32_t>(list[0]));
+	EXPECT_EQ(mat6[1], py::cast<uint32_t>(list[1]));
+	EXPECT_EQ(mat6[2], py::cast<uint32_t>(list[2]));
 
 	array = numpy.attr("array")(list, "dtype"_a = numpy.attr("uint64"));
 	EXPECT_ANY_THROW(PyNN_::matrix_from_numpy<int8_t>(array));
@@ -1034,9 +1067,9 @@ TEST(pynn2, matrix_from_numpy)
 	EXPECT_ANY_THROW(PyNN_::matrix_from_numpy<double>(array));
 	EXPECT_ANY_THROW(PyNN_::matrix_from_numpy<float>(array));
 	auto mat7 = PyNN_::matrix_from_numpy<uint64_t>(array);
-	EXPECT_EQ(mat7(0, 0), py::cast<uint64_t>(list[0]));
-	EXPECT_EQ(mat7(1, 0), py::cast<uint64_t>(list[1]));
-	EXPECT_EQ(mat7(2, 0), py::cast<uint64_t>(list[2]));
+	EXPECT_EQ(mat7[0], py::cast<uint64_t>(list[0]));
+	EXPECT_EQ(mat7[1], py::cast<uint64_t>(list[1]));
+	EXPECT_EQ(mat7[2], py::cast<uint64_t>(list[2]));
 
 	array = numpy.attr("array")(list, "dtype"_a = numpy.attr("float64"));
 	EXPECT_ANY_THROW(PyNN_::matrix_from_numpy<int8_t>(array));
@@ -1050,9 +1083,9 @@ TEST(pynn2, matrix_from_numpy)
 	EXPECT_NO_THROW(PyNN_::matrix_from_numpy<double>(array));
 	EXPECT_ANY_THROW(PyNN_::matrix_from_numpy<float>(array));
 	auto mat8 = PyNN_::matrix_from_numpy<double>(array);
-	EXPECT_NEAR(mat8(0, 0), py::cast<double>(list[0]), 1e-8);
-	EXPECT_NEAR(mat8(1, 0), py::cast<double>(list[1]), 1e-8);
-	EXPECT_NEAR(mat8(2, 0), py::cast<double>(list[2]), 1e-8);
+	EXPECT_NEAR(mat8[0], py::cast<double>(list[0]), 1e-8);
+	EXPECT_NEAR(mat8[1], py::cast<double>(list[1]), 1e-8);
+	EXPECT_NEAR(mat8[2], py::cast<double>(list[2]), 1e-8);
 
 	array = numpy.attr("array")(list, "dtype"_a = numpy.attr("float32"));
 	EXPECT_ANY_THROW(PyNN_::matrix_from_numpy<int8_t>(array));
@@ -1066,9 +1099,9 @@ TEST(pynn2, matrix_from_numpy)
 	EXPECT_ANY_THROW(PyNN_::matrix_from_numpy<double>(array));
 	EXPECT_NO_THROW(PyNN_::matrix_from_numpy<float>(array));
 	auto mat9 = PyNN_::matrix_from_numpy<float>(array);
-	EXPECT_NEAR(mat9(0, 0), py::cast<float>(list[0]), 1e-8);
-	EXPECT_NEAR(mat9(1, 0), py::cast<float>(list[1]), 1e-8);
-	EXPECT_NEAR(mat9(2, 0), py::cast<float>(list[2]), 1e-8);
+	EXPECT_NEAR(mat9[0], py::cast<float>(list[0]), 1e-8);
+	EXPECT_NEAR(mat9[1], py::cast<float>(list[1]), 1e-8);
+	EXPECT_NEAR(mat9[2], py::cast<float>(list[2]), 1e-8);
 }
 
 TEST(pynn2, fetch_data_nest)
@@ -1143,10 +1176,6 @@ TEST(pynn2, fetch_data_nest)
 		            IfCondExpParameters().v_rest(), 0.01);
 
 		// Test fetching gsyn
-		/*for(size_t i = 0; i<size; i++){
-		    std::cout << pops[1][0].signals().data(2)(i,0) << ",\t" <<
-		pops[1][0].signals().data(2)(i,1)<<std::endl;
-		}*/
 		EXPECT_NEAR(pops[1][0].signals().data(2)(0, 0), 0.1, 0.2);
 		EXPECT_NEAR(pops[1][0].signals().data(2)(0, 1), 0, 0.01);
 		EXPECT_NEAR(pops[1][1].signals().data(2)(0, 0), 0.1, 0.2);
