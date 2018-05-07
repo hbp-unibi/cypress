@@ -1300,16 +1300,17 @@ void PyNN_::do_run(NetworkBase &source, Real duration) const
 
 	auto buildpop = std::chrono::system_clock::now();
 	Real timestep = 0;
-	if (m_simulator == "nest" || m_simulator == "spinnaker") {
+	if (m_normalised_simulator == "nest" || m_normalised_simulator == "nmmc1") {
 		global_logger().info("cypress",
 		                     "Delays are rounded to "
 		                     "multiples of the "
 		                     "timestep");
 		timestep = py::cast<Real>(pynn.attr("get_time_step")());
-		if (m_simulator == "spinnaker") {  // timestep to milliseconds
+		if (m_normalised_simulator == "nmmc1") {  // timestep to milliseconds
 			timestep = timestep / 1000.0;
 		}
 	}
+
 	for (auto conn : source.connections()) {
 		auto it = SUPPORTED_CONNECTIONS.find(conn.connector().name());
 		GroupConnction group_conn;
@@ -1325,15 +1326,21 @@ void PyNN_::do_run(NetworkBase &source, Real duration) const
 	}
 
 	auto buildconn = std::chrono::system_clock::now();
-	int duration_rounded = int((duration + timestep) / timestep) * timestep;
+	Real duration_rounded = 0;
+	if (timestep != 0) {
+		duration_rounded = int((duration + timestep) / timestep) * timestep;
+	}
+	else {
+		duration_rounded = duration;
+	}
 	pynn.attr("run")(duration_rounded);
 	auto execrun = std::chrono::system_clock::now();
 
 	// fetch data
-	if (m_simulator == "nest") {
+	if (m_normalised_simulator == "nest") {
 		fetch_data_nest(populations, pypopulations);
 	}
-	else if (m_simulator == "spinnaker") {
+	else if (m_normalised_simulator == "nmmc1") {
 		fetch_data_spinnaker(populations, pypopulations);
 	}
 	else {
