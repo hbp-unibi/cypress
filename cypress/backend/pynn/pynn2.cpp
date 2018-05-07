@@ -481,7 +481,7 @@ py::dict PyNN_::json_to_dict(Json json)
 			py::list list;
 			for (auto entry : value) {
 				if (entry.is_number_float()) {
-					list.append(float(entry));
+					list.append(double(entry));
 				}
 				else if (entry.is_boolean()) {
 					list.append(bool(entry));
@@ -507,7 +507,7 @@ py::dict PyNN_::json_to_dict(Json json)
 			dict = py::dict(py::arg(i.key().c_str()) = temp, **dict);
 		}
 		else if (value.is_number_float()) {
-			float temp = value;
+			double temp = value;
 			dict = py::dict(py::arg(i.key().c_str()) = temp, **dict);
 		}
 		else if (value.is_number_integer() or value.is_number_unsigned()) {
