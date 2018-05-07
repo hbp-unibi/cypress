@@ -1100,7 +1100,6 @@ void PyNN_::fetch_data_spinnaker(const std::vector<PopulationBase> &populations,
 						}
 
 						if (len == 0) {
-							;
 							continue;
 						}
 						auto res = std::make_shared<Matrix<Real>>(len, 1);
@@ -1212,18 +1211,18 @@ void PyNN_::fetch_data_neo5(const std::vector<PopulationBase> &populations,
 					py::object py_pydata =
 					    analogsignals[signal_index].attr("as_array")();
 					Matrix<double> pydata =
-					    matrix_from_numpy<double>(py_pydata);
+					    matrix_from_numpy<double>(py_pydata, true);
 
 					for (size_t k = 0; k < neuron_ids.size(); k++) {
-
+						assert(time.size() == pydata.cols());
 						auto data =
-						    std::make_shared<Matrix<Real>>(pydata.rows(), 2);
-						for (size_t l = 0; l < pydata.rows(); l++) {
+						    std::make_shared<Matrix<Real>>(time.size(), 2);
+						for (size_t l = 0; l < time.size(); l++) {
 							(*data)(l, 0) = time[l];
-							(*data)(l, 1) = pydata(l, k);
+							(*data)(l, 1) = pydata(k, l);
 						}
 
-						auto neuron = populations[i][neuron_ids(k, 0)];
+						auto neuron = populations[i][neuron_ids[k]];
 						auto idx = neuron.type().signal_index(signals[j]);
 						neuron.signals().data(idx.value(), std::move(data));
 					}
