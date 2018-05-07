@@ -892,7 +892,7 @@ void inline assert_types()
 }  // namespace
 
 template <typename T>
-Matrix<T> PyNN_::matrix_from_numpy(const py::object &object)
+Matrix<T> PyNN_::matrix_from_numpy(const py::object &object, bool transposed)
 {
 	// Check the data type
 	std::string type = py::cast<std::string>(object.attr("dtype").attr("name"));
@@ -940,12 +940,19 @@ Matrix<T> PyNN_::matrix_from_numpy(const py::object &object)
 		second_dim = shape[1];
 	}
 	else {
-		throw;
+		throw ExecutionError(
+		    "Python arrays with dimension >2 are not supported!");
 	}
-	py::buffer_info buffer_data = py::buffer(object.attr("data")).request();
 
-	return Matrix<T>(shape[0], second_dim,
-	                 reinterpret_cast<T *>(buffer_data.ptr), false);
+	py::buffer_info buffer_data = py::buffer(object.attr("data")).request();
+	if (transposed) {
+		return Matrix<T>(second_dim, shape[0],
+		                 reinterpret_cast<T *>(buffer_data.ptr), false);
+	}
+	else {
+		return Matrix<T>(shape[0], second_dim,
+		                 reinterpret_cast<T *>(buffer_data.ptr), false);
+	}
 }
 
 void PyNN_::fetch_data_nest(const std::vector<PopulationBase> &populations,

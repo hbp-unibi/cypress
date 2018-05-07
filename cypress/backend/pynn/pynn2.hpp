@@ -162,19 +162,19 @@ public:
 	static std::string get_import(const std::vector<std::string> &imports,
 	                              const std::string &simulator);
 
-    /**
-    * Returns the PyNN version, 8 represents version 0.8.x
-    * 
-    * @return integer representing the pyNN version
-    */
-    static int get_pynn_version();
-    
-    /**
-    * Returns the neo version, 5 represents version 0.5.x
-    * 
-    * @return integer representing the neo version
-    */
-    static int get_neo_version();
+	/**
+	 * Returns the PyNN version, 8 represents version 0.8.x
+	 *
+	 * @return integer representing the pyNN version
+	 */
+	static int get_pynn_version();
+
+	/**
+	 * Returns the neo version, 5 represents version 0.5.x
+	 *
+	 * @return integer representing the neo version
+	 */
+	static int get_neo_version();
 
 	/**
 	 * Converting a Json object to a py::dict. Make sure that the python
@@ -304,9 +304,9 @@ public:
 	 */
 	static py::object group_connect(
 	    const std::vector<PopulationBase> &populations,
-	    const std::vector<py::object> &pypopulations, const GroupConnction &group_conn,
-	    const py::module &pynn, const std::string &conn_name,
-	    const Real timestep = 0.0);
+	    const std::vector<py::object> &pypopulations,
+	    const GroupConnction &group_conn, const py::module &pynn,
+	    const std::string &conn_name, const Real timestep = 0.0);
 
 	/**
 	 * Creates a PyNN FromList Connection
@@ -325,16 +325,18 @@ public:
 
 	template <typename T>
 	/**
-	 * Given a numpy object, this method creates a matrix without creating a
-	 * copy. The python dtype is checked and compared to @param T. Matrix sizes
-	 * are caught in Python, because the py::buffer_info seems to be misleading
-	 * in some cases
+	 * Given a numpy object, this method creates the (transposed) C++ matrix
+	 * without creating a copy. The python dtype is checked and compared to
+	 * @param T. Matrix sizes are caught in Python, because the py::buffer_info
+	 * seems to be misleading in some cases.
 	 *
 	 * @param T Type of the matrix
 	 * @param object handler for numpy array
+     * @param transposed matrix dimensions are swapped (hack for NEO)
 	 * @return C++ matrix of the numpy array
 	 */
-	static Matrix<T> matrix_from_numpy(const py::object& object);
+	static Matrix<T>
+	matrix_from_numpy(const py::object &object, bool transposed = false);
 
 	/**
 	 * Fetch all data (spikes, traces) from nest. This is faster than using NEO.
