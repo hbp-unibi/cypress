@@ -80,6 +80,7 @@ TEST(pynn2, timestep)
 }
 // auto python_instance = PythonInstance();
 std::vector<std::string> all_avail_imports;
+std::vector<std::string> simulators;
 int version = 0;
 int neo_version = 0;
 
@@ -91,6 +92,7 @@ TEST(pynn2, get_import)
 			auto normalised_simulator = res.first;
 			auto imports = res.second;
 			all_avail_imports.push_back(PyNN_::get_import(imports, sim));
+			simulators.push_back(sim);
 		}
 		catch (...) {
 		};
@@ -448,10 +450,6 @@ TEST(pynn2, create_homogeneous_pop)
 			EXPECT_TRUE(temp);
 			check_pop_parameters_nest(pypop, pop1);
 			// IfFacetsHardware1 does not know tau_refrac in Nest
-			/*pypop = py::list(PyNN_::create_homogeneous_pop(pop2, pynn, temp));
-			EXPECT_TRUE(temp);
-			check_pop_parameters_nest(
-			    pypop, pop2);*/
 			pypop = py::list(PyNN_::create_homogeneous_pop(pop3, pynn, temp));
 			EXPECT_TRUE(temp);
 			check_pop_parameters_nest(pypop, pop3);
@@ -922,7 +920,7 @@ TEST(pynn2, list_connect)
 		}
 		if (import == "pyNN.spiNNaker") {
 			pynn.attr("reset")();
-            pynn.attr("end")();
+			pynn.attr("end")();
 		}
 	}
 }
@@ -1341,6 +1339,7 @@ TEST(pynn2, fetch_data_spinnaker)
 		EXPECT_NEAR(pops[1][1].signals().data(3)(210, 1), 0.0, 0.01);
 		EXPECT_NEAR(pops[1][2].signals().data(3)(210, 0), 21, 0.2);
 		EXPECT_NEAR(pops[1][2].signals().data(3)(210, 1), 0.0, 0.01);
+		pynn.attr("reset")();
 		pynn.attr("end")();
 	}
 	else {
@@ -1479,13 +1478,208 @@ TEST(pynn2, fetch_data_neo5)
 	}
 }
 
+TEST(pynn2, pynn2)
+{
+	for (auto sim : simulators) {
+		Network netw;
+		std::vector<PopulationBase> pops{
+		    netw.create_population<SpikeSourceArray>(
+		        1, SpikeSourceArrayParameters().spike_times({20, 50})),
+		    netw.create_population<IfCondExp>(3,
+		                                      IfCondExpParameters().tau_m(1.0),
+		                                      IfCondExpSignals()
+		                                          .record_v()
+		                                          .record_spikes()
+		                                          .record_gsyn_exc()
+		                                          .record_gsyn_inh())};
+		netw.add_connection(pops[0], pops[1], Connector::all_to_all(0.5, 1.0));
+		if (sim == "nest") {
+			netw.run("pynn." + sim + "={\"timestep\" : 0.1}", 100);
+			// Test fetching spikes
+			EXPECT_NEAR(pops[1][0].signals().data(0)[0], 20, 3);
+			EXPECT_NEAR(pops[1][1].signals().data(0)[0], 20, 3);
+			EXPECT_NEAR(pops[1][2].signals().data(0)[0], 20, 3);
+
+			EXPECT_NEAR(pops[1][0].signals().data(
+			                0)[pops[1][0].signals().data(0).size() - 1],
+			            50, 3);
+			EXPECT_NEAR(pops[1][1].signals().data(
+			                0)[pops[1][1].signals().data(0).size() - 1],
+			            50, 3);
+			EXPECT_NEAR(pops[1][2].signals().data(
+			                0)[pops[1][2].signals().data(0).size() - 1],
+			            50, 3);
+			// Test fetching voltage
+			size_t size = pops[1][2].signals().data(1).rows() - 1;
+			EXPECT_NEAR(pops[1][0].signals().data(1)(0, 0), 0.1, 0.2);
+			EXPECT_NEAR(pops[1][0].signals().data(1)(0, 1),
+			            IfCondExpParameters().v_rest(), 0.01);
+			EXPECT_NEAR(pops[1][1].signals().data(1)(0, 0), 0.1, 0.2);
+			EXPECT_NEAR(pops[1][1].signals().data(1)(0, 1),
+			            IfCondExpParameters().v_rest(), 0.01);
+			EXPECT_NEAR(pops[1][2].signals().data(1)(0, 0), 0.1, 0.2);
+			EXPECT_NEAR(pops[1][2].signals().data(1)(0, 1),
+			            IfCondExpParameters().v_rest(), 0.01);
+
+			size = pops[1][2].signals().data(1).rows() - 1;
+			EXPECT_NEAR(pops[1][0].signals().data(1)(size, 0), 100, 0.2);
+			EXPECT_NEAR(pops[1][0].signals().data(1)(size, 1),
+			            IfCondExpParameters().v_rest(), 0.01);
+			EXPECT_NEAR(pops[1][1].signals().data(1)(size, 0), 100, 0.2);
+			EXPECT_NEAR(pops[1][1].signals().data(1)(size, 1),
+			            IfCondExpParameters().v_rest(), 0.01);
+			EXPECT_NEAR(pops[1][2].signals().data(1)(size, 0), 100, 0.2);
+			EXPECT_NEAR(pops[1][2].signals().data(1)(size, 1),
+			            IfCondExpParameters().v_rest(), 0.01);
+
+			// Test fetching gsyn
+			EXPECT_NEAR(pops[1][0].signals().data(2)(0, 0), 0.1, 0.2);
+			EXPECT_NEAR(pops[1][0].signals().data(2)(0, 1), 0, 0.01);
+			EXPECT_NEAR(pops[1][1].signals().data(2)(0, 0), 0.1, 0.2);
+			EXPECT_NEAR(pops[1][1].signals().data(2)(0, 1), 0, 0.01);
+			EXPECT_NEAR(pops[1][2].signals().data(2)(0, 0), 0.1, 0.2);
+			EXPECT_NEAR(pops[1][2].signals().data(2)(0, 1), 0, 0.01);
+
+			size = pops[1][2].signals().data(2).rows() - 1;
+			EXPECT_NEAR(pops[1][0].signals().data(2)(size, 0), 100, 0.2);
+			EXPECT_NEAR(pops[1][0].signals().data(2)(size, 1), 0, 0.01);
+			EXPECT_NEAR(pops[1][1].signals().data(2)(size, 0), 100, 0.2);
+			EXPECT_NEAR(pops[1][1].signals().data(2)(size, 1), 0, 0.01);
+			EXPECT_NEAR(pops[1][2].signals().data(2)(size, 0), 100, 0.2);
+			EXPECT_NEAR(pops[1][2].signals().data(2)(size, 1), 0, 0.01);
+
+			EXPECT_NEAR(pops[1][0].signals().data(2)(219, 0), 22, 0.2);
+			EXPECT_NEAR(pops[1][0].signals().data(2)(219, 1), 0.5, 0.01);
+			EXPECT_NEAR(pops[1][1].signals().data(2)(219, 0), 22, 0.2);
+			EXPECT_NEAR(pops[1][1].signals().data(2)(219, 1), 0.5, 0.01);
+			EXPECT_NEAR(pops[1][2].signals().data(2)(219, 0), 22, 0.2);
+			EXPECT_NEAR(pops[1][2].signals().data(2)(219, 1), 0.5, 0.01);
+
+			// gsyn inhibitory
+			EXPECT_NEAR(pops[1][0].signals().data(3)(0, 0), 0.1, 0.2);
+			EXPECT_NEAR(pops[1][0].signals().data(3)(0, 1), 0, 0.01);
+			EXPECT_NEAR(pops[1][1].signals().data(3)(0, 0), 0.1, 0.2);
+			EXPECT_NEAR(pops[1][1].signals().data(3)(0, 1), 0, 0.01);
+			EXPECT_NEAR(pops[1][2].signals().data(3)(0, 0), 0.1, 0.2);
+			EXPECT_NEAR(pops[1][2].signals().data(3)(0, 1), 0, 0.01);
+
+			size = pops[1][2].signals().data(3).rows() - 1;
+			EXPECT_NEAR(pops[1][0].signals().data(3)(size, 0), 100, 0.2);
+			EXPECT_NEAR(pops[1][0].signals().data(3)(size, 1), 0, 0.01);
+			EXPECT_NEAR(pops[1][1].signals().data(3)(size, 0), 100, 0.2);
+			EXPECT_NEAR(pops[1][1].signals().data(3)(size, 1), 0, 0.01);
+			EXPECT_NEAR(pops[1][2].signals().data(3)(size, 0), 100, 0.2);
+			EXPECT_NEAR(pops[1][2].signals().data(3)(size, 1), 0, 0.01);
+
+			EXPECT_NEAR(pops[1][0].signals().data(3)(219, 0), 22, 0.2);
+			EXPECT_NEAR(pops[1][0].signals().data(3)(219, 1), 0.0, 0.01);
+			EXPECT_NEAR(pops[1][1].signals().data(3)(219, 0), 22, 0.2);
+			EXPECT_NEAR(pops[1][1].signals().data(3)(219, 1), 0.0, 0.01);
+			EXPECT_NEAR(pops[1][2].signals().data(3)(219, 0), 22, 0.2);
+			EXPECT_NEAR(pops[1][2].signals().data(3)(219, 1), 0.0, 0.01);
+		}
+		else if (sim == "nmmc1") {
+			netw.run(sim + "={\"timestep\" : 0.1}", 100);
+			// Test fetching spikes
+			EXPECT_NEAR(pops[1][0].signals().data(0)[0], 20, 3);
+			EXPECT_NEAR(pops[1][1].signals().data(0)[0], 20, 3);
+			EXPECT_NEAR(pops[1][2].signals().data(0)[0], 20, 3);
+
+			EXPECT_NEAR(pops[1][0].signals().data(
+			                0)[pops[1][0].signals().data(0).size() - 1],
+			            50, 3);
+			EXPECT_NEAR(pops[1][1].signals().data(
+			                0)[pops[1][1].signals().data(0).size() - 1],
+			            50, 3);
+			EXPECT_NEAR(pops[1][2].signals().data(
+			                0)[pops[1][2].signals().data(0).size() - 1],
+			            50, 3);
+			// Test fetching voltage
+			EXPECT_NEAR(pops[1][0].signals().data(1)(0, 0), 0.1, 0.2);
+			EXPECT_NEAR(pops[1][0].signals().data(1)(0, 1),
+			            IfCondExpParameters().v_rest(), 0.01);
+			EXPECT_NEAR(pops[1][1].signals().data(1)(0, 0), 0.1, 0.2);
+			EXPECT_NEAR(pops[1][1].signals().data(1)(0, 1),
+			            IfCondExpParameters().v_rest(), 0.01);
+			EXPECT_NEAR(pops[1][2].signals().data(1)(0, 0), 0.1, 0.2);
+			EXPECT_NEAR(pops[1][2].signals().data(1)(0, 1),
+			            IfCondExpParameters().v_rest(), 0.01);
+
+			size_t size = pops[1][2].signals().data(1).rows() - 1;
+			EXPECT_NEAR(pops[1][0].signals().data(1)(size, 0), 100, 0.2);
+			EXPECT_NEAR(pops[1][0].signals().data(1)(size, 1),
+			            IfCondExpParameters().v_rest(), 0.01);
+			EXPECT_NEAR(pops[1][1].signals().data(1)(size, 0), 100, 0.2);
+			EXPECT_NEAR(pops[1][1].signals().data(1)(size, 1),
+			            IfCondExpParameters().v_rest(), 0.01);
+			EXPECT_NEAR(pops[1][2].signals().data(1)(size, 0), 100, 0.2);
+			EXPECT_NEAR(pops[1][2].signals().data(1)(size, 1),
+			            IfCondExpParameters().v_rest(), 0.01);
+
+			// Test fetching gsyn
+			EXPECT_NEAR(pops[1][0].signals().data(2)(0, 0), 0.1, 0.2);
+			EXPECT_NEAR(pops[1][0].signals().data(2)(0, 1), 0, 0.01);
+			EXPECT_NEAR(pops[1][1].signals().data(2)(0, 0), 0.1, 0.2);
+			EXPECT_NEAR(pops[1][1].signals().data(2)(0, 1), 0, 0.01);
+			EXPECT_NEAR(pops[1][2].signals().data(2)(0, 0), 0.1, 0.2);
+			EXPECT_NEAR(pops[1][2].signals().data(2)(0, 1), 0, 0.01);
+
+			size = pops[1][2].signals().data(2).rows() - 1;
+			EXPECT_NEAR(pops[1][0].signals().data(2)(size, 0), 100, 0.2);
+			EXPECT_NEAR(pops[1][0].signals().data(2)(size, 1), 0, 0.01);
+			EXPECT_NEAR(pops[1][1].signals().data(2)(size, 0), 100, 0.2);
+			EXPECT_NEAR(pops[1][1].signals().data(2)(size, 1), 0, 0.01);
+			EXPECT_NEAR(pops[1][2].signals().data(2)(size, 0), 100, 0.2);
+			EXPECT_NEAR(pops[1][2].signals().data(2)(size, 1), 0, 0.01);
+
+			EXPECT_NEAR(pops[1][0].signals().data(2)(210, 0), 21, 0.2);
+			EXPECT_NEAR(pops[1][0].signals().data(2)(210, 1), 0.5, 0.01);
+			EXPECT_NEAR(pops[1][1].signals().data(2)(210, 0), 21, 0.2);
+			EXPECT_NEAR(pops[1][1].signals().data(2)(210, 1), 0.5, 0.01);
+			EXPECT_NEAR(pops[1][2].signals().data(2)(210, 0), 21, 0.2);
+			EXPECT_NEAR(pops[1][2].signals().data(2)(210, 1), 0.5, 0.01);
+
+			// gsyn inhibitory
+			EXPECT_NEAR(pops[1][0].signals().data(3)(0, 0), 0.1, 0.2);
+			EXPECT_NEAR(pops[1][0].signals().data(3)(0, 1), 0, 0.01);
+			EXPECT_NEAR(pops[1][1].signals().data(3)(0, 0), 0.1, 0.2);
+			EXPECT_NEAR(pops[1][1].signals().data(3)(0, 1), 0, 0.01);
+			EXPECT_NEAR(pops[1][2].signals().data(3)(0, 0), 0.1, 0.2);
+			EXPECT_NEAR(pops[1][2].signals().data(3)(0, 1), 0, 0.01);
+
+			size = pops[1][2].signals().data(3).rows() - 1;
+			EXPECT_NEAR(pops[1][0].signals().data(3)(size, 0), 100, 0.2);
+			EXPECT_NEAR(pops[1][0].signals().data(3)(size, 1), 0, 0.01);
+			EXPECT_NEAR(pops[1][1].signals().data(3)(size, 0), 100, 0.2);
+			EXPECT_NEAR(pops[1][1].signals().data(3)(size, 1), 0, 0.01);
+			EXPECT_NEAR(pops[1][2].signals().data(3)(size, 0), 100, 0.2);
+			EXPECT_NEAR(pops[1][2].signals().data(3)(size, 1), 0, 0.01);
+
+			EXPECT_NEAR(pops[1][0].signals().data(3)(210, 0), 21, 0.2);
+			EXPECT_NEAR(pops[1][0].signals().data(3)(210, 1), 0.0, 0.01);
+			EXPECT_NEAR(pops[1][1].signals().data(3)(210, 0), 21, 0.2);
+			EXPECT_NEAR(pops[1][1].signals().data(3)(210, 1), 0.0, 0.01);
+			EXPECT_NEAR(pops[1][2].signals().data(3)(210, 0), 21, 0.2);
+			EXPECT_NEAR(pops[1][2].signals().data(3)(210, 1), 0.0, 0.01);
+		}
+		else {
+			// TODO
+			std::cout << " ... Skipping test" << std::endl;
+			// netw.run("pynn." + sim, 100);
+		}
+	}
+}
+
 }  // namespace cypress
 
 int main(int argc, char **argv)
 {
 	// Start the python interpreter
-	auto python = cypress::PythonInstance();
-	::testing::InitGoogleTest(&argc, argv);
-	auto temp = RUN_ALL_TESTS();
+	int temp = 0;
+	{
+		auto python = cypress::PythonInstance();
+		::testing::InitGoogleTest(&argc, argv);
+		temp = RUN_ALL_TESTS();
+	}
 	return temp;
 }
