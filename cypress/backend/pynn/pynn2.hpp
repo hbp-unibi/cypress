@@ -332,11 +332,11 @@ public:
 	 *
 	 * @param T Type of the matrix
 	 * @param object handler for numpy array
-     * @param transposed matrix dimensions are swapped (hack for NEO)
+	 * @param transposed matrix dimensions are swapped (hack for NEO)
 	 * @return C++ matrix of the numpy array
 	 */
-	static Matrix<T>
-	matrix_from_numpy(const py::object &object, bool transposed = false);
+	static Matrix<T> matrix_from_numpy(const py::object &object,
+	                                   bool transposed = false);
 
 	/**
 	 * Fetch all data (spikes, traces) from nest. This is faster than using NEO.
@@ -364,8 +364,8 @@ public:
 	 * @param populations Cypress populations
 	 * @param pypopulations PyNN populations
 	 */
-	static void fetch_data_neo5(const std::vector<PopulationBase> &populations,
-	                            const std::vector<py::object> &pypopulations);
+	static void fetch_data_neo(const std::vector<PopulationBase> &populations,
+	                           const std::vector<py::object> &pypopulations);
 };
 }  // namespace cypress
 

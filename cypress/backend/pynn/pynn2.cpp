@@ -445,7 +445,7 @@ int PyNN_::get_neo_version()
 		py::module neo = py::module::import("neo");
 	}
 	catch (...) {
-		throw NotSupportedException("PyNN version " + std::to_string(pynn_v) +
+		throw NotSupportedException("Neo version " + std::to_string(pynn_v) +
 		                            "." + " requires neo");
 	}
 	py::module neo = py::module::import("neo");
@@ -457,8 +457,8 @@ int PyNN_::get_neo_version()
 	int main_n = std::stoi(main);
 	int submain_n = std::stoi(submain);
 
-	if (main_n != 0 || !((submain_n == 4) || (submain_n == 5))) {
-		throw NotSupportedException("PyNN version " + main + "." + submain +
+	if (main_n != 0 || !((submain_n > 3) && (submain_n < 7))) {
+		throw NotSupportedException("Neo version " + main + "." + submain +
 		                            "is not supported");
 	}
 	return submain_n;
@@ -1146,9 +1146,10 @@ void PyNN_::fetch_data_spinnaker(const std::vector<PopulationBase> &populations,
 	}
 }
 
-void PyNN_::fetch_data_neo5(const std::vector<PopulationBase> &populations,
-                            const std::vector<py::object> &pypopulations)
+void PyNN_::fetch_data_neo(const std::vector<PopulationBase> &populations,
+                           const std::vector<py::object> &pypopulations)
 {
+	int neo_v = get_neo_version();
 	for (size_t i = 0; i < populations.size(); i++) {
 		if (populations[i].size() == 0) {
 			continue;
@@ -1189,9 +1190,17 @@ void PyNN_::fetch_data_neo5(const std::vector<PopulationBase> &populations,
 					}
 				}
 				else {
-					py::list analogsignals =
-					    (py::list(neo_block.attr("segments"))[0])
-					        .attr("analogsignals");
+					py::list analogsignals;
+					if (neo_v > 4) {
+						analogsignals =
+						    (py::list(neo_block.attr("segments"))[0])
+						        .attr("analogsignals");
+					}
+					else {
+						analogsignals =
+						    (py::list(neo_block.attr("segments"))[0])
+						        .attr("analogsignalarrays");
+					}
 					size_t signal_index = 0;
 					for (size_t k = 0; k < analogsignals.size(); k++) {
 						if (py::cast<std::string>(
@@ -1200,31 +1209,59 @@ void PyNN_::fetch_data_neo5(const std::vector<PopulationBase> &populations,
 							break;
 						}
 					}
-					py::object py_neuron_ids = analogsignals[signal_index]
-					                               .attr("channel_index")
-					                               .attr("channel_ids");
+					py::object py_neuron_ids;
+
+					if (neo_v > 4) {
+						py_neuron_ids = analogsignals[signal_index]
+						                    .attr("channel_index")
+						                    .attr("channel_ids");
+					}
+					else {
+						py_neuron_ids =
+						    analogsignals[signal_index].attr("channel_indexes");
+					}
 					Matrix<int64_t> neuron_ids =
 					    matrix_from_numpy<int64_t>(py_neuron_ids);
 					py::object py_times =
 					    analogsignals[signal_index].attr("times");
 					Matrix<double> time = matrix_from_numpy<double>(py_times);
-					py::object py_pydata =
-					    analogsignals[signal_index].attr("as_array")();
-					Matrix<double> pydata =
-					    matrix_from_numpy<double>(py_pydata, true);
+					if (neo_v > 4) {
+						py::object py_pydata =
+						    analogsignals[signal_index].attr("as_array")();
+						Matrix<double> pydata =
+						    matrix_from_numpy<double>(py_pydata, true);
 
-					for (size_t k = 0; k < neuron_ids.size(); k++) {
-						assert(time.size() == pydata.cols());
-						auto data =
-						    std::make_shared<Matrix<Real>>(time.size(), 2);
-						for (size_t l = 0; l < time.size(); l++) {
-							(*data)(l, 0) = time[l];
-							(*data)(l, 1) = pydata(k, l);
+						for (size_t k = 0; k < neuron_ids.size(); k++) {
+							assert(time.size() == pydata.cols());
+							auto data =
+							    std::make_shared<Matrix<Real>>(time.size(), 2);
+							for (size_t l = 0; l < time.size(); l++) {
+								(*data)(l, 0) = time[l];
+								(*data)(l, 1) = pydata(k, l);
+							}
+
+							auto neuron = populations[i][neuron_ids[k]];
+							auto idx = neuron.type().signal_index(signals[j]);
+							neuron.signals().data(idx.value(), std::move(data));
 						}
-
-						auto neuron = populations[i][neuron_ids[k]];
-						auto idx = neuron.type().signal_index(signals[j]);
-						neuron.signals().data(idx.value(), std::move(data));
+					}
+					else {
+						for (size_t k = 0; k < neuron_ids.size(); k++) {
+							Matrix<double> pydata =
+							    matrix_from_numpy<double>(py::list(
+							        analogsignals[signal_index].attr("T"))[k]);
+							auto data = std::make_shared<Matrix<Real>>(
+							    pydata.size(), 2);
+							for (size_t l = 0; l < pydata.size(); l++) {
+								(*data)(l, 0) = Real(time[l]);
+								(*data)(l, 1) = Real(pydata[l]);
+							}
+							auto idx = populations[i][neuron_ids(k, 0)]
+							               .type()
+							               .signal_index(signals[j]);
+							auto neuron = populations[i][neuron_ids(k, 0)];
+							neuron.signals().data(idx.value(), std::move(data));
+						}
 					}
 				}
 			}
@@ -1344,7 +1381,7 @@ void PyNN_::do_run(NetworkBase &source, Real duration) const
 		fetch_data_spinnaker(populations, pypopulations);
 	}
 	else {
-		fetch_data_neo5(populations, pypopulations);
+		fetch_data_neo(populations, pypopulations);
 	}
 
 	auto finished = std::chrono::system_clock::now();
