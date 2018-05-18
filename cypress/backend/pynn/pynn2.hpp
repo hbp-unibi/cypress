@@ -307,6 +307,24 @@ public:
 	    const std::vector<py::object> &pypopulations,
 	    const GroupConnction &group_conn, const py::module &pynn,
 	    const std::string &conn_name, const Real timestep = 0.0);
+    
+    /**
+	 * Connect based on an existing PyNN connector
+	 *
+	 * @param populations vector of cypress populations
+	 * @param pypopulations vector of PyNN populations
+	 * @param conn Cypress connection descriptor
+	 * @param group_conn Cypress group connection descriptor
+	 * @param pynn Handler for PyNN module
+	 * @param conn_name PyNN name of the connector
+	 * @param timestep timestep of the simulator
+	 * @return Handler for the connector
+	 */
+	static py::object group_connect7(
+	    const std::vector<PopulationBase> &populations,
+	    const std::vector<py::object> &pypopulations,
+	    const GroupConnction &group_conn, const py::module &pynn,
+	    const std::string &conn_name);
 
 	/**
 	 * Creates a PyNN FromList Connection
@@ -366,6 +384,8 @@ public:
 	 */
 	static void fetch_data_neo(const std::vector<PopulationBase> &populations,
 	                           const std::vector<py::object> &pypopulations);
+    
+    static void Spikey_run(NetworkBase &source, Real duration, std::string import, py::module& pynn);
 };
 }  // namespace cypress
 

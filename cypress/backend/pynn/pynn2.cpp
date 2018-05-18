@@ -1,6 +1,6 @@
 /*
  *  Cypress -- C++ Spiking Neural Network Simulation Framework
- *  Copyright (C) 2016  Andreas Stöckel
+ *  Copyright (C) 2018 Christoph Jenzen
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -788,6 +788,24 @@ py::object PyNN_::group_connect(const std::vector<PopulationBase> &populations,
 	    "receptor_type"_a = receptor);
 }
 
+py::object PyNN_::group_connect7(const std::vector<PopulationBase> &populations,
+                                 const std::vector<py::object> &pypopulations,
+                                 const GroupConnction &group_conn,
+                                 const py::module &pynn,
+                                 const std::string &conn_name)
+{
+	py::object source = pypopulations[group_conn.psrc];
+	py::object target = pypopulations[group_conn.ptar];
+
+	std::string receptor = "excitatory";
+	if (group_conn.synapse.weight < 0) {
+		receptor = "inhibitory";
+	}
+	return pynn.attr("Projection")(source, target,
+	                               get_connector7(conn_name, group_conn, pynn),
+	                               "target"_a = receptor);
+}
+
 /**
  * Creates a PyNN FromList Connection
  *
@@ -1290,6 +1308,10 @@ void PyNN_::do_run(NetworkBase &source, Real duration) const
 	py::module pynn = py::module::import(import.c_str());
 	auto dict = json_to_dict(m_setup);
 	pynn.attr("setup")(**dict);
+	if (import == "pyNN.hardware.spikey") {
+		Spikey_run(source, duration, import, pynn);
+		return;
+	}
 
 	// Create populations
 	auto setup = std::chrono::system_clock::now();
@@ -1448,5 +1470,312 @@ std::vector<std::string> PyNN_::simulators()
 		}
 	}
 	return res;
+}
+
+namespace {
+
+py::object spikey_create_source_population(const PopulationBase &pop,
+                                           py::module &pynn)
+{
+	// This covers all spike sources!
+
+	// Create Spike Source
+	py::dict neuron_params;
+	py::list spikes;
+	for (auto neuron : pop) {
+		const std::vector<Real> &temp = neuron.parameters().parameters();
+		spikes.append(
+		    py::array_t<Real>({temp.size()}, {sizeof(Real)}, temp.data()));
+	}
+
+	auto neuron_type = pynn.attr("SpikeSourceArray");
+
+	py::module numpy = py::module::import("numpy");
+	py::object pypop =
+	    pynn.attr("Population")(numpy.attr("int")(pop.size()), neuron_type);
+	pypop.attr("tset")("spike_times", spikes);
+
+	return pypop;
+}
+
+py::object spikey_create_homogeneous_pop(const PopulationBase &pop,
+                                         py::module &pynn)
+{
+	py::dict neuron_params;
+	const auto &params = pop[0].parameters();
+	const auto &param_names = pop.type().parameter_names;
+	for (size_t j = 0; j < param_names.size(); j++) {
+		neuron_params = py::dict(py::arg(param_names[j].c_str()) = params[j],
+		                         **neuron_params);
+	}
+
+	py::module numpy = py::module::import("numpy");
+	py::object pypop = pynn.attr("Population")(
+	    numpy.attr("int")(pop.size()),
+	    pynn.attr(PyNN_::get_neuron_class(pop.type()).c_str()), neuron_params);
+    global_logger().warn("cypress",
+		                     "Backend does not support explicit "
+		                     "initialization of the membrane "
+		                     "potential!");
+	return pypop;
+}
+void spikey_set_homogeneous_rec(const PopulationBase &pop, py::object &pypop, py::module &pynn)
+{
+	std::vector<std::string> signals = pop.type().signal_names;
+	for (size_t j = 0; j < signals.size(); j++) {
+		if (pop.signals().is_recording(j)) {
+			if (signals[j] == "spikes") {
+				pypop.attr("record")();
+			}
+			else if (signals[j] == "v") {
+                pynn.attr("record_v")(py::list(pypop)[0], "");
+                global_logger().warn("cypress", "Recording membrane only for the first neuron!");
+			}
+			else {
+				throw ExecutionError("Spikey supports recording only for membrane and spikes!");
+			}
+		}
+	}
+}
+
+void spikey_set_inhomogeneous_rec(const PopulationBase &pop, py::object &pypop, py::module pynn)
+{
+	std::vector<std::string> signals = pop.type().signal_names;
+	py::list pypop_list = py::list(pypop);
+	for (size_t j = 0; j < signals.size(); j++) {
+		py::list list;
+		for (size_t k = 0; k < pop.size(); k++) {
+			if (pop[k].signals().is_recording(j)) {
+				list.append(pypop_list[k]);
+			}
+		}
+		if (list.size() == 0) {
+			continue;
+		}
+		if (signals[j] == "spikes") {
+			pynn.attr("record")(list, "");
+		}
+		else if (signals[j] == "v") {
+			pynn.attr("record_v")(list, "");
+			if (list.size() > 1) {
+				global_logger().info("cypress",
+				                     "Spikey might not support recording of "
+				                     "more than one neuron");
+			}
+		}
+		else if (signals[j] == "gsyn_exc" || signals[j] == "gsyn_inh") {
+            global_logger().info("cypress",
+				                     "Spikey does not support recording of "
+				                     "gsyn_*");
+
+		}
+	}
+}
+
+void spikey_set_inhomogeneous_parameters(const PopulationBase &pop,
+                                         py::object &pypop)
+{
+	const auto &params = pop[0].parameters();
+	const auto &param_names = pop.type().parameter_names;
+	py::list pypop_list = py::list(pypop);
+
+	for (size_t id = 0; id < params.size(); id++) {
+		std::vector<Real> new_params;
+		for (size_t neuron_id = 0; neuron_id < pop.size(); neuron_id++) {
+			pypop_list[neuron_id].attr(param_names[id].c_str()) =
+			    pop[neuron_id].parameters()[id];
+		}
+	}
+}
+
+bool inline check_full_pop(GroupConnction group_conn,
+                           const std::vector<PopulationBase> &populations)
+{
+	return group_conn.src0 == 0 ||
+	       group_conn.src1 ==
+	           NeuronIndex(populations[group_conn.psrc].size()) ||
+	       group_conn.tar0 == 0 ||
+	       group_conn.tar1 == NeuronIndex(populations[group_conn.ptar].size());
+}
+
+void spikey_get_spikes(PopulationBase pop, py::object &pypop)
+{
+	Matrix<double> spikes =
+	    PyNN_::matrix_from_numpy<double>(pypop.attr("getSpikes")());
+	auto idx = pop[0].type().signal_index("spikes");
+	for (size_t neuron_id = 0; neuron_id < pop.size(); neuron_id++) {
+		size_t counter = 0;
+		for (size_t i = 0; i < spikes.rows(); i++) {
+			if (spikes(i, 0) == neuron_id) {
+				counter++;
+			}
+		}
+		auto data = std::make_shared<Matrix<Real>>(counter, 1);
+		counter = 0;
+		for (size_t i = 0; i < spikes.rows(); i++) {
+			if (spikes(i, 0) == neuron_id) {
+				(*data)(counter, 0) = Real(spikes(i, 1));
+			}
+		}
+		pop[neuron_id].signals().data(idx.value(), std::move(data));
+	}
+}
+
+void spikey_get_voltage(NeuronBase neuron, py::module &pynn)
+{
+	Matrix<double> membrane =
+	    PyNN_::matrix_from_numpy<double>(pynn.attr("membraneOutput"));
+	Matrix<double> time =
+	    PyNN_::matrix_from_numpy<double>(pynn.attr("timeMembraneOutput"));
+
+	auto idx = neuron.type().signal_index("v");
+	auto data = std::make_shared<Matrix<Real>>(time.rows(), 2);
+	for (size_t i = 0; i < time.size(); i++) {
+		(*data)(i, 0) = Real(time[i]);
+		(*data)(i, 1) = Real(membrane[i]);
+	}
+	neuron.signals().data(idx.value(), std::move(data));
+}
+
+}  // namespace
+
+void PyNN_::Spikey_run(NetworkBase &source, Real duration, std::string import,
+                       py::module &pynn)
+{
+	auto start = std::chrono::system_clock::now();
+	py::module pylogging = py::module::import("pylogging");
+	std::vector<std::string> logger({"HAL.Cal", "HAL.PyS", "HAL.Spi", "PyN.cfg",
+	                                 "PyN.syn", "PyN.wks", "Default"});
+	for (std::string i : logger) {
+		py::str py_s = py::str(i).attr("encode")("utf-8");
+		pylogging.attr("set_loglevel")(
+		    pylogging.attr("get")(py_s),
+		    pylogging.attr("LogLevel").attr("DEBUG"));
+	}
+
+	auto setup = std::chrono::system_clock::now();
+	const std::vector<PopulationBase> &populations = source.populations();
+	std::vector<py::object> pypopulations;
+
+	// TODO :: neuron count?
+
+	for (size_t i = 0; i < populations.size(); i++) {
+		if (populations.size() == 0) {
+			pypopulations.push_back(py::object());
+			continue;
+		}
+
+		if (&populations[i].type() == &SpikeSourceArray::inst()) {
+			pypopulations.push_back(
+			    spikey_create_source_population(populations[i], pynn));
+			const bool homogeneous_rec = populations[i].homogeneous_record();
+			if (homogeneous_rec) {
+				spikey_set_homogeneous_rec(populations[i],
+				                           pypopulations.back(), pynn);
+			}
+			else {
+				spikey_set_inhomogeneous_rec(populations[i],
+				                             pypopulations.back(), pynn);
+			}
+		}
+		else {
+			bool homogeneous = populations[i].homogeneous_parameters();
+			pypopulations.push_back(spikey_create_homogeneous_pop(
+			    populations[i], pynn));
+
+			if (!homogeneous) {
+				spikey_set_inhomogeneous_parameters(populations[i],
+				                                    pypopulations.back());
+			}
+			const bool homogeneous_rec = populations[i].homogeneous_record();
+			if (homogeneous_rec) {
+				spikey_set_homogeneous_rec(populations[i],
+				                           pypopulations.back(), pynn);
+			}
+			else {
+				spikey_set_inhomogeneous_rec(populations[i],
+				                             pypopulations.back(), pynn);
+			}
+		}
+	}
+	auto buildpop = std::chrono::system_clock::now();
+
+	for (auto conn : source.connections()) {
+		auto it = SUPPORTED_CONNECTIONS.find(conn.connector().name());
+		GroupConnction group_conn;
+		if (it != SUPPORTED_CONNECTIONS.end() &&
+		    conn.connector().group_connect(conn, group_conn) &&
+		    check_full_pop(group_conn, populations)) {
+			// Group connections
+			group_connect7(populations, pypopulations, group_conn, pynn,
+			               it->second);
+		}
+		else {
+			list_connect(pypopulations, conn, pynn);
+		}
+	}
+	auto buildconn = std::chrono::system_clock::now();
+	pynn.attr("run")(duration);
+	auto execrun = std::chrono::system_clock::now();
+
+	for (size_t i = 0; i < populations.size(); i++) {
+		if (populations[i].size() == 0) {
+			continue;
+		}
+		std::vector<std::string> signals = populations[i].type().signal_names;
+		for (size_t j = 0; j < signals.size(); j++) {
+			bool is_recording = false;
+			for (auto neuron : populations[i]) {
+				if (neuron.signals().is_recording(j)) {
+					is_recording = true;
+					break;
+				}
+			}
+
+			if (is_recording) {
+				if (signals[j] == "spikes") {
+					spikey_get_spikes(populations[i], pypopulations[i]);
+				}
+				else if(signals[j] == "v"){
+                    for (auto neuron : populations[i]) {
+                        if (neuron.signals().is_recording(j)) {
+                            spikey_get_voltage(neuron, pynn);
+                        }
+                    }
+                }
+                else{
+                    throw; //TODO
+                }
+			}
+		}
+	}
+
+	auto finished = std::chrono::system_clock::now();
+	std::cout << "setup "
+	          << std::chrono::duration_cast<std::chrono::milliseconds>(setup -
+	                                                                   start)
+	                 .count()
+	          << std::endl;
+	std::cout << "buildpop "
+	          << std::chrono::duration_cast<std::chrono::milliseconds>(
+	                 buildpop - setup)
+	                 .count()
+	          << std::endl;
+	std::cout << "buildconn "
+	          << std::chrono::duration_cast<std::chrono::milliseconds>(
+	                 buildconn - buildpop)
+	                 .count()
+	          << std::endl;
+	std::cout << "execrun "
+	          << std::chrono::duration_cast<std::chrono::milliseconds>(
+	                 execrun - buildconn)
+	                 .count()
+	          << std::endl;
+	std::cout << "finished "
+	          << std::chrono::duration_cast<std::chrono::milliseconds>(
+	                 finished - execrun)
+	                 .count()
+	          << std::endl;
+	pynn.attr("end")();
 }
 }  // namespace cypress
