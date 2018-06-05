@@ -307,8 +307,8 @@ public:
 	    const std::vector<py::object> &pypopulations,
 	    const GroupConnction &group_conn, const py::module &pynn,
 	    const std::string &conn_name, const Real timestep = 0.0);
-    
-    /**
+
+	/**
 	 * Connect based on an existing PyNN connector
 	 *
 	 * @param populations vector of cypress populations
@@ -384,8 +384,85 @@ public:
 	 */
 	static void fetch_data_neo(const std::vector<PopulationBase> &populations,
 	                           const std::vector<py::object> &pypopulations);
-    
-    static void Spikey_run(NetworkBase &source, Real duration, std::string import, py::module& pynn);
+
+	// ______________ Spikey related part _______________________
+
+	/**
+	 * Special run function for the Spikey system
+	 *
+	 * @param source The Network description
+	 * @param duration Simulation duration
+	 * @param pynn Module pointer to PyNN.hardware.spikey
+	 */
+	static void Spikey_run(NetworkBase &source, Real duration,
+	                       py::module &pynn);
+
+	/**
+	 * Creates a PyNN source population for Spikey
+	 *
+	 * @param pop The cypress population
+	 * @param pynn the PyNN instance
+	 * @return handler for the PyNN population
+	 */
+	static py::object &spikey_create_source_population(
+	    const PopulationBase &pop, py::module &pynn);
+
+	/**
+	 * Creates a PyNN population with homogeneous parameters for Spikey,
+	 * inhomogeneous parameters can be set with set_inhomogeneous_parameters
+	 * afterwards.
+	 *
+	 * @param pop The cypress population
+	 * @param pynn the PyNN instance
+	 * @return handler for the PyNN population
+	 */
+	static py::object spikey_create_homogeneous_pop(const PopulationBase &pop,
+	                                                py::module &pynn);
+
+	/**
+	 * Sets parameters of an existing population for spikey
+	 *
+	 * @param pop Source cypress population
+	 * @param pypop Target PyNN population
+	 * @param init_available flag for initializing the population
+	 */
+	static void spikey_set_homogeneous_rec(const PopulationBase &pop,
+	                                       py::object &pypop, py::module &pynn);
+
+	/**
+	 * Set recording for a full population for spikey
+	 *
+	 * @param pop Source cypress population
+	 * @param pypop Target PyNN population
+	 */
+	static void spikey_set_inhomogeneous_rec(const PopulationBase &pop,
+	                                         py::object &pypop,
+	                                         py::module pynn);
+
+	/**
+	 * Set mixed recordings for a population for the Spikey system
+	 *
+	 * @param pop Source cypress population
+	 * @param pypop Target PyNN population
+	 */
+	static void spikey_set_inhomogeneous_parameters(const PopulationBase &pop,
+	                                                py::object &pypop);
+
+	/**
+	 * Fetches spikes and saves them to pop
+	 *
+	 * @param pop cypress population
+	 * @param pypop PyNN population
+	 */
+
+	static void spikey_get_spikes(PopulationBase pop, py::object &pypop);
+	/**
+	 * Fetch membrane voltage for a neuron in Spikey
+	 *
+	 * @param neuron The cypress neuron recording the membrane
+	 * @param pynn pointer to PyNN module
+	 */
+	static void spikey_get_voltage(NeuronBase neuron, py::module &pynn);
 };
 }  // namespace cypress
 
