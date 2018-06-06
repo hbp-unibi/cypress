@@ -404,7 +404,7 @@ public:
 	 * @param pynn the PyNN instance
 	 * @return handler for the PyNN population
 	 */
-	static py::object &spikey_create_source_population(
+	static py::object spikey_create_source_population(
 	    const PopulationBase &pop, py::module &pynn);
 
 	/**

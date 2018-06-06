@@ -108,7 +108,7 @@ TEST(pynn2, get_pynn_version)
 	if (all_avail_imports.size() != 0) {
 		EXPECT_NO_THROW(PyNN_::get_pynn_version());
 		version = PyNN_::get_pynn_version();
-		EXPECT_TRUE((version == 8) || (version == 9));
+		EXPECT_TRUE((version == 6) || (version == 8) || (version == 9));
 
 		py::module pynn = py::module::import("pyNN");
 		std::string backup = py::cast<std::string>(pynn.attr("__version__"));
@@ -179,7 +179,7 @@ TEST(pynn2, get_neo_version)
 			EXPECT_NO_THROW(PyNN_::get_neo_version());
 		}
 		catch (...) {
-			EXPECT_ANY_THROW(PyNN_::get_neo_version());
+			EXPECT_EQ(0, PyNN_::get_neo_version());
 			std::cout << " ... Skipping test" << std::endl;
 		}
 	}
@@ -263,7 +263,13 @@ TEST(pynn2, get_neuron_class)
 			EXPECT_NO_THROW(pynn.attr(
 			    PyNN_::get_neuron_class(cypress::IfCondExp::inst()).c_str())());
 		}
-		// TODO SPIKEY + BRAINSCALES
+		else if (import == "pyNN.hardware.spikey") {
+			py::module pynn = py::module::import(import.c_str());
+			EXPECT_NO_THROW(pynn.attr(
+			    PyNN_::get_neuron_class(cypress::IfFacetsHardware1::inst())
+			        .c_str()));
+		}
+		// TODO BRAINSCALES
 	}
 	if (all_avail_imports.size() == 0) {
 		std::cout << " ... Skipping test" << std::endl;
@@ -299,15 +305,15 @@ TEST(pynn2, create_source_population)
 	for (auto import : all_avail_imports) {
 		py::module pynn = py::module::import(import.c_str());
 		pynn.attr("setup")();
-		auto pypop1 = PyNN_::create_source_population(pop1, pynn);
-		auto pypop2 = PyNN_::create_source_population(pop2, pynn);
-		auto pypop3 = PyNN_::create_source_population(pop3, pynn);
-		auto pypop4 = PyNN_::create_source_population(pop4, pynn);
-		auto pypop5 = PyNN_::create_source_population(pop5, pynn);
-		auto pypop6 = PyNN_::create_source_population(pop6, pynn);
 		std::vector<Real> spikes1, spikes2, spikes3, spikes4, spikes50,
 		    spikes57, spikes60, spikes61, spikes62;
 		if (version > 8 || import == "pyNN.nest") {
+			auto pypop1 = PyNN_::create_source_population(pop1, pynn);
+			auto pypop2 = PyNN_::create_source_population(pop2, pynn);
+			auto pypop3 = PyNN_::create_source_population(pop3, pynn);
+			auto pypop4 = PyNN_::create_source_population(pop4, pynn);
+			auto pypop5 = PyNN_::create_source_population(pop5, pynn);
+			auto pypop6 = PyNN_::create_source_population(pop6, pynn);
 			spikes1 = py::cast<std::vector<Real>>(
 			    py::list(py::list(pypop1.attr("get")("spike_times"))[0].attr(
 			        "value"))[0]);
@@ -339,7 +345,13 @@ TEST(pynn2, create_source_population)
 			    py::list(py::list(pypop6.attr("get")("spike_times"))[2].attr(
 			        "value"))[0]);
 		}
-		else {
+		else if (import == "pyNN.spiNNaker") {
+			auto pypop1 = PyNN_::create_source_population(pop1, pynn);
+			auto pypop2 = PyNN_::create_source_population(pop2, pynn);
+			auto pypop3 = PyNN_::create_source_population(pop3, pynn);
+			auto pypop4 = PyNN_::create_source_population(pop4, pynn);
+			auto pypop5 = PyNN_::create_source_population(pop5, pynn);
+			auto pypop6 = PyNN_::create_source_population(pop6, pynn);
 			spikes1 = py::cast<std::vector<Real>>(
 			    py::list(pypop1.attr("get")("spike_times"))[0]);
 			spikes2 = py::cast<std::vector<Real>>(
@@ -359,6 +371,37 @@ TEST(pynn2, create_source_population)
 			    py::list(pypop6.attr("get")("spike_times"))[1]);
 			spikes62 = py::cast<std::vector<Real>>(
 			    py::list(pypop6.attr("get")("spike_times"))[2]);
+		}
+		else if (import == "pyNN.hardware.spikey") {
+			auto pypop1 = PyNN_::spikey_create_source_population(pop1, pynn);
+			auto pypop2 = PyNN_::spikey_create_source_population(pop2, pynn);
+			auto pypop3 = PyNN_::spikey_create_source_population(pop3, pynn);
+			auto pypop4 = PyNN_::spikey_create_source_population(pop4, pynn);
+			auto pypop5 = PyNN_::spikey_create_source_population(pop5, pynn);
+			auto pypop6 = PyNN_::spikey_create_source_population(pop6, pynn);
+			spikes1 = py::cast<std::vector<Real>>(
+			    py::list(pypop1.attr("get")("spike_times"))[0]);
+			spikes2 = py::cast<std::vector<Real>>(
+			    py::list(pypop2.attr("get")("spike_times"))[0]);
+			spikes3 = py::cast<std::vector<Real>>(
+			    py::list(pypop3.attr("get")("spike_times"))[0]);
+			spikes4 = py::cast<std::vector<Real>>(
+			    py::list(pypop4.attr("get")("spike_times"))[0]);
+			spikes50 = py::cast<std::vector<Real>>(
+			    py::list(pypop5.attr("get")("spike_times"))[0]);
+			spikes57 = py::cast<std::vector<Real>>(
+			    py::list(pypop5.attr("get")("spike_times"))[7]);
+
+			spikes60 = py::cast<std::vector<Real>>(
+			    py::list(pypop6.attr("get")("spike_times"))[0]);
+			spikes61 = py::cast<std::vector<Real>>(
+			    py::list(pypop6.attr("get")("spike_times"))[1]);
+			spikes62 = py::cast<std::vector<Real>>(
+			    py::list(pypop6.attr("get")("spike_times"))[2]);
+		}
+		else {
+			std::cout << " ... Skipping test" << std::endl;
+			return;
 		}
 
 		EXPECT_EQ(pop1[0].parameters().spike_times().size(), spikes1.size());
@@ -460,10 +503,14 @@ TEST(pynn2, create_homogeneous_pop)
 			EXPECT_TRUE(temp);
 			check_pop_parameters_spinnaker(pypop, pop1);
 		}
+		else if (import == "pyNN.hardware.spikey") {
+			py::object pypop = PyNN_::spikey_create_homogeneous_pop(pop2, pynn);
+			check_pop_parameters_spinnaker(pypop, pop2);
+		}
 		else {
 			std::cout << " ... Skipping test" << std::endl;
 		}
-		// TODO SPIKEY + BRAINSCALES
+		// TODO BRAINSCALES
 	}
 }
 
@@ -471,7 +518,13 @@ TEST(pynn2, set_inhomogeneous_parameters)
 {
 	for (auto import : all_avail_imports) {
 		py::module pynn = py::module::import(import.c_str());
-		pynn.attr("setup")();
+		if (import == "pyNN.hardware.spikey") {
+			pynn.attr("end")();
+			pynn.attr("setup")("calibIcb"_a = true);
+		}
+		else {
+			pynn.attr("setup")();
+		}
 		cypress::Network netw;
 		auto pop1 = netw.create_population<IfCondExp>(3, IfCondExpParameters());
 		pop1[0].parameters().tau_refrac(50);
@@ -490,10 +543,22 @@ TEST(pynn2, set_inhomogeneous_parameters)
 			// Not supporterd by spinnaker
 			std::cout << " ... Skipping test" << std::endl;
 		}
+		else if (import == "pyNN.hardware.spikey") {
+			auto pop2 = netw.create_population<IfFacetsHardware1>(
+			    3, IfFacetsHardware1Parameters());
+			pop2[0].parameters().tau_refrac(5);
+			pop2[1].parameters().tau_m(10);
+			pop2[2].parameters().tau_m(9);
+			pop2[2].parameters().tau_refrac(7);
+			py::object pypop =
+			    py::object(PyNN_::spikey_create_homogeneous_pop(pop2, pynn));
+			PyNN_::spikey_set_inhomogeneous_parameters(pop2, pypop);
+			check_pop_parameters_spinnaker(pypop, pop2);
+		}
 		else {
 			std::cout << " ... Skipping test" << std::endl;
 		}
-		// TODO SPIKEY + BRAINSCALES
+		// TODO BRAINSCALES
 	}
 }
 
@@ -533,10 +598,16 @@ TEST(pynn2, set_homogeneous_rec)
 			    py::object(PyNN_::create_homogeneous_pop(pop1, pynn, temp));
 			EXPECT_NO_THROW(PyNN_::set_homogeneous_rec(pop1, pypop));
 		}
+		else if (import == "pyNN.hardware.spikey") {
+			py::object pypop =
+			    py::object(PyNN_::spikey_create_homogeneous_pop(pop2, pynn));
+			EXPECT_NO_THROW(
+			    PyNN_::spikey_set_homogeneous_rec(pop2, pypop, pynn));
+		}
 		else {
 			std::cout << " ... Skipping test" << std::endl;
 		}
-		// TODO SPIKEY + BRAINSCALES
+		// TODO BRAINSCALES
 	}
 }
 
@@ -584,10 +655,16 @@ TEST(pynn2, set_inhomogenous_rec)
 			// Not supporterd by spinnaker
 			std::cout << " ... Skipping test" << std::endl;
 		}
+		else if (import == "pyNN.hardware.spikey") {
+			py::object pypop =
+			    py::object(PyNN_::spikey_create_homogeneous_pop(pop2, pynn));
+			EXPECT_NO_THROW(
+			    PyNN_::spikey_set_inhomogeneous_rec(pop2, pypop, pynn));
+		}
 		else {
 			std::cout << " ... Skipping test" << std::endl;
 		}
-		// TODO SPIKEY + BRAINSCALES
+		// TODO BRAINSCALES
 	}
 }
 
@@ -637,7 +714,7 @@ TEST(pynn2, get_pop_view)
 		else {
 			std::cout << " ... Skipping test" << std::endl;
 		}
-		// TODO SPIKEY + BRAINSCALES
+		// TODO + BRAINSCALES
 	}
 }
 
@@ -678,7 +755,29 @@ TEST(pynn2, get_connector)
 
 TEST(pynn2, get_connector7)
 {
-	// TODO SPIKEY + BRAINSCALES
+	if (version == 6) {
+		py::module pynn = py::module::import("pyNN.hardware.spikey");
+		pynn.attr("setup")();
+
+		GroupConnction conn = GroupConnction::create_group_connection(
+		    0, 1, 0, 16, 0, 16, 0.15, 1, 3, "asd");
+		EXPECT_NO_THROW(PyNN_::get_connector7("AllToAllConnector", conn, pynn));
+		EXPECT_NO_THROW(PyNN_::get_connector7("OneToOneConnector", conn, pynn));
+
+		EXPECT_NO_THROW(
+		    PyNN_::get_connector7("FixedNumberPreConnector", conn, pynn));
+		EXPECT_NO_THROW(
+		    PyNN_::get_connector7("FixedNumberPreConnector", conn, pynn));
+		EXPECT_ANY_THROW(
+		    PyNN_::get_connector7("FixedProbabilityConnector", conn, pynn));
+		conn.additional_parameter = 0.5;
+		EXPECT_NO_THROW(
+		    PyNN_::get_connector7("FixedProbabilityConnector", conn, pynn));
+	}
+	else {
+		std::cout << " ... Skipping test" << std::endl;
+	}
+	// TODO BRAINSCALES
 }
 
 void check_projection(py::object projection, GroupConnction &conn)
@@ -746,31 +845,16 @@ TEST(pynn2, group_connect)
 	std::vector<PopulationBase> pops{
 	    netw.create_population<IfCondExp>(16, IfCondExpParameters()),
 	    netw.create_population<IfCondExp>(16, IfCondExpParameters())};
-	for (auto import : all_avail_imports) {
-		py::module pynn = py::module::import(import.c_str());
-		pynn.attr("setup")();
-		bool temp;
-		std::vector<py::object> pypops{
-		    PyNN_::create_homogeneous_pop(pops[0], pynn, temp),
-		    PyNN_::create_homogeneous_pop(pops[1], pynn, temp)};
-		GroupConnction conn = GroupConnction::create_group_connection(
-		    0, 1, 0, 16, 0, 16, 0.15, 1, 3, "asd");
-		EXPECT_NO_THROW(PyNN_::group_connect(pops, pypops, conn, pynn,
-		                                     "AllToAllConnector", 0.1));
-		EXPECT_NO_THROW(PyNN_::group_connect(pops, pypops, conn, pynn,
-		                                     "OneToOneConnector", 0.1));
-		EXPECT_NO_THROW(PyNN_::group_connect(pops, pypops, conn, pynn,
-		                                     "FixedNumberPreConnector", 0.1));
-		EXPECT_NO_THROW(PyNN_::group_connect(pops, pypops, conn, pynn,
-		                                     "FixedNumberPostConnector", 0.1));
-		conn.additional_parameter = 0.5;
-		EXPECT_NO_THROW(PyNN_::group_connect(pops, pypops, conn, pynn,
-		                                     "FixedProbabilityConnector", 0.1));
-
-		if (import == "pyNN.nest" && version > 8) {
-			conn.src1 = 10;
-			conn.tar0 = 5;
-			conn.additional_parameter = 3;
+	if (version > 7) {
+		for (auto import : all_avail_imports) {
+			py::module pynn = py::module::import(import.c_str());
+			pynn.attr("setup")();
+			bool temp;
+			std::vector<py::object> pypops{
+			    PyNN_::create_homogeneous_pop(pops[0], pynn, temp),
+			    PyNN_::create_homogeneous_pop(pops[1], pynn, temp)};
+			GroupConnction conn = GroupConnction::create_group_connection(
+			    0, 1, 0, 16, 0, 16, 0.15, 1, 3, "asd");
 			EXPECT_NO_THROW(PyNN_::group_connect(pops, pypops, conn, pynn,
 			                                     "AllToAllConnector", 0.1));
 			EXPECT_NO_THROW(PyNN_::group_connect(pops, pypops, conn, pynn,
@@ -783,52 +867,130 @@ TEST(pynn2, group_connect)
 			EXPECT_NO_THROW(PyNN_::group_connect(
 			    pops, pypops, conn, pynn, "FixedProbabilityConnector", 0.1));
 
-			check_projection(PyNN_::group_connect(pops, pypops, conn, pynn,
-			                                      "AllToAllConnector", 0.1),
-			                 conn);
-			check_projection(PyNN_::group_connect(pops, pypops, conn, pynn,
-			                                      "OneToOneConnector", 0.1),
-			                 conn);
-			conn.additional_parameter = 3;
-			check_projection(
-			    PyNN_::group_connect(pops, pypops, conn, pynn,
-			                         "FixedNumberPreConnector", 0.1),
-			    conn);
-			check_projection(
-			    PyNN_::group_connect(pops, pypops, conn, pynn,
-			                         "FixedNumberPostConnector", 0.1),
-			    conn);
-			conn.additional_parameter = 0.5;
-			check_projection(
-			    PyNN_::group_connect(pops, pypops, conn, pynn,
-			                         "FixedProbabilityConnector", 0.1),
-			    conn);
+			if (import == "pyNN.nest" && version > 8) {
+				conn.src1 = 10;
+				conn.tar0 = 5;
+				conn.additional_parameter = 3;
+				EXPECT_NO_THROW(PyNN_::group_connect(pops, pypops, conn, pynn,
+				                                     "AllToAllConnector", 0.1));
+				EXPECT_NO_THROW(PyNN_::group_connect(pops, pypops, conn, pynn,
+				                                     "OneToOneConnector", 0.1));
+				EXPECT_NO_THROW(PyNN_::group_connect(
+				    pops, pypops, conn, pynn, "FixedNumberPreConnector", 0.1));
+				EXPECT_NO_THROW(PyNN_::group_connect(
+				    pops, pypops, conn, pynn, "FixedNumberPostConnector", 0.1));
+				conn.additional_parameter = 0.5;
+				EXPECT_NO_THROW(
+				    PyNN_::group_connect(pops, pypops, conn, pynn,
+				                         "FixedProbabilityConnector", 0.1));
 
-			conn.synapse.weight = -0.015;
-			check_projection(PyNN_::group_connect(pops, pypops, conn, pynn,
-			                                      "AllToAllConnector", 0.1),
-			                 conn);
-			check_projection(PyNN_::group_connect(pops, pypops, conn, pynn,
-			                                      "OneToOneConnector", 0.1),
-			                 conn);
-			conn.additional_parameter = 3;
-			check_projection(
-			    PyNN_::group_connect(pops, pypops, conn, pynn,
-			                         "FixedNumberPreConnector", 0.1),
-			    conn);
-			check_projection(
-			    PyNN_::group_connect(pops, pypops, conn, pynn,
-			                         "FixedNumberPostConnector", 0.1),
-			    conn);
-			conn.additional_parameter = 0.5;
-			check_projection(
-			    PyNN_::group_connect(pops, pypops, conn, pynn,
-			                         "FixedProbabilityConnector", 0.1),
-			    conn);
+				check_projection(PyNN_::group_connect(pops, pypops, conn, pynn,
+				                                      "AllToAllConnector", 0.1),
+				                 conn);
+				check_projection(PyNN_::group_connect(pops, pypops, conn, pynn,
+				                                      "OneToOneConnector", 0.1),
+				                 conn);
+				conn.additional_parameter = 3;
+				check_projection(
+				    PyNN_::group_connect(pops, pypops, conn, pynn,
+				                         "FixedNumberPreConnector", 0.1),
+				    conn);
+				check_projection(
+				    PyNN_::group_connect(pops, pypops, conn, pynn,
+				                         "FixedNumberPostConnector", 0.1),
+				    conn);
+				conn.additional_parameter = 0.5;
+				check_projection(
+				    PyNN_::group_connect(pops, pypops, conn, pynn,
+				                         "FixedProbabilityConnector", 0.1),
+				    conn);
+
+				conn.synapse.weight = -0.015;
+				check_projection(PyNN_::group_connect(pops, pypops, conn, pynn,
+				                                      "AllToAllConnector", 0.1),
+				                 conn);
+				check_projection(PyNN_::group_connect(pops, pypops, conn, pynn,
+				                                      "OneToOneConnector", 0.1),
+				                 conn);
+				conn.additional_parameter = 3;
+				check_projection(
+				    PyNN_::group_connect(pops, pypops, conn, pynn,
+				                         "FixedNumberPreConnector", 0.1),
+				    conn);
+				check_projection(
+				    PyNN_::group_connect(pops, pypops, conn, pynn,
+				                         "FixedNumberPostConnector", 0.1),
+				    conn);
+				conn.additional_parameter = 0.5;
+				check_projection(
+				    PyNN_::group_connect(pops, pypops, conn, pynn,
+				                         "FixedProbabilityConnector", 0.1),
+				    conn);
+			}
 		}
 	}
+	else {
+		std::cout << " ... Skipping test" << std::endl;
+	}
 }
+TEST(pynn2, group_connect7)
+{
+	Network netw;
+	std::vector<PopulationBase> pops{netw.create_population<IfFacetsHardware1>(
+	                                     16, IfFacetsHardware1Parameters()),
+	                                 netw.create_population<IfFacetsHardware1>(
+	                                     16, IfFacetsHardware1Parameters())};
+	if (version > 8) {
+		std::cout << " ... Skipping test" << std::endl;
+		return;
+	}
+	for (auto import : all_avail_imports) {
+		if (import == "pyNN.hardware.spikey") {
+			py::module pynn = py::module::import(import.c_str());
+			pynn.attr("setup")();
+			std::vector<py::object> pypops{
+			    PyNN_::spikey_create_homogeneous_pop(pops[0], pynn),
+			    PyNN_::spikey_create_homogeneous_pop(pops[1], pynn)};
+			GroupConnction conn = GroupConnction::create_group_connection(
+			    0, 1, 0, 16, 0, 16, 0.15, 1, 3, "asd");
+			EXPECT_NO_THROW(PyNN_::group_connect7(pops, pypops, conn, pynn,
+			                                      "AllToAllConnector"));
+			EXPECT_NO_THROW(PyNN_::group_connect7(pops, pypops, conn, pynn,
+			                                      "OneToOneConnector"));
+			EXPECT_NO_THROW(PyNN_::group_connect7(pops, pypops, conn, pynn,
+			                                      "FixedNumberPreConnector"));
+			EXPECT_NO_THROW(PyNN_::group_connect7(pops, pypops, conn, pynn,
+			                                      "FixedNumberPostConnector"));
+			conn.additional_parameter = 0.5;
+			EXPECT_NO_THROW(PyNN_::group_connect7(pops, pypops, conn, pynn,
+			                                      "FixedProbabilityConnector"));
 
+			conn.additional_parameter = 3.0;
+			check_projection(PyNN_::group_connect7(pops, pypops, conn, pynn,
+			                                       "AllToAllConnector"),
+			                 conn);
+			check_projection(PyNN_::group_connect7(pops, pypops, conn, pynn,
+			                                       "OneToOneConnector"),
+			                 conn);
+			check_projection(PyNN_::group_connect7(pops, pypops, conn, pynn,
+			                                       "FixedNumberPreConnector"),
+			                 conn);
+			check_projection(PyNN_::group_connect7(pops, pypops, conn, pynn,
+			                                       "FixedNumberPostConnector"),
+			                 conn);
+			conn.additional_parameter = 0.5;
+			check_projection(PyNN_::group_connect7(pops, pypops, conn, pynn,
+			                                       "FixedProbabilityConnector"),
+			                 conn);
+
+			// TODO
+		}
+		else {
+			std::cout << " ... Skipping test" << std::endl;
+		}
+		// TODO BRAINSCALES
+	}
+}
 TEST(pynn2, list_connect)
 {
 	Network netw;

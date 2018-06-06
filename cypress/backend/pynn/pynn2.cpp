@@ -427,7 +427,7 @@ int PyNN_::get_pynn_version()
 	int main_n = std::stoi(main);
 	int submain_n = std::stoi(submain);
 
-	if (main_n != 0 || !((submain_n == 8) || (submain_n == 9))) {
+	if (main_n != 0 || !((submain_n == 6) || (submain_n == 8) || (submain_n == 9))) {
 		throw NotSupportedException("PyNN version " + main + "." + submain +
 		                            "is not supported");
 	}
@@ -1451,7 +1451,7 @@ std::vector<std::string> PyNN_::simulators()
 	return res;
 }
 
-py::object &PyNN_::spikey_create_source_population(const PopulationBase &pop,
+py::object PyNN_::spikey_create_source_population(const PopulationBase &pop,
                                                    py::module &pynn)
 {
 	// This covers all spike sources!
