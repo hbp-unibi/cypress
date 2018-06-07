@@ -173,15 +173,12 @@ TEST(pynn2, get_neo_version)
 
 		neo.attr("__version__") = backup;
 	}
-	else {
-		try {
-			py::module neo = py::module::import("neo");
-			EXPECT_NO_THROW(PyNN_::get_neo_version());
-		}
-		catch (...) {
-			EXPECT_EQ(0, PyNN_::get_neo_version());
-			std::cout << " ... Skipping test" << std::endl;
-		}
+	else if (all_avail_imports.size() != 0 && (version < 8)){
+        EXPECT_NO_THROW(PyNN_::get_neo_version());
+        EXPECT_EQ(0, PyNN_::get_neo_version());
+    }
+    else{
+        EXPECT_ANY_THROW(PyNN_::get_neo_version());
 	}
 }
 
@@ -982,8 +979,6 @@ TEST(pynn2, group_connect7)
 			check_projection(PyNN_::group_connect7(pops, pypops, conn, pynn,
 			                                       "FixedProbabilityConnector"),
 			                 conn);
-
-			// TODO
 		}
 		else {
 			std::cout << " ... Skipping test" << std::endl;

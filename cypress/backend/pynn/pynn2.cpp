@@ -445,7 +445,7 @@ int PyNN_::get_neo_version()
 		py::module neo = py::module::import("neo");
 	}
 	catch (...) {
-		throw NotSupportedException("Neo version " + std::to_string(pynn_v) +
+		throw NotSupportedException("PyNN version " + std::to_string(pynn_v) +
 		                            "." + " requires neo");
 	}
 	py::module neo = py::module::import("neo");
