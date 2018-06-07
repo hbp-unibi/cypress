@@ -427,7 +427,8 @@ int PyNN_::get_pynn_version()
 	int main_n = std::stoi(main);
 	int submain_n = std::stoi(submain);
 
-	if (main_n != 0 || !((submain_n == 6) || (submain_n == 8) || (submain_n == 9))) {
+	if (main_n != 0 ||
+	    !((submain_n == 6) || (submain_n == 8) || (submain_n == 9))) {
 		throw NotSupportedException("PyNN version " + main + "." + submain +
 		                            "is not supported");
 	}
@@ -1639,20 +1640,23 @@ bool inline check_full_pop(GroupConnction group_conn,
 void PyNN_::spikey_get_spikes(PopulationBase pop, py::object &pypop)
 {
 	Matrix<double> spikes =
-	    PyNN_::matrix_from_numpy<double>(pypop.attr("getSpikes")());
+	    PyNN_::matrix_from_numpy<double>(pypop.attr("getSpikes")(), true);
+
 	auto idx = pop[0].type().signal_index("spikes");
 	for (size_t neuron_id = 0; neuron_id < pop.size(); neuron_id++) {
 		size_t counter = 0;
-		for (size_t i = 0; i < spikes.rows(); i++) {
-			if (spikes(i, 0) == neuron_id) {
+		for (size_t i = 0; i < spikes.cols(); i++) {
+			if (spikes(0, i) == neuron_id) {
 				counter++;
 			}
 		}
+		
 		auto data = std::make_shared<Matrix<Real>>(counter, 1);
 		counter = 0;
-		for (size_t i = 0; i < spikes.rows(); i++) {
-			if (spikes(i, 0) == neuron_id) {
-				(*data)(counter, 0) = Real(spikes(i, 1));
+		for (size_t i = 0; i < spikes.cols(); i++) {
+			if (spikes(0, i) == neuron_id) {
+				(*data)(counter, 0) = Real(spikes(1, i));
+                counter ++;
 			}
 		}
 		pop[neuron_id].signals().data(idx.value(), std::move(data));
