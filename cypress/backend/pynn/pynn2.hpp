@@ -341,6 +341,19 @@ public:
 	    const ConnectionDescriptor conn, const py::module &pynn,
 	    const Real timestep = 0.0);
 
+	/**
+	 * Creates a PyNN6/7 FromList Connection
+	 *
+	 * @param pypopulations list of python populations
+	 * @param conn ConnectionDescriptor of the List connection
+	 * @param pynn Handler for PyNN python module
+	 * @return tuple of the excitatory,inhibitory connection. List is separated
+	 * for compatibility reasons
+	 */
+	static std::tuple<py::object, py::object> list_connect7(
+	    const std::vector<py::object> &pypopulations,
+	    const ConnectionDescriptor conn, const py::module &pynn);
+
 	template <typename T>
 	/**
 	 * Given a numpy object, this method creates the (transposed) C++ matrix
@@ -404,8 +417,8 @@ public:
 	 * @param pynn the PyNN instance
 	 * @return handler for the PyNN population
 	 */
-	static py::object spikey_create_source_population(
-	    const PopulationBase &pop, py::module &pynn);
+	static py::object spikey_create_source_population(const PopulationBase &pop,
+	                                                  py::module &pynn);
 
 	/**
 	 * Creates a PyNN population with homogeneous parameters for Spikey,

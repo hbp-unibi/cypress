@@ -831,7 +831,7 @@ std::tuple<py::object, py::object> PyNN_::list_connect(
 			num_inh++;
 		}
 	}
-
+	// TODO 2 full copies in memory
 	Matrix<Real> conns_exc(conns_full.size() - num_inh, 4),
 	    conns_inh(num_inh, 4);
 	size_t counter_ex = 0, counter_in = 0;
@@ -897,6 +897,63 @@ std::tuple<py::object, py::object> PyNN_::list_connect(
 	}
 	return ret;
 }
+namespace {
+bool init_numpy_dtype = false;
+}
+std::tuple<py::object, py::object> PyNN_::list_connect7(
+    const std::vector<py::object> &pypopulations,
+    const ConnectionDescriptor conn, const py::module &pynn)
+{
+	// TODO 2 copies (avoid array.tolist())
+	if (!init_numpy_dtype) {
+		PYBIND11_NUMPY_DTYPE(LocalConnection, src, tar, synapse.weight,
+		                     synapse.delay);
+		init_numpy_dtype = true;
+	}
+	std::tuple<py::object, py::object> ret =
+	    std::make_tuple(py::object(), py::object());
+	std::vector<Connection> conns_full;
+	std::vector<LocalConnection> conn_exc, conn_inh;
+	conn.connect(conns_full);
+	size_t size = conns_full.size();
+	for (size_t i = 0; i < size; i++) {
+		LocalConnection conn = conns_full[i].n;
+		if (conn.synapse.weight > 0) {
+			conn_exc.push_back(conn);
+		}
+		else {
+			conn_inh.push_back(conn.absolute_connection());
+		}
+	}
+
+	if (conn_exc.size() > 0) {
+		py::detail::any_container<ssize_t> shape(
+		    {static_cast<long>(conn_exc.size())});
+		py::array_t<LocalConnection> temp(
+		    shape, {2 * sizeof(NeuronIndex) + 2 * sizeof(Real)},
+		    conn_exc.data());
+		py::object connector =
+		    pynn.attr("FromListConnector")(temp.attr("tolist")());
+
+		std::get<0>(ret) = pynn.attr("Projection")(
+		    pypopulations[conn.pid_src()], pypopulations[conn.pid_tar()],
+		    connector, "target"_a = "excitatory");
+	}
+	if (conn_inh.size() > 0) {
+		py::detail::any_container<ssize_t> shape(
+		    {static_cast<long>(conn_inh.size())});
+		py::array_t<LocalConnection> temp(
+		    shape, {2 * sizeof(NeuronIndex) + 2 * sizeof(Real)},
+		    conn_inh.data());
+		py::object connector =
+		    pynn.attr("FromListConnector")(temp.attr("tolist")());
+		std::get<1>(ret) = pynn.attr("Projection")(
+		    pypopulations[conn.pid_src()], pypopulations[conn.pid_tar()],
+		    connector, "target"_a = "inhibitory");
+	}
+	return ret;
+}
+
 namespace {
 template <typename T, typename T2>
 void inline assert_types()
@@ -1452,7 +1509,7 @@ std::vector<std::string> PyNN_::simulators()
 }
 
 py::object PyNN_::spikey_create_source_population(const PopulationBase &pop,
-                                                   py::module &pynn)
+                                                  py::module &pynn)
 {
 	// This covers all spike sources!
 
@@ -1687,7 +1744,7 @@ void PyNN_::Spikey_run(NetworkBase &source, Real duration, py::module &pynn)
 			               it->second);
 		}
 		else {
-			list_connect(pypopulations, conn, pynn);
+			list_connect7(pypopulations, conn, pynn);
 		}
 	}
 	auto buildconn = std::chrono::system_clock::now();
