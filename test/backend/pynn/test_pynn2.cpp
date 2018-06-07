@@ -173,12 +173,12 @@ TEST(pynn2, get_neo_version)
 
 		neo.attr("__version__") = backup;
 	}
-	else if (all_avail_imports.size() != 0 && (version < 8)){
-        EXPECT_NO_THROW(PyNN_::get_neo_version());
-        EXPECT_EQ(0, PyNN_::get_neo_version());
-    }
-    else{
-        EXPECT_ANY_THROW(PyNN_::get_neo_version());
+	else if (all_avail_imports.size() != 0 && (version < 8)) {
+		EXPECT_NO_THROW(PyNN_::get_neo_version());
+		EXPECT_EQ(0, PyNN_::get_neo_version());
+	}
+	else {
+		EXPECT_ANY_THROW(PyNN_::get_neo_version());
 	}
 }
 
@@ -989,24 +989,49 @@ TEST(pynn2, group_connect7)
 TEST(pynn2, list_connect)
 {
 	Network netw;
-	std::vector<PopulationBase> pops{
-	    netw.create_population<IfCondExp>(16, IfCondExpParameters()),
-	    netw.create_population<IfCondExp>(16, IfCondExpParameters())};
 
 	for (auto import : all_avail_imports) {
+		std::vector<PopulationBase> pops;
+		if (import == "pyNN.hardware.spikey") {
+			pops = std::vector<PopulationBase>{
+			    netw.create_population<IfFacetsHardware1>(
+			        16, IfFacetsHardware1Parameters()),
+			    netw.create_population<IfFacetsHardware1>(
+			        16, IfFacetsHardware1Parameters())};
+		}
+		else {
+			pops = std::vector<PopulationBase>{
+			    netw.create_population<IfCondExp>(16, IfCondExpParameters()),
+			    netw.create_population<IfCondExp>(16, IfCondExpParameters())};
+		}
 		py::module pynn = py::module::import(import.c_str());
 		pynn.attr("setup")();
 		bool temp;
-		std::vector<py::object> pypops{
-		    PyNN_::create_homogeneous_pop(pops[0], pynn, temp),
-		    PyNN_::create_homogeneous_pop(pops[1], pynn, temp)};
+
+		std::vector<py::object> pypops;
+		if (import == "pyNN.hardware.spikey") {
+			pypops = std::vector<py::object>{
+			    PyNN_::spikey_create_homogeneous_pop(pops[0], pynn),
+			    PyNN_::spikey_create_homogeneous_pop(pops[1], pynn)};
+		}
+		else {
+			pypops = std::vector<py::object>{
+			    PyNN_::create_homogeneous_pop(pops[0], pynn, temp),
+			    PyNN_::create_homogeneous_pop(pops[1], pynn, temp)};
+		}
 
 		// excitatory
 		ConnectionDescriptor conn(0, 0, 15, 1, 0, 15,
 		                          Connector::all_to_all(0.015, 1));
 		GroupConnction group_conn;
 		conn.connector().group_connect(conn, group_conn);
-		auto connection = PyNN_::list_connect(pypops, conn, pynn, 0.1);
+		std::tuple<py::object, py::object> connection;
+		if (import == "pyNN.hardware.spikey") {
+			connection = PyNN_::list_connect7(pypops, conn, pynn);
+		}
+		else {
+			connection = PyNN_::list_connect(pypops, conn, pynn, 0.1);
+		}
 		py::object exc = std::get<0>(connection);
 		py::object inh = std::get<1>(connection);
 		if (import == "pyNN.spiNNaker") {
@@ -1016,6 +1041,7 @@ TEST(pynn2, list_connect)
 		if (!(version < 9 && import == "pyNN.nest")) {
 			check_all_to_all_list_projection(exc, group_conn);
 		}
+
 		EXPECT_TRUE(py::object().is(inh));
 		EXPECT_FALSE(py::object().is(exc));
 
@@ -1027,7 +1053,12 @@ TEST(pynn2, list_connect)
 			pynn.attr("reset")();
 		}
 
-		connection = PyNN_::list_connect(pypops, conn, pynn, 0.1);
+		if (import == "pyNN.hardware.spikey") {
+			connection = PyNN_::list_connect7(pypops, conn, pynn);
+		}
+		else {
+			connection = PyNN_::list_connect(pypops, conn, pynn, 0.1);
+		}
 		exc = std::get<0>(connection);
 		inh = std::get<1>(connection);
 
@@ -1050,7 +1081,12 @@ TEST(pynn2, list_connect)
 		if (import == "pyNN.spiNNaker") {
 			pynn.attr("reset")();
 		}
-		connection = PyNN_::list_connect(pypops, conn, pynn, 0.1);
+		if (import == "pyNN.hardware.spikey") {
+			connection = PyNN_::list_connect7(pypops, conn, pynn);
+		}
+		else {
+			connection = PyNN_::list_connect(pypops, conn, pynn, 0.1);
+		}
 		exc = std::get<0>(connection);
 		inh = std::get<1>(connection);
 		EXPECT_FALSE(py::object().is(exc));
@@ -1762,6 +1798,67 @@ TEST(pynn2, fetch_data_neo)
 	}
 }
 
+TEST(pynn2, fetch_data_spikey)
+{
+
+	for (auto import : all_avail_imports) {
+		std::vector<PopulationBase> pops;
+		if (import == "pyNN.hardware.spikey") {
+			Network netw;
+			std::vector<PopulationBase> pops{
+			    netw.create_population<SpikeSourceArray>(
+			        10, SpikeSourceArrayParameters().spike_times({20, 50})),
+			    netw.create_population<IfFacetsHardware1>(
+			        2,
+			        IfFacetsHardware1Parameters()
+			            .tau_m(1.0)
+			            .v_thresh(-55.0)
+			            .v_rest(-60.0)
+			            .v_reset(-70.0),
+			        IfFacetsHardware1Signals().record_v().record_spikes())};
+
+			py::module pynn = py::module::import("pyNN.hardware.spikey");
+			pynn.attr("setup")();
+			std::vector<py::object> pypops{
+			    PyNN_::spikey_create_source_population(pops[0], pynn),
+			    PyNN_::spikey_create_homogeneous_pop(pops[1], pynn)};
+			PyNN_::spikey_set_homogeneous_rec(pops[1], pypops[1], pynn);
+
+			GroupConnction conn = GroupConnction::create_group_connection(
+			    0, 1, 0, 10, 0, 1, 0.5, 1.0, 0, "AllToAllConnector");
+			PyNN_::group_connect7(pops, pypops, conn, pynn,
+			                      "AllToAllConnector");
+
+			pynn.attr("run")(100);
+
+			PyNN_::spikey_get_spikes(pops[1], pypops[1]);
+			PyNN_::spikey_get_voltage(pops[1][0], pynn);
+
+			// Test fetching spikes
+			EXPECT_NEAR(pops[1][0].signals().data(0)[0], 20, 5);
+
+			EXPECT_NEAR(pops[1][0].signals().data(
+			                0)[pops[1][0].signals().data(0).size() - 1],
+			            50, 25);
+
+			// Test fetching spikes
+			EXPECT_NEAR(pops[1][1].signals().data(0)[0], 20, 5);
+
+			EXPECT_NEAR(pops[1][1].signals().data(
+			                0)[pops[1][1].signals().data(0).size() - 1],
+			            50, 20);
+
+			// Test fetching voltage
+			EXPECT_NEAR(pops[1][0].signals().data(1)(0, 0), 0.1, 0.2);
+			EXPECT_NEAR(pops[1][0].signals().data(1)(0, 1), -60, 5);
+
+			size_t size = pops[1][0].signals().data(1).rows() - 1;
+			EXPECT_NEAR(pops[1][0].signals().data(1)(size, 0), 100, 0.2);
+			EXPECT_NEAR(pops[1][0].signals().data(1)(size, 1), -60, 5);
+		}
+	}
+}
+
 TEST(pynn2, pynn2)
 {
 	for (auto sim : simulators) {
@@ -1945,6 +2042,43 @@ TEST(pynn2, pynn2)
 			EXPECT_NEAR(pops[1][1].signals().data(3)(210, 1), 0.0, 0.01);
 			EXPECT_NEAR(pops[1][2].signals().data(3)(210, 0), 21, 0.2);
 			EXPECT_NEAR(pops[1][2].signals().data(3)(210, 1), 0.0, 0.01);
+		}
+		else if (sim == "spikey") {
+			Network netw2;
+			std::vector<PopulationBase> pops{
+			    netw2.create_population<SpikeSourceArray>(
+			        10, SpikeSourceArrayParameters().spike_times({20, 50})),
+			    netw2.create_population<IfCondExp>(
+			        3, IfCondExpParameters().tau_m(1.0),
+			        IfCondExpSignals().record_v().record_spikes())};
+			netw2.add_connection(pops[0], pops[1],
+			                     Connector::all_to_all(0.5, 1.0));
+
+			netw2.run(sim, 100);
+			// Test fetching spikes
+			EXPECT_NEAR(pops[1][0].signals().data(0)[0], 20, 5);
+			EXPECT_NEAR(pops[1][1].signals().data(0)[0], 20, 5);
+			EXPECT_NEAR(pops[1][2].signals().data(0)[0], 20, 5);
+
+			EXPECT_NEAR(pops[1][0].signals().data(
+			                0)[pops[1][0].signals().data(0).size() - 1],
+			            50, 25);
+			EXPECT_NEAR(pops[1][1].signals().data(
+			                0)[pops[1][1].signals().data(0).size() - 1],
+			            50, 25);
+			EXPECT_NEAR(pops[1][2].signals().data(
+			                0)[pops[1][2].signals().data(0).size() - 1],
+			            50, 25);
+
+			// Test fetching voltage
+			EXPECT_NEAR(pops[1][0].signals().data(1)(0, 0), 0.1, 0.2);
+			EXPECT_NEAR(pops[1][0].signals().data(1)(0, 1),
+			            IfCondExpParameters().v_rest(), 5);
+
+			size_t size = pops[1][0].signals().data(1).rows() - 1;
+			EXPECT_NEAR(pops[1][0].signals().data(1)(size, 0), 100, 0.2);
+			EXPECT_NEAR(pops[1][0].signals().data(1)(size, 1),
+			            IfCondExpParameters().v_rest(), 5);
 		}
 		else {
 			// TODO
