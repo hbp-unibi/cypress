@@ -692,17 +692,17 @@ py::object PyNN_::get_connector7(const std::string &connector_name,
 	if (connector_name == "AllToAllConnector") {
 		return pynn.attr(connector_name.c_str())(
 		    "weights"_a = group_conn.synapse.weight,
-		    "delays"_a = group_conn.synapse.delay,
+		    "delays"_a = abs(group_conn.synapse.delay),
 		    "allow_self_connections"_a = py::cast(false));
 	}
 	else if (connector_name == "OneToOneConnector") {
 		return pynn.attr(connector_name.c_str())(
-		    "weights"_a = group_conn.synapse.weight,
+		    "weights"_a = abs(group_conn.synapse.weight),
 		    "delays"_a = group_conn.synapse.delay);
 	}
 	else if (connector_name == "FixedProbabilityConnector") {
 		return pynn.attr(connector_name.c_str())(
-		    "weights"_a = group_conn.synapse.weight,
+		    "weights"_a = abs(group_conn.synapse.weight),
 		    "delays"_a = group_conn.synapse.delay,
 		    "p_connect"_a = group_conn.additional_parameter,
 		    "allow_self_connections"_a = py::cast(false));
@@ -710,7 +710,7 @@ py::object PyNN_::get_connector7(const std::string &connector_name,
 	else if (connector_name == "FixedNumberPreConnector") {
 		py::module np = py::module::import("numpy");
 		return pynn.attr(connector_name.c_str())(
-		    "weights"_a = group_conn.synapse.weight,
+		    "weights"_a = abs(group_conn.synapse.weight),
 		    "delays"_a = group_conn.synapse.delay,
 		    "n"_a = np.attr("int")(group_conn.additional_parameter),
 		    "allow_self_connections"_a = py::cast(false));
@@ -718,7 +718,7 @@ py::object PyNN_::get_connector7(const std::string &connector_name,
 	else if (connector_name == "FixedNumberPostConnector") {
 		py::module np = py::module::import("numpy");
 		return pynn.attr(connector_name.c_str())(
-		    "weights"_a = group_conn.synapse.weight,
+		    "weights"_a = abs(group_conn.synapse.weight),
 		    "delays"_a = group_conn.synapse.delay,
 		    "n"_a = np.attr("int")(group_conn.additional_parameter),
 		    "allow_self_connections"_a = py::cast(false));
