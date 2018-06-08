@@ -1634,10 +1634,10 @@ namespace {
 bool inline check_full_pop(GroupConnction group_conn,
                            const std::vector<PopulationBase> &populations)
 {
-	return group_conn.src0 == 0 ||
+	return group_conn.src0 == 0 &&
 	       group_conn.src1 ==
-	           NeuronIndex(populations[group_conn.psrc].size()) ||
-	       group_conn.tar0 == 0 ||
+	           NeuronIndex(populations[group_conn.psrc].size()) &&
+	       group_conn.tar0 == 0 &&
 	       group_conn.tar1 == NeuronIndex(populations[group_conn.ptar].size());
 }
 }  // namespace
