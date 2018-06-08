@@ -876,6 +876,7 @@ std::tuple<py::object, py::object> PyNN_::list_connect(
 		py::array_t<Real> temp(shape, {4 * sizeof(Real), sizeof(Real)},
 		                       conns_exc.data());
 		py::object connector = pynn.attr("FromListConnector")(temp);
+
 		std::get<0>(ret) = pynn.attr("Projection")(
 		    pypopulations[conn.pid_src()], pypopulations[conn.pid_tar()],
 		    connector,
@@ -1582,6 +1583,12 @@ void PyNN_::spikey_set_inhomogeneous_rec(const PopulationBase &pop,
 	std::vector<std::string> signals = pop.type().signal_names;
 	py::list pypop_list = py::list(pypop);
 	for (size_t j = 0; j < signals.size(); j++) {
+		if (signals[j] == "spikes") {
+			pypop.attr("record")();
+			global_logger().info(
+			    "cypress", "Can only record spikes for a full population");
+			continue;
+		}
 		py::list list;
 		for (size_t k = 0; k < pop.size(); k++) {
 			if (pop[k].signals().is_recording(j)) {
@@ -1591,10 +1598,8 @@ void PyNN_::spikey_set_inhomogeneous_rec(const PopulationBase &pop,
 		if (list.size() == 0) {
 			continue;
 		}
-		if (signals[j] == "spikes") {
-			pynn.attr("record")(list, "");
-		}
-		else if (signals[j] == "v") {
+
+		if (signals[j] == "v") {
 			pynn.attr("record_v")(list, "");
 			if (list.size() > 1) {
 				global_logger().info("cypress",
