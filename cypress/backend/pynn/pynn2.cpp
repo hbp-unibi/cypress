@@ -1644,27 +1644,58 @@ bool inline check_full_pop(GroupConnction group_conn,
 
 void PyNN_::spikey_get_spikes(PopulationBase pop, py::object &pypop)
 {
-	Matrix<double> spikes =
-	    PyNN_::matrix_from_numpy<double>(pypop.attr("getSpikes")(), true);
+	int64_t first_id = py::cast<int64_t>(py::list(pypop)[0]);
+	py::object spikes_py = pypop.attr("getSpikes")();
+	Matrix<double> spikes = PyNN_::matrix_from_numpy<double>(spikes_py, true);
 
-	auto idx = pop[0].type().signal_index("spikes");
-	for (size_t neuron_id = 0; neuron_id < pop.size(); neuron_id++) {
-		size_t counter = 0;
-		for (size_t i = 0; i < spikes.cols(); i++) {
-			if (spikes(0, i) == neuron_id) {
-				counter++;
+	// Spike source get negative ids
+	bool negative = false;
+	if (first_id < 0) {
+		first_id = -first_id;
+		negative = true;
+	}
+
+	if (!negative) {
+		auto idx = pop[0].type().signal_index("spikes");
+		for (size_t neuron_id = 0; neuron_id < pop.size(); neuron_id++) {
+			size_t counter = 0;
+			for (size_t i = 0; i < spikes.cols(); i++) {
+				if (spikes(0, i) == neuron_id + first_id) {
+					counter++;
+				}
 			}
-		}
-		
-		auto data = std::make_shared<Matrix<Real>>(counter, 1);
-		counter = 0;
-		for (size_t i = 0; i < spikes.cols(); i++) {
-			if (spikes(0, i) == neuron_id) {
-				(*data)(counter, 0) = Real(spikes(1, i));
-                counter ++;
+
+			auto data = std::make_shared<Matrix<Real>>(counter, 1);
+			counter = 0;
+			for (size_t i = 0; i < spikes.cols(); i++) {
+				if (spikes(0, i) == neuron_id + first_id) {
+					(*data)(counter, 0) = Real(spikes(1, i));
+					counter++;
+				}
 			}
+			pop[neuron_id].signals().data(idx.value(), std::move(data));
 		}
-		pop[neuron_id].signals().data(idx.value(), std::move(data));
+	}
+	else {
+		auto idx = pop[0].type().signal_index("spikes");
+		for (size_t neuron_id = 0; neuron_id < pop.size(); neuron_id++) {
+			size_t counter = 0;
+			for (size_t i = 0; i < spikes.cols(); i++) {
+				if (-spikes(0, i) == neuron_id + first_id) {
+					counter++;
+				}
+			}
+
+			auto data = std::make_shared<Matrix<Real>>(counter, 1);
+			counter = 0;
+			for (size_t i = 0; i < spikes.cols(); i++) {
+				if (-spikes(0, i) == neuron_id + first_id) {
+					(*data)(counter, 0) = Real(spikes(1, i));
+					counter++;
+				}
+			}
+			pop[neuron_id].signals().data(idx.value(), std::move(data));
+		}
 	}
 }
 
