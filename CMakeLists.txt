@@ -24,6 +24,7 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR}/cmake)
 # Automatically download and compile Google-Test and the JSON library
 include(gtest_external)
 include(json_external)
+include(matplotlib_external)
 
 SET(PYBIND11_PYTHON_VERSION "2.7")
 add_subdirectory(external/pybind11)
@@ -138,6 +139,7 @@ add_library(cypress
 	cypress/util/filesystem
 	cypress/util/json
 	cypress/util/logger
+	cypress/util/matplotlib_cpp
 	cypress/util/matrix
 	cypress/util/optional
 	cypress/util/process

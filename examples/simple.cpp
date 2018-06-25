@@ -28,8 +28,8 @@
  * @author Andreas Stöckel
  */
 
-#include <iostream>
 #include <fstream>
+#include <iostream>
 
 #include <cypress/cypress.hpp>
 
@@ -48,10 +48,11 @@ int main(int argc, const char *argv[])
 	    Network()
 	        // Add a named population of poisson spike sources
 	        .add_population<SpikeSourceConstFreq>(
-	            "source", 8, SpikeSourceConstFreqParameters()
-	                             .start(100.0)
-	                             .rate(1000.0)
-	                             .duration(1000.0),
+	            "source", 8,
+	            SpikeSourceConstFreqParameters()
+	                .start(100.0)
+	                .rate(1000.0)
+	                .duration(1000.0),
 	            SpikeSourceConstFreqSignals().record_spikes())
 	        // Add a population of IfFacetsHardware1 neurons -- those neurons
 	        // are supported by all simulator backends
@@ -71,13 +72,30 @@ int main(int argc, const char *argv[])
 	    }*/
 
 	std::cout << "---------" << std::endl;
+	std::cout << net.runtime().initialize << ", " << net.runtime().sim << ", "
+	          << net.runtime().finalize << ", " << net.runtime().total << ", "
+	          << std::endl;
 
 	// Print the spike times for each target neuron
+	std::vector<std::vector<Real>> spikes;
 	for (auto neuron : net.population<IfFacetsHardware1>("target")) {
 		std::cout << "Spike frequency for target neuron " << neuron.nid()
 		          << ", " << neuron.signals().get_spikes().size() / 0.9
 		          << std::endl;
+		spikes.push_back(neuron.signals().get_spikes());
 	}
+	
+	// Plot spike times
+	std::map<std::string, std::string> keywords;
+	keywords["linewidths"] = "0.1";
+	keywords["colors"] = "red";
+	pyplot::eventplot(spikes, keywords);
+	pyplot::title("Simple example on " + std::string(argv[1]));
+	pyplot::xlabel("Time in ms");
+	pyplot::ylabel("Neuron ID");
+	pyplot::xlim(0, 1000);
+	pyplot::ylim(size_t(0), net.population<IfFacetsHardware1>("target").size());
+	pyplot::show();
 
 	return 0;
 }
