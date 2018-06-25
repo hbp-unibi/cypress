@@ -28,7 +28,6 @@
 #include <fstream>
 
 #include <cypress/cypress.hpp>
-#include <cypress/matplotlibcpp.hpp>
 
 using namespace cypress;
 namespace plt = matplotlibcpp;
