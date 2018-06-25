@@ -38,7 +38,6 @@ int main(int argc, const char *argv[])
     
     using namespace std::chrono;
     system_clock::time_point t1, t2;
-    auto python = PythonInstance();
     
     
 	auto net =

@@ -52,8 +52,19 @@ namespace py = pybind11;
  *
  */
 class PythonInstance {
-public:
+private:
 	PythonInstance();
+
+public:
+	PythonInstance(PythonInstance const &) = delete;
+	void operator=(PythonInstance const &) = delete;
+	static PythonInstance &instance()
+	{
+		static PythonInstance instance;
+		return instance;
+	}
+
+private:
 	~PythonInstance();
 };
 
@@ -71,7 +82,6 @@ protected:
 
 private:
 	void do_run(NetworkBase &network, Real duration) const override;
-	PythonInstance m_python;
 
 public:
 	/**

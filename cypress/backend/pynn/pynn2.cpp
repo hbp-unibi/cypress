@@ -52,25 +52,15 @@ namespace cypress {
 
 namespace py = pybind11;
 using namespace py::literals;
-namespace {
-std::shared_ptr<pybind11::scoped_interpreter> python_instance;
-size_t _python_counter = 0;
-}  // namespace
 
-PythonInstance::PythonInstance()
-{
-	if (_python_counter == 0) {
-		python_instance = std::make_shared<py::scoped_interpreter>(
-		    pybind11::scoped_interpreter{});
-	}
-	_python_counter++;
-}
+PythonInstance::PythonInstance() { py::initialize_interpreter(); }
 PythonInstance::~PythonInstance()
 {
-	_python_counter--;
-	if (_python_counter == 0) {
-		python_instance = std::shared_ptr<pybind11::scoped_interpreter>();
-	}
+	// Here we should call
+	// py::finalize_interpreter();
+	/*
+	 * Py_Finalize() will lead to a SegFault here
+	 */
 }
 
 namespace {
@@ -337,6 +327,7 @@ static PyNNUtil PYNN_UTIL;
 PyNN_::PyNN_(const std::string &simulator, const Json &setup)
     : m_simulator(simulator), m_setup(setup)
 {
+	PythonInstance::instance();
 	// Lookup the canonical simulator name and the
 	auto res = PYNN_UTIL.lookup_simulator(simulator);
 	m_normalised_simulator = res.first;
@@ -650,7 +641,7 @@ void PyNN_::set_inhomogenous_rec(const PopulationBase &pop, py::object &pypop,
 {
 	std::vector<std::string> signals = pop.type().signal_names;
 	for (size_t j = 0; j < signals.size(); j++) {
-		std::vector<size_t> neuron_ids;
+		std::vector<size_t> neuron_ids;  // u_int_64?
 		for (size_t k = 0; k < pop.size(); k++) {
 			if (pop[k].signals().is_recording(j)) {
 				neuron_ids.push_back(k);
@@ -890,6 +881,7 @@ std::tuple<py::object, py::object> PyNN_::list_connect(
 		py::array_t<Real> temp(shape, {4 * sizeof(Real), sizeof(Real)},
 		                       conns_inh.data());
 		py::object connector = pynn.attr("FromListConnector")(temp);
+
 		std::get<1>(ret) = pynn.attr("Projection")(
 		    pypopulations[conn.pid_src()], pypopulations[conn.pid_tar()],
 		    connector,
@@ -1776,6 +1768,7 @@ void PyNN_::Spikey_run(NetworkBase &source, Real duration, py::module &pynn)
 	for (auto conn : source.connections()) {
 		auto it = SUPPORTED_CONNECTIONS.find(conn.connector().name());
 		GroupConnction group_conn;
+
 		if (it != SUPPORTED_CONNECTIONS.end() &&
 		    conn.connector().group_connect(conn, group_conn) &&
 		    check_full_pop(group_conn, populations)) {

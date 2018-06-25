@@ -2095,7 +2095,6 @@ int main(int argc, char **argv)
 	// Start the python interpreter
 	int temp = 0;
 	{
-		auto python = cypress::PythonInstance();
 		::testing::InitGoogleTest(&argc, argv);
 		temp = RUN_ALL_TESTS();
 	}
