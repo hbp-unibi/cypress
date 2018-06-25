@@ -20,3 +20,14 @@ file(DOWNLOAD
 	https://raw.githubusercontent.com/cjenzen/matplotlib-cpp/master/matplotlibcpp.h
 	${CMAKE_BINARY_DIR}/include/cypress/matplotlibcpp.hpp
 )
+
+find_package(PythonLibs 2.7 REQUIRED)
+find_package(PythonInterp 2.7 REQUIRED)
+
+execute_process(
+    COMMAND "${PYTHON_EXECUTABLE}" -c
+            "from __future__ import print_function\nimport numpy; print(numpy.get_include(), end='')"
+            OUTPUT_VARIABLE numpy_path)
+            
+find_path(PYTHON_NUMPY_INCLUDE_DIR numpy/arrayobject.h 
+    HINTS "${numpy_path}" "${PYTHON_INCLUDE_PATH}" NO_DEFAULT_PATH)

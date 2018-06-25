@@ -74,6 +74,7 @@ include_directories(
 	${CMAKE_BINARY_DIR}/include
 	PRIVATE
 		${CMAKE_BINARY_DIR}
+    ${PYTHON_NUMPY_INCLUDE_DIR}
 )
 
 
