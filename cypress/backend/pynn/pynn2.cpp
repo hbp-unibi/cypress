@@ -824,11 +824,17 @@ std::tuple<py::object, py::object> PyNN_::list_connect(
 			num_inh++;
 		}
 	}
-	Matrix<Real> *conns_exc = new Matrix<Real>(conns_full.size() - num_inh, 4);
-	Matrix<Real> *conns_inh = new Matrix<Real>(num_inh, 4);
+	Matrix<Real> *conns_exc, *conns_inh;
+	if (conns_full.size() - num_inh > 0) {
+		conns_exc = new Matrix<Real>(conns_full.size() - num_inh, 4);
+	}
+	if (num_inh > 0) {
+		conns_inh = new Matrix<Real>(num_inh, 4);
+	}
+
 	size_t counter_ex = 0, counter_in = 0;
 	for (auto i : conns_full) {
-		if (i.n.synapse.weight > 0) {
+		if (i.n.synapse.weight >= 0) {
 			(*conns_exc)(counter_ex, 0) = i.n.src;
 			(*conns_exc)(counter_ex, 1) = i.n.tar;
 			(*conns_exc)(counter_ex, 2) = i.n.synapse.weight;
