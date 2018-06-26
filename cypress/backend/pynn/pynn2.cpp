@@ -833,22 +833,22 @@ std::tuple<py::object, py::object> PyNN_::list_connect(
 		}
 	}
 
-	Matrix<Real> conns_exc(conns_full.size() - num_inh, 4),
-	    conns_inh(num_inh, 4);
+	Matrix<Real> *conns_exc = new Matrix<Real>(conns_full.size() - num_inh, 4),
+	             conns_inh(num_inh, 4);
 	size_t counter_ex = 0, counter_in = 0;
 	for (auto i : conns_full) {
 		if (i.n.synapse.weight > 0) {
-			conns_exc(counter_ex, 0) = i.n.src;
-			conns_exc(counter_ex, 1) = i.n.tar;
-			conns_exc(counter_ex, 2) = i.n.synapse.weight;
+			(*conns_exc)(counter_ex, 0) = i.n.src;
+			(*conns_exc)(counter_ex, 1) = i.n.tar;
+			(*conns_exc)(counter_ex, 2) = i.n.synapse.weight;
 			if (timestep != 0) {
 				Real delay =
 				    std::max(round(i.n.synapse.delay / timestep), 1.0) *
 				    timestep;
-				conns_exc(counter_ex, 3) = delay;
+				(*conns_exc)(counter_ex, 3) = delay;
 			}
 			else {
-				conns_exc(counter_ex, 3) = i.n.synapse.delay;
+				(*conns_exc)(counter_ex, 3) = i.n.synapse.delay;
 			}
 			counter_ex++;
 		}
@@ -871,11 +871,12 @@ std::tuple<py::object, py::object> PyNN_::list_connect(
 	}
 
 	if (conns_full.size() - num_inh > 0) {
-		py::detail::any_container<ssize_t> shape(
-		    {static_cast<long>(conns_exc.rows()), 4});
-		py::array_t<Real> temp(shape, {4 * sizeof(Real), sizeof(Real)},
-		                       conns_exc.data());
-		py::object connector = pynn.attr("FromListConnector")(temp);
+		auto capsule = py::capsule(conns_exc, [](void *v) {
+			delete reinterpret_cast<Matrix<Real> *>(v);
+		});
+		py::array temp_array({(*conns_exc).rows(), (*conns_exc).cols()},
+		                     (*conns_exc).data(), capsule);
+		py::object connector = pynn.attr("FromListConnector")(temp_array);
 		std::get<0>(ret) = pynn.attr("Projection")(
 		    pypopulations[conn.pid_src()], pypopulations[conn.pid_tar()],
 		    connector,
