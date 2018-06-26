@@ -16,6 +16,9 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+// Include first to avoid "_POSIX_C_SOURCE redefined" warning
+#include <cypress/backend/pynn/pynn2.hpp>
+
 #include <algorithm>
 #include <memory>
 #include <sstream>
@@ -30,7 +33,6 @@
 #include <cypress/backend/nest/nest.hpp>
 #include <cypress/backend/nmpi/nmpi.hpp>
 #include <cypress/backend/pynn/pynn.hpp>
-#include <cypress/backend/pynn/pynn2.hpp>
 #include <cypress/backend/pynn/slurm.hpp>
 
 #include <cypress/transformations/registry.hpp>

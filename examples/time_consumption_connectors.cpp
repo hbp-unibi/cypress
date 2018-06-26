@@ -16,11 +16,12 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+// Include first to avoid "_POSIX_C_SOURCE redefined" warning
+#include <cypress/cypress.hpp>
+
 #include <chrono>
 #include <fstream>
 #include <iostream>
-
-#include <cypress/cypress.hpp>
 
 using namespace cypress;
 

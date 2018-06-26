@@ -16,6 +16,9 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+// Include first to avoid "_POSIX_C_SOURCE redefined" warning
+#include <pybind11/pybind11.h>
+
 #include <algorithm>
 #include <cerrno>
 #include <fstream>
@@ -34,7 +37,6 @@
 
 #include <pybind11/embed.h>
 #include <pybind11/numpy.h>
-#include <pybind11/pybind11.h>
 #include <pybind11/pytypes.h>
 #include <pybind11/stl.h>  //Type conversions
 
@@ -824,7 +826,7 @@ std::tuple<py::object, py::object> PyNN_::list_connect(
 			num_inh++;
 		}
 	}
-	Matrix<Real> *conns_exc, *conns_inh;
+	Matrix<Real> *conns_exc = nullptr, *conns_inh = nullptr;
 	if (conns_full.size() - num_inh > 0) {
 		conns_exc = new Matrix<Real>(conns_full.size() - num_inh, 4);
 	}

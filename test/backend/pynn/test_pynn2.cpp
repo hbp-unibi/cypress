@@ -16,15 +16,13 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+#include <cypress/cypress.hpp>
+
+#include <cypress/backend/pynn/pynn2.cpp>
 
 #include "gtest/gtest.h"
 
 #include <sstream>
-
-#include <cypress/cypress.hpp>
-
-#include <cypress/backend/pynn/pynn2.cpp>
-#include <cypress/backend/pynn/pynn2.hpp>
 
 namespace cypress {
 

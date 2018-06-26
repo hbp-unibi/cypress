@@ -16,12 +16,13 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <iostream>
+// Include first to avoid "_POSIX_C_SOURCE redefined" warning
+#include <cypress/backend/pynn/pynn2.hpp>
 
 #include <unistd.h>
+#include <iostream>
 
 #include <cypress/backend/nmpi/nmpi.hpp>
-#include <cypress/backend/pynn/pynn2.hpp>
 #include <cypress/backend/resources.hpp>
 #include <cypress/util/filesystem.hpp>
 #include <cypress/util/process.hpp>
@@ -146,8 +147,7 @@ NMPI::NMPI(const std::string &pynn_backend, int &argc, const char *argv[],
 
 NMPI::~NMPI() = default;
 
-std::unordered_set<const NeuronType *> NMPI::supported_neuron_types()
-    const
+std::unordered_set<const NeuronType *> NMPI::supported_neuron_types() const
 {
 	return m_pynn->supported_neuron_types();
 }
@@ -163,4 +163,4 @@ void NMPI::do_run(NetworkBase &network, Real duration) const
 {
 	m_pynn->run(network, duration);
 }
-}
+}  // namespace cypress

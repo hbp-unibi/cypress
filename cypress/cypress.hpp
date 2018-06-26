@@ -29,11 +29,13 @@
 #ifndef CYPRESS_HPP
 #define CYPRESS_HPP
 
+// Include first to avoid "_POSIX_C_SOURCE redefined" warning
+#include <cypress/backend/pynn/pynn2.hpp>
+
 #include <cypress/backend/binnf/binnf.hpp>
 #include <cypress/backend/nest/nest.hpp>
 #include <cypress/backend/nmpi/nmpi.hpp>
 #include <cypress/backend/pynn/pynn.hpp>
-#include <cypress/backend/pynn/pynn2.hpp>
 #include <cypress/backend/resources.hpp>
 #include <cypress/core/backend.hpp>
 #include <cypress/core/connector.hpp>

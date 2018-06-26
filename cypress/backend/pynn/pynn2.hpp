@@ -21,13 +21,15 @@
 #ifndef CYPRESS_BACKEND_PYNN2_HPP
 #define CYPRESS_BACKEND_PYNN2_HPP
 
+// Include first to avoid "_POSIX_C_SOURCE redefined" warning
+#include <pybind11/pybind11.h>
+
+#include <pybind11/embed.h>
+
 #include <memory>
 #include <stdexcept>
 #include <string>
 #include <vector>
-
-#include <pybind11/embed.h>
-#include <pybind11/pybind11.h>
 
 #include <cypress/core/backend.hpp>
 #include <cypress/core/network_base_objects.hpp>

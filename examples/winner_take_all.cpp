@@ -27,10 +27,12 @@
  * @author Andreas Stöckel
  */
 
+// Include first to avoid "_POSIX_C_SOURCE redefined" warning
+#include <cypress/cypress.hpp>
+
 #include <iostream>
 #include <fstream>
 
-#include <cypress/cypress.hpp>
 #include <cypress/nef/delta_sigma.hpp>
 
 using namespace cypress;

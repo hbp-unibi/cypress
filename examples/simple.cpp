@@ -28,10 +28,11 @@
  * @author Andreas Stöckel
  */
 
+// Include first to avoid "_POSIX_C_SOURCE redefined" warning
+#include <cypress/cypress.hpp>
+
 #include <fstream>
 #include <iostream>
-
-#include <cypress/cypress.hpp>
 
 using namespace cypress;
 
