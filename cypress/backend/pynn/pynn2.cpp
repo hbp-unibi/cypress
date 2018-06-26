@@ -649,8 +649,8 @@ void PyNN_::set_inhomogenous_rec(const PopulationBase &pop, py::object &pypop,
 {
 	std::vector<std::string> signals = pop.type().signal_names;
 	for (size_t j = 0; j < signals.size(); j++) {
-		std::vector<size_t> neuron_ids;
-		for (size_t k = 0; k < pop.size(); k++) {
+		std::vector<uint64_t> neuron_ids;
+		for (uint64_t k = 0; k < pop.size(); k++) {
 			if (pop[k].signals().is_recording(j)) {
 				neuron_ids.push_back(k);
 			}
@@ -659,8 +659,9 @@ void PyNN_::set_inhomogenous_rec(const PopulationBase &pop, py::object &pypop,
 			continue;
 		}
 		py::object popview = pynn.attr("PopulationView")(
-		    pypop, py::array_t<size_t>({neuron_ids.size()}, {sizeof(size_t)},
-		                               neuron_ids.data()));
+		    pypop,
+		    py::array_t<uint64_t>({neuron_ids.size()}, {sizeof(uint64_t)},
+		                          neuron_ids.data()));
 		popview.attr("record")(signals[j].c_str());
 	}
 }
