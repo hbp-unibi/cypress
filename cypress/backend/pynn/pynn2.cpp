@@ -824,8 +824,8 @@ std::tuple<py::object, py::object> PyNN_::list_connect(
 			num_inh++;
 		}
 	}
-	Matrix<Real> *conns_exc = new Matrix<Real>(conns_full.size() - num_inh, 4),
-	             conns_inh(num_inh, 4);
+	Matrix<Real> *conns_exc = new Matrix<Real>(conns_full.size() - num_inh, 4);
+	Matrix<Real> *conns_inh = new Matrix<Real>(num_inh, 4);
 	size_t counter_ex = 0, counter_in = 0;
 	for (auto i : conns_full) {
 		if (i.n.synapse.weight > 0) {
@@ -844,18 +844,18 @@ std::tuple<py::object, py::object> PyNN_::list_connect(
 			counter_ex++;
 		}
 		else {
-			conns_inh(counter_in, 0) = i.n.src;
-			conns_inh(counter_in, 1) = i.n.tar;
-			conns_inh(counter_in, 2) = -i.n.synapse.weight;
+			(*conns_inh)(counter_in, 0) = i.n.src;
+			(*conns_inh)(counter_in, 1) = i.n.tar;
+			(*conns_inh)(counter_in, 2) = -i.n.synapse.weight;
 			if (timestep != 0) {
 				;
 				Real delay =
 				    std::max(round(i.n.synapse.delay / timestep), 1.0) *
 				    timestep;
-				conns_inh(counter_in, 3) = delay;
+				(*conns_inh)(counter_in, 3) = delay;
 			}
 			else {
-				conns_inh(counter_in, 3) = i.n.synapse.delay;
+				(*conns_inh)(counter_in, 3) = i.n.synapse.delay;
 			}
 			counter_in++;
 		}
@@ -876,11 +876,13 @@ std::tuple<py::object, py::object> PyNN_::list_connect(
 		    "receptor_type"_a = "excitatory");
 	}
 	if (num_inh > 0) {
-		py::detail::any_container<ssize_t> shape(
-		    {static_cast<long>(conns_inh.rows()), 4});
-		py::array_t<Real> temp(shape, {4 * sizeof(Real), sizeof(Real)},
-		                       conns_inh.data());
-		py::object connector = pynn.attr("FromListConnector")(temp);
+		auto capsule = py::capsule(conns_inh, [](void *v) {
+			delete reinterpret_cast<Matrix<Real> *>(v);
+		});
+		py::array temp_array({(*conns_inh).rows(), (*conns_inh).cols()},
+		                     (*conns_inh).data(), capsule);
+
+		py::object connector = pynn.attr("FromListConnector")(temp_array);
 
 		std::get<1>(ret) = pynn.attr("Projection")(
 		    pypopulations[conn.pid_src()], pypopulations[conn.pid_tar()],
