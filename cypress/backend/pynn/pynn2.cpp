@@ -893,56 +893,44 @@ std::tuple<py::object, py::object> PyNN_::list_connect(
 	}
 	return ret;
 }
-namespace {
-bool init_numpy_dtype = false;
-}
+
 std::tuple<py::object, py::object> PyNN_::list_connect7(
     const std::vector<py::object> &pypopulations,
     const ConnectionDescriptor conn, const py::module &pynn)
 {
-	// TODO 2 copies (avoid array.tolist())
-	if (!init_numpy_dtype) {
-		PYBIND11_NUMPY_DTYPE(LocalConnection, src, tar, synapse.weight,
-		                     synapse.delay);
-		init_numpy_dtype = true;
-	}
+
+	std::vector<Connection> conns_full;
+	conn.connect(conns_full);
+	py::list conn_exc, conn_inh;
 	std::tuple<py::object, py::object> ret =
 	    std::make_tuple(py::object(), py::object());
-	std::vector<Connection> conns_full;
-	std::vector<LocalConnection> conn_exc, conn_inh;
-	conn.connect(conns_full);
-	size_t size = conns_full.size();
-	for (size_t i = 0; i < size; i++) {
+
+	for (size_t i = 0; i < conns_full.size(); i++) {
 		LocalConnection conn = conns_full[i].n;
+		py::list local_conn;
+		local_conn.append(conn.src);
+		local_conn.append(conn.tar);
 		if (conn.synapse.weight > 0) {
-			conn_exc.push_back(conn);
+			local_conn.append(conn.synapse.weight);
+			local_conn.append(conn.synapse.delay);
+			conn_exc.append(local_conn);
 		}
 		else {
-			conn_inh.push_back(conn.absolute_connection());
+			local_conn.append(-conn.synapse.weight);
+			local_conn.append(conn.synapse.delay);
+			conn_inh.append(local_conn);
 		}
 	}
 
 	if (conn_exc.size() > 0) {
-		py::detail::any_container<ssize_t> shape(
-		    {static_cast<long>(conn_exc.size())});
-		py::array_t<LocalConnection> temp(
-		    shape, {2 * sizeof(NeuronIndex) + 2 * sizeof(Real)},
-		    conn_exc.data());
-		py::object connector =
-		    pynn.attr("FromListConnector")(temp.attr("tolist")());
+		py::object connector = pynn.attr("FromListConnector")(conn_exc);
 
 		std::get<0>(ret) = pynn.attr("Projection")(
 		    pypopulations[conn.pid_src()], pypopulations[conn.pid_tar()],
 		    connector, "target"_a = "excitatory");
 	}
 	if (conn_inh.size() > 0) {
-		py::detail::any_container<ssize_t> shape(
-		    {static_cast<long>(conn_inh.size())});
-		py::array_t<LocalConnection> temp(
-		    shape, {2 * sizeof(NeuronIndex) + 2 * sizeof(Real)},
-		    conn_inh.data());
-		py::object connector =
-		    pynn.attr("FromListConnector")(temp.attr("tolist")());
+		py::object connector = pynn.attr("FromListConnector")(conn_inh);
 		std::get<1>(ret) = pynn.attr("Projection")(
 		    pypopulations[conn.pid_src()], pypopulations[conn.pid_tar()],
 		    connector, "target"_a = "inhibitory");
