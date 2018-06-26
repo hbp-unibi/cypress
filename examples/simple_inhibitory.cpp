@@ -86,11 +86,25 @@ int main(int argc, const char *argv[])
 	std::cout << "---------" << std::endl;
 
 	// Print the spike times for each target neuron
+    std::vector<std::vector<Real>> spikes;
 	for (auto neuron : net.population<IfFacetsHardware1>("target")) {
 		std::cout << "Spike frequency for target neuron " << neuron.nid()
 		          << ", " << neuron.signals().get_spikes().size() / 0.9
 		          << std::endl;
+        spikes.push_back(neuron.signals().get_spikes());
 	}
+	
+    std::map<std::string, std::string> keywords;
+    keywords["linewidths"] = "0.1";
+    keywords["colors"] = "red";
+	pyplot::eventplot(spikes, keywords);
+    pyplot::title("Simple example on " + std::string(argv[1]));
+    pyplot::xlabel("Time in ms");
+    pyplot::ylabel("Neuron ID");
+    pyplot::xlim(0,1000);
+    pyplot::ylim(size_t(0),net.population<IfFacetsHardware1>("target").size());
+    pyplot::show();
+	
 
 	return 0;
 }

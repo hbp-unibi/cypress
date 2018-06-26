@@ -30,6 +30,7 @@
 #include <cypress/cypress.hpp>
 
 using namespace cypress;
+namespace plt = matplotlibcpp;
 
 int main(int argc, const char *argv[])
 {
@@ -51,6 +52,31 @@ int main(int argc, const char *argv[])
 	std::cout << "Target population produced "
 	          << tar.signals().get_spikes().size() << " spikes" << std::endl;
 	std::cout << tar.signals().get_v();
+    
+    // Plot membrane voltage and spike times
+    
+    auto v_and_time = tar.signals().get_v();
+    std::vector<Real> time, voltage;
+    for(size_t i = 0; i<v_and_time.rows(); i++){
+        time.push_back(v_and_time(i,0));
+        voltage.push_back(v_and_time(i,1));
+    }
+    plt::subplot(3,1,1);
+    plt::plot(time, voltage);
+    plt::title("Membrane voltage for simulator " + std::string(argv[1]));
+    plt::xlabel("time in ms");
+    plt::ylabel("Voltage in mV");
+    plt::subplot(3,1,3);
+    plt::eventplot(std::vector<std::vector<Real>>({ tar.signals().get_spikes()}));
+    plt::title("Spike Times");
+    pyplot::xlabel("Time in ms");
+    pyplot::ylabel("Neuron ID");
+    pyplot::xlim(0,100);
+    pyplot::ylim(size_t(0),net.population<IfFacetsHardware1>("target").size());
+    plt::show();
+    // plt::save("filename");
+    
+    
 
 	return 0;
 }
