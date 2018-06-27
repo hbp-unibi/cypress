@@ -113,7 +113,7 @@ bool NetIO4::connected()
 			control();
 			return true;
 		}
-		catch (std::exception err) {
+		catch (std::exception &err) {
 			return false;
 		}
 	}
@@ -185,4 +185,4 @@ bool NetIO4::switch_off(const std::string &device)
 	}
 	return false;
 }
-}
+}  // namespace cypress

@@ -381,7 +381,7 @@ void Transformations::run(const Backend &backend, NetworkBase network,
 				networks.emplace(
 				    trafos.top()->transform(networks.top(), aux_cpy));
 			}
-			catch (TransformationException e) {
+			catch (TransformationException &e) {
 				networks.top().logger().warn(
 				    "cypress", "Error while executing the transformation " +
 				                   trafos.top()->id() + ": " + e.what());

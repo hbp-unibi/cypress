@@ -195,7 +195,7 @@ void PowerManagementBackend::do_run(NetworkBase &network, Real duration) const
 			power_off_manager.add_device(m_device, dev_name);
 			return;
 		}
-		catch (ExecutionError e) {
+		catch (ExecutionError &e) {
 			// If an exception occurred, switch off the device. If this was
 			// successful, try again
 			if (repeat > 1) {
