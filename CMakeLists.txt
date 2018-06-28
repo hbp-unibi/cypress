@@ -68,29 +68,28 @@ if(STATIC_LINKING)
     endif()
 endif()
 
-
 include_directories(
-	${CMAKE_SOURCE_DIR}
-	${CMAKE_BINARY_DIR}/include
-	PRIVATE
-		${CMAKE_BINARY_DIR}
-    ${PYTHON_NUMPY_INCLUDE_DIR}
+    PUBLIC
+        ${CMAKE_SOURCE_DIR}
+        ${CMAKE_BINARY_DIR}/include
+        ${PYTHON_NUMPY_INCLUDE_DIR}
 )
+
 
 
 # Add configuration option for setting the width of the floating point values
 set(CYPRESS_REAL_WIDTH 8 CACHE STRING "Width of the floating point values in bytes (one of 4, 8, 10, 16)")
 
-configure_file(cypress/config.h.in cypress/config.h)
+configure_file(cypress/config.h.in include/cypress/config.h)
 
 # Compile the Python code into a C++ header
 add_custom_command(
 	OUTPUT
-		"${CMAKE_BINARY_DIR}/resource/backend/pynn/pynn_interface.hpp"
-		"${CMAKE_BINARY_DIR}/resource/backend/pynn/pynn_binnf_loopback.hpp"
-		"${CMAKE_BINARY_DIR}/resource/backend/nmpi/nmpi_broker.hpp"
+		"${CMAKE_BINARY_DIR}/include/resource/backend/pynn/pynn_interface.hpp"
+		"${CMAKE_BINARY_DIR}/include/resource/backend/pynn/pynn_binnf_loopback.hpp"
+		"${CMAKE_BINARY_DIR}/include/resource/backend/nmpi/nmpi_broker.hpp"
 	COMMAND
-		"${CMAKE_SOURCE_DIR}/resource/build_resources.sh" "${CMAKE_BINARY_DIR}/resource/backend"
+		"${CMAKE_SOURCE_DIR}/resource/build_resources.sh" "${CMAKE_BINARY_DIR}/include/resource/backend"
 	DEPENDS
 		"${CMAKE_SOURCE_DIR}/resource/build_resources.sh"
 		"${CMAKE_SOURCE_DIR}/resource/backend/pynn/binnf.py"
@@ -103,9 +102,9 @@ add_custom_command(
 
 # Compile the library itself
 add_library(cypress
-	"${CMAKE_BINARY_DIR}/resource/backend/pynn/pynn_interface.hpp"
-	"${CMAKE_BINARY_DIR}/resource/backend/pynn/pynn_binnf_loopback.hpp"
-	"${CMAKE_BINARY_DIR}/resource/backend/nmpi/nmpi_broker.hpp"
+	"${CMAKE_BINARY_DIR}/include/resource/backend/pynn/pynn_interface.hpp"
+	"${CMAKE_BINARY_DIR}/include/resource/backend/pynn/pynn_binnf_loopback.hpp"
+	"${CMAKE_BINARY_DIR}/include/resource/backend/nmpi/nmpi_broker.hpp"
 	cypress/backend/resources
 	cypress/backend/binnf/binnf
 	cypress/backend/binnf/marshaller
@@ -167,6 +166,11 @@ install(
 	DIRECTORY ${CMAKE_SOURCE_DIR}/cypress
 	DESTINATION include
 	FILES_MATCHING PATTERN "*.hpp"
+)
+install(
+	DIRECTORY ${CMAKE_SOURCE_DIR}/external/pybind11/include/
+	DESTINATION include
+	FILES_MATCHING PATTERN "*.h"
 )
 install(
 	FILES ${CMAKE_BINARY_DIR}/cypress/config.h
