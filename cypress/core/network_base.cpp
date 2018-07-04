@@ -409,7 +409,9 @@ std::unique_ptr<Backend> NetworkBase::make_backend(std::string backend_id,
 		}
 		return std::make_unique<Slurm>(join(elems, '.'), setup);
 	}
-	
+	else if( elems[0] == "nmpm1"){
+        return std::make_unique<PyNN>(join(elems, '.'), setup);
+    }
 	else if (elems[0] == "nest") {
 		return std::make_unique<NEST>(setup);
 	}
