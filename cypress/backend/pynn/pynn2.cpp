@@ -55,7 +55,13 @@ namespace cypress {
 namespace py = pybind11;
 using namespace py::literals;
 
-PythonInstance::PythonInstance() { py::initialize_interpreter(); }
+PythonInstance::PythonInstance()
+{
+	py::initialize_interpreter();
+	py::module logging = py::module::import("logging");
+	int32_t loglevel = global_logger().min_level();
+	logging.attr("basicConfig")("level"_a = loglevel);
+}
 PythonInstance::~PythonInstance()
 {
 	// Here we should call
@@ -545,23 +551,25 @@ std::string PyNN_::get_neuron_class(const NeuronType &neuron_type)
 void PyNN_::init_logger()
 {
 	py::module logger = py::module::import("logging");
+	py::module util = py::module::import("pyNN.utility");
 	int32_t loglevel = global_logger().min_level();
-	logger.attr("getLogger")("PyNN").attr("setLevel")(loglevel);
-	logger.attr("getLogger")("").attr("setLevel")(loglevel);
+	try {
+		util.attr("init_logging")(py::none(), "level"_a = loglevel);
+	}
+	catch (...) {
+	}
 }
 
 py::object PyNN_::create_source_population(const PopulationBase &pop,
                                            py::module &pynn)
 {
-	// This covers all spike sources!
-
 	// Create Spike Source
 	py::dict neuron_params;
 	py::list spikes;
 	for (auto neuron : pop) {
 		const std::vector<Real> &temp = neuron.parameters().parameters();
-		spikes.append(
-		    py::array_t<Real>({temp.size()}, {sizeof(Real)}, temp.data()));
+		auto capsule = py::capsule(&temp, [](void *) {});
+		spikes.append(py::array(temp.size(), temp.data(), capsule));
 	}
 
 	auto neuron_type = pynn.attr("SpikeSourceArray")("spike_times"_a = spikes);
@@ -1338,11 +1346,9 @@ void PyNN_::fetch_data_neo(const std::vector<PopulationBase> &populations,
 
 void PyNN_::do_run(NetworkBase &source, Real duration) const
 {
-
-	init_logger();
-
 	py::module sys = py::module::import("sys");
 	std::string import = get_import(m_imports, m_simulator);
+	init_logger();
 
 	auto start = std::chrono::system_clock::now();
 	// Bug when importing NEST
@@ -1356,11 +1362,11 @@ void PyNN_::do_run(NetworkBase &source, Real duration) const
 	// Setup simulator
 	py::module pynn = py::module::import(import.c_str());
 	auto dict = json_to_dict(m_setup);
-	pynn.attr("setup")(**dict);
 	if (import == "pyNN.hardware.spikey") {
-		Spikey_run(source, duration, pynn);
+		spikey_run(source, duration, pynn, dict);
 		return;
 	}
+	pynn.attr("setup")(**dict);
 
 	// Create populations
 	const std::vector<PopulationBase> &populations = source.populations();
@@ -1705,18 +1711,32 @@ void PyNN_::spikey_get_voltage(NeuronBase neuron, py::module &pynn)
 	neuron.signals().data(idx.value(), std::move(data));
 }
 
-void PyNN_::Spikey_run(NetworkBase &source, Real duration, py::module &pynn)
+namespace {
+static std::map<LogSeverity, std::string> loglevelnames{{DEBUG, "DEBUG"},
+                                                        {INFO, "INFO"},
+                                                        {WARNING, "WARN"},
+                                                        {ERROR, "ERROR"},
+                                                        {FATAL_ERROR, "FATAL"}};
+}
+
+void PyNN_::spikey_run(NetworkBase &source, Real duration, py::module &pynn,
+                       py::dict dict)
 {
 	auto start = std::chrono::system_clock::now();
 	py::module pylogging = py::module::import("pylogging");
-	std::vector<std::string> logger({"HAL.Cal", "HAL.PyS", "HAL.Spi", "PyN.cfg",
-	                                 "PyN.syn", "PyN.wks", "Default"});
+	std::vector<std::string> logger({"HAL.Cal", "HAL.Ctr", "HAL.PyS", "HAL.PRC",
+	                                 "HAL.Spi", "PyN.cfg", "PyN.syn", "PyN.wks",
+	                                 "Default"});
 	for (std::string i : logger) {
 		py::str py_s = py::str(i).attr("encode")("utf-8");
+		std::string loglevel = loglevelnames[global_logger().min_level()];
 		pylogging.attr("set_loglevel")(
 		    pylogging.attr("get")(py_s),
-		    pylogging.attr("LogLevel").attr("DEBUG"));
+		    pylogging.attr("LogLevel")
+		        .attr(loglevel
+		                  .c_str()));  // ALL DEBUG ERROR FATAL INFO TRACE WARN
 	}
+	pynn.attr("setup")(dict);
 
 	const std::vector<PopulationBase> &populations = source.populations();
 	std::vector<py::object> pypopulations;

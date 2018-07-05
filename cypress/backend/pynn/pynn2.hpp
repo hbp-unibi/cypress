@@ -419,8 +419,8 @@ public:
 	 * @param duration Simulation duration
 	 * @param pynn Module pointer to PyNN.hardware.spikey
 	 */
-	static void Spikey_run(NetworkBase &source, Real duration,
-	                       py::module &pynn);
+	static void spikey_run(NetworkBase &source, Real duration, py::module &pynn,
+	                       py::dict dict);
 
 	/**
 	 * Creates a PyNN source population for Spikey
