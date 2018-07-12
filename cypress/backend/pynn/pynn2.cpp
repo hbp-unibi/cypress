@@ -763,19 +763,32 @@ py::object PyNN_::get_connector(const std::string &connector_name,
 
 py::object PyNN_::group_connect(const std::vector<PopulationBase> &populations,
                                 const std::vector<py::object> &pypopulations,
+                                const ConnectionDescriptor &conn,
                                 const GroupConnction &group_conn,
                                 const py::module &pynn,
                                 const std::string &conn_name,
                                 const Real timestep)
 {
-	py::object source = get_pop_view(pynn, pypopulations[group_conn.psrc],
-	                                 populations[group_conn.psrc],
-	                                 group_conn.src0, group_conn.src1);
+	py::object source, target;
+	try {
+		source = get_pop_view(pynn, pypopulations[group_conn.psrc],
+		                      populations[group_conn.psrc], group_conn.src0,
+		                      group_conn.src1);
 
-	py::object target = get_pop_view(pynn, pypopulations[group_conn.ptar],
-	                                 populations[group_conn.ptar],
-	                                 group_conn.tar0, group_conn.tar1);
-
+		target = get_pop_view(pynn, pypopulations[group_conn.ptar],
+		                      populations[group_conn.ptar], group_conn.tar0,
+		                      group_conn.tar1);
+	}
+	catch (...) {
+		global_logger().info("cypress",
+		                     "PopViews not supported. Using list connector");
+		std::tuple<py::object, py::object> ret =
+		    list_connect(pypopulations, conn, pynn, timestep);
+		if (group_conn.synapse.weight > 0) {
+			return std::get<0>(ret);
+		}
+		return std::get<1>(ret);
+	}
 	std::string receptor = "excitatory";
 	if (group_conn.synapse.weight < 0) {
 		receptor = "inhibitory";
@@ -1429,7 +1442,7 @@ void PyNN_::do_run(NetworkBase &source, Real duration) const
 		if (it != SUPPORTED_CONNECTIONS.end() &&
 		    conn.connector().group_connect(conn, group_conn)) {
 			// Group connections
-			group_connect(populations, pypopulations, group_conn, pynn,
+			group_connect(populations, pypopulations, conn, group_conn, pynn,
 			              it->second, timestep);
 		}
 		else {

@@ -850,75 +850,88 @@ TEST(pynn2, group_connect)
 			    PyNN_::create_homogeneous_pop(pops[1], pynn, temp)};
 			GroupConnction conn = GroupConnction::create_group_connection(
 			    0, 1, 0, 16, 0, 16, 0.15, 1, 3, "asd");
-			EXPECT_NO_THROW(PyNN_::group_connect(pops, pypops, conn, pynn,
-			                                     "AllToAllConnector", 0.1));
-			EXPECT_NO_THROW(PyNN_::group_connect(pops, pypops, conn, pynn,
-			                                     "OneToOneConnector", 0.1));
+			ConnectionDescriptor conn_desc(0, 0, 16, 1, 0, 16,
+			                               Connector::all_to_all(0.15, 1));
 			EXPECT_NO_THROW(PyNN_::group_connect(
-			    pops, pypops, conn, pynn, "FixedNumberPreConnector", 0.1));
+			    pops, pypops, conn_desc, conn, pynn, "AllToAllConnector", 0.1));
 			EXPECT_NO_THROW(PyNN_::group_connect(
-			    pops, pypops, conn, pynn, "FixedNumberPostConnector", 0.1));
+			    pops, pypops, conn_desc, conn, pynn, "OneToOneConnector", 0.1));
+			EXPECT_NO_THROW(
+			    PyNN_::group_connect(pops, pypops, conn_desc, conn, pynn,
+			                         "FixedNumberPreConnector", 0.1));
+			EXPECT_NO_THROW(
+			    PyNN_::group_connect(pops, pypops, conn_desc, conn, pynn,
+			                         "FixedNumberPostConnector", 0.1));
 			conn.additional_parameter = 0.5;
-			EXPECT_NO_THROW(PyNN_::group_connect(
-			    pops, pypops, conn, pynn, "FixedProbabilityConnector", 0.1));
+			EXPECT_NO_THROW(
+			    PyNN_::group_connect(pops, pypops, conn_desc, conn, pynn,
+			                         "FixedProbabilityConnector", 0.1));
 
 			if (import == "pyNN.nest" && version > 8) {
 				conn.src1 = 10;
 				conn.tar0 = 5;
 				conn.additional_parameter = 3;
-				EXPECT_NO_THROW(PyNN_::group_connect(pops, pypops, conn, pynn,
+				EXPECT_NO_THROW(PyNN_::group_connect(pops, pypops, conn_desc,
+				                                     conn, pynn,
 				                                     "AllToAllConnector", 0.1));
-				EXPECT_NO_THROW(PyNN_::group_connect(pops, pypops, conn, pynn,
+				EXPECT_NO_THROW(PyNN_::group_connect(pops, pypops, conn_desc,
+				                                     conn, pynn,
 				                                     "OneToOneConnector", 0.1));
-				EXPECT_NO_THROW(PyNN_::group_connect(
-				    pops, pypops, conn, pynn, "FixedNumberPreConnector", 0.1));
-				EXPECT_NO_THROW(PyNN_::group_connect(
-				    pops, pypops, conn, pynn, "FixedNumberPostConnector", 0.1));
+				EXPECT_NO_THROW(
+				    PyNN_::group_connect(pops, pypops, conn_desc, conn, pynn,
+				                         "FixedNumberPreConnector", 0.1));
+				EXPECT_NO_THROW(
+				    PyNN_::group_connect(pops, pypops, conn_desc, conn, pynn,
+				                         "FixedNumberPostConnector", 0.1));
 				conn.additional_parameter = 0.5;
 				EXPECT_NO_THROW(
-				    PyNN_::group_connect(pops, pypops, conn, pynn,
+				    PyNN_::group_connect(pops, pypops, conn_desc, conn, pynn,
 				                         "FixedProbabilityConnector", 0.1));
 
-				check_projection(PyNN_::group_connect(pops, pypops, conn, pynn,
-				                                      "AllToAllConnector", 0.1),
-				                 conn);
-				check_projection(PyNN_::group_connect(pops, pypops, conn, pynn,
-				                                      "OneToOneConnector", 0.1),
-				                 conn);
+				check_projection(
+				    PyNN_::group_connect(pops, pypops, conn_desc, conn, pynn,
+				                         "AllToAllConnector", 0.1),
+				    conn);
+				check_projection(
+				    PyNN_::group_connect(pops, pypops, conn_desc, conn, pynn,
+				                         "OneToOneConnector", 0.1),
+				    conn);
 				conn.additional_parameter = 3;
 				check_projection(
-				    PyNN_::group_connect(pops, pypops, conn, pynn,
+				    PyNN_::group_connect(pops, pypops, conn_desc, conn, pynn,
 				                         "FixedNumberPreConnector", 0.1),
 				    conn);
 				check_projection(
-				    PyNN_::group_connect(pops, pypops, conn, pynn,
+				    PyNN_::group_connect(pops, pypops, conn_desc, conn, pynn,
 				                         "FixedNumberPostConnector", 0.1),
 				    conn);
 				conn.additional_parameter = 0.5;
 				check_projection(
-				    PyNN_::group_connect(pops, pypops, conn, pynn,
+				    PyNN_::group_connect(pops, pypops, conn_desc, conn, pynn,
 				                         "FixedProbabilityConnector", 0.1),
 				    conn);
 
 				conn.synapse.weight = -0.015;
-				check_projection(PyNN_::group_connect(pops, pypops, conn, pynn,
-				                                      "AllToAllConnector", 0.1),
-				                 conn);
-				check_projection(PyNN_::group_connect(pops, pypops, conn, pynn,
-				                                      "OneToOneConnector", 0.1),
-				                 conn);
+				check_projection(
+				    PyNN_::group_connect(pops, pypops, conn_desc, conn, pynn,
+				                         "AllToAllConnector", 0.1),
+				    conn);
+				check_projection(
+				    PyNN_::group_connect(pops, pypops, conn_desc, conn, pynn,
+				                         "OneToOneConnector", 0.1),
+				    conn);
 				conn.additional_parameter = 3;
 				check_projection(
-				    PyNN_::group_connect(pops, pypops, conn, pynn,
+				    PyNN_::group_connect(pops, pypops, conn_desc, conn, pynn,
 				                         "FixedNumberPreConnector", 0.1),
 				    conn);
 				check_projection(
-				    PyNN_::group_connect(pops, pypops, conn, pynn,
+				    PyNN_::group_connect(pops, pypops, conn_desc, conn, pynn,
 				                         "FixedNumberPostConnector", 0.1),
 				    conn);
 				conn.additional_parameter = 0.5;
 				check_projection(
-				    PyNN_::group_connect(pops, pypops, conn, pynn,
+				    PyNN_::group_connect(pops, pypops, conn_desc, conn, pynn,
 				                         "FixedProbabilityConnector", 0.1),
 				    conn);
 			}
@@ -1330,8 +1343,10 @@ TEST(pynn2, fetch_data_nest)
 
 		GroupConnction conn = GroupConnction::create_group_connection(
 		    0, 1, 0, 1, 0, 3, 0.5, 1.0, 0, "AllToAllConnector");
-		PyNN_::group_connect(pops, pypops, conn, pynn, "AllToAllConnector",
-		                     0.1);
+		ConnectionDescriptor conn_desc(0, 0, 16, 1, 0, 16,
+		                               Connector::all_to_all(0.15, 1));
+		PyNN_::group_connect(pops, pypops, conn_desc, conn, pynn,
+		                     "AllToAllConnector", 0.1);
 
 		pynn.attr("run")(100);
 		PyNN_::fetch_data_nest(pops, pypops);
@@ -1452,8 +1467,10 @@ TEST(pynn2, fetch_data_spinnaker)
 
 		GroupConnction conn = GroupConnction::create_group_connection(
 		    0, 1, 0, 1, 0, 3, 0.5, 1.0, 0, "AllToAllConnector");
-		PyNN_::group_connect(pops, pypops, conn, pynn, "AllToAllConnector",
-		                     0.1);
+		ConnectionDescriptor conn_desc(0, 0, 16, 1, 0, 16,
+		                               Connector::all_to_all(0.15, 1));
+		PyNN_::group_connect(pops, pypops, conn_desc, conn, pynn,
+		                     "AllToAllConnector", 0.1);
 
 		pynn.attr("run")(100);
 		PyNN_::fetch_data_spinnaker(pops, pypops);
@@ -1578,8 +1595,10 @@ TEST(pynn2, fetch_data_neo)
 
 			GroupConnction conn = GroupConnction::create_group_connection(
 			    0, 1, 0, 1, 0, 3, 0.5, 1.0, 0, "AllToAllConnector");
-			PyNN_::group_connect(pops, pypops, conn, pynn, "AllToAllConnector",
-			                     0.1);
+			ConnectionDescriptor conn_desc(0, 0, 16, 1, 0, 16,
+			                               Connector::all_to_all(0.15, 1));
+			PyNN_::group_connect(pops, pypops, conn_desc, conn, pynn,
+			                     "AllToAllConnector", 0.1);
 
 			pynn.attr("run")(100);
 			PyNN_::fetch_data_neo(pops, pypops);
@@ -1696,12 +1715,13 @@ TEST(pynn2, fetch_data_neo)
 
 			GroupConnction conn = GroupConnction::create_group_connection(
 			    0, 1, 0, 1, 0, 3, 0.5, 1.0, 0, "AllToAllConnector");
-			PyNN_::group_connect(pops, pypops, conn, pynn, "AllToAllConnector",
-			                     0.1);
+			ConnectionDescriptor conn_desc(0, 0, 16, 1, 0, 16,
+			                               Connector::all_to_all(0.15, 1));
+			PyNN_::group_connect(pops, pypops, conn_desc, conn, pynn,
+			                     "AllToAllConnector", 0.1);
 
 			pynn.attr("run")(100);
 			PyNN_::fetch_data_neo(pops, pypops);
-			std::cout << " ______________________ " << std::endl;
 
 			// Test fetching spikes
 			EXPECT_NEAR(pops[1][0].signals().data(0)[0], 20, 3);
