@@ -244,6 +244,10 @@ class Cypress:
                 float(setup["bandwidth"]))
             del setup["bandwidth"]
 
+        if "synapse_loss" in setup:
+            marocco.continue_despite_synapse_loss = setup["synapse_loss"]
+            del setup["synapse_loss"]
+
         # Flag for setting digital weights
         set_digital_weight = False
 
