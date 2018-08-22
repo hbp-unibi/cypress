@@ -1379,7 +1379,12 @@ void PyNN_::do_run(NetworkBase &source, Real duration) const
 		spikey_run(source, duration, pynn, dict);
 		return;
 	}
-	pynn.attr("setup")(**dict);
+	try {
+		pynn.attr("setup")(**dict);
+	}
+	catch (const pybind11::error_already_set &e) {
+		throw ExecutionError(e.what());
+	}
 
 	// Create populations
 	const std::vector<PopulationBase> &populations = source.populations();
@@ -1459,7 +1464,18 @@ void PyNN_::do_run(NetworkBase &source, Real duration) const
 	}
 
 	auto buildconn = std::chrono::system_clock::now();
-	pynn.attr("run")(duration_rounded);
+	try {
+		pynn.attr("run")(duration_rounded);
+	}
+	catch (const pybind11::error_already_set &e) {
+		try {
+			pynn.attr("end");
+		}
+		catch (...) {
+		}
+		throw ExecutionError(e.what());
+	}
+
 	auto execrun = std::chrono::system_clock::now();
 
 	// fetch data
@@ -1749,7 +1765,12 @@ void PyNN_::spikey_run(NetworkBase &source, Real duration, py::module &pynn,
 		        .attr(loglevel
 		                  .c_str()));  // ALL DEBUG ERROR FATAL INFO TRACE WARN
 	}
-	pynn.attr("setup")(dict);
+	try {
+		pynn.attr("setup")(**dict);
+	}
+	catch (const pybind11::error_already_set &e) {
+		throw ExecutionError(e.what());
+	}
 
 	const std::vector<PopulationBase> &populations = source.populations();
 	std::vector<py::object> pypopulations;
@@ -1812,7 +1833,14 @@ void PyNN_::spikey_run(NetworkBase &source, Real duration, py::module &pynn,
 		}
 	}
 	auto buildconn = std::chrono::system_clock::now();
-	pynn.attr("run")(duration);
+
+	try {
+		pynn.attr("run")(duration);
+	}
+	catch (const pybind11::error_already_set &e) {
+		throw ExecutionError(e.what());
+	}
+
 	auto execrun = std::chrono::system_clock::now();
 
 	for (size_t i = 0; i < populations.size(); i++) {
