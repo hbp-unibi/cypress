@@ -289,6 +289,7 @@ PyNN::PyNN(const std::string &simulator, const Json &setup)
 {
 	// Lookup the canonical simulator name and the
 	auto res = PYNN_UTIL.lookup_simulator(simulator);
+
 	m_normalised_simulator = res.first;
 	m_imports = res.second;
 
@@ -396,6 +397,9 @@ std::string PyNN::get_import(const std::vector<std::string> &imports,
 		}
 	}
 	auto normalised_simulator = PYNN_UTIL.lookup_simulator(simulator).first;
+	if(normalised_simulator == "nmpm1"){
+		return "pyhmf";
+	}
 	if (import.empty()) {
 		std::stringstream ss;
 		ss << "The simulator \"" << simulator << "\" with canonical name \""
