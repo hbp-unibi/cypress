@@ -207,6 +207,10 @@ void Slurm::do_run(NetworkBase &network, Real duration) const
 			              " -z >text.txt &\n");
 		}
 
+		if(m_normalised_simulator == "nmpm1"){
+			script.append("run_nmpm_software ");
+		}
+
 		script.append(
 		    "python " +
 		    Resources::PYNN_INTERFACE.open_local(m_filename + ".py") + " run " +
