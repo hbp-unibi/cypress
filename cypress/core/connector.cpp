@@ -20,6 +20,7 @@
 #include <limits>
 
 #include <cypress/core/connector.hpp>
+#include <iostream>
 
 namespace cypress {
 
@@ -66,24 +67,22 @@ void AllToAllConnector::connect(const ConnectionDescriptor &descr,
 		for (NeuronIndex n_tar = descr.nid_tar0(); n_tar < descr.nid_tar1();
 		     n_tar++) {
 			tar.emplace_back(descr.pid_src(), descr.pid_tar(), n_src, n_tar,
-			                 weight(), delay());
+			                 *m_synapse);
 		}
 	}
 }
 
 bool AllToAllConnector::group_connect(const ConnectionDescriptor &descr,
-	                     GroupConnction &tar) const
+                                      GroupConnection &tar) const
 {
-	tar.psrc = descr.pid_src();
-	tar.src0 = descr.nid_src0();
-	tar.src1 = descr.nid_src1();
-	tar.ptar = descr.pid_tar();
-	tar.tar0 = descr.nid_tar0();
-    tar.tar1 = descr.nid_tar1();
-	tar.synapse = Synapse(m_weight, m_delay);
-	tar.additional_parameter = 0;
-    tar.connection_name = "AllToAllConnector";
-    return true;
+	if (!m_synapse) {
+		throw;
+	}
+	tar = GroupConnection(descr.pid_src(), descr.pid_tar(), descr.nid_src0(),
+	                      descr.nid_src1(), descr.nid_tar0(), descr.nid_tar1(),
+	                      m_synapse->parameters(), 0, "AllToAllConnector",
+	                      m_synapse->name());
+	return true;
 }
 
 /*
@@ -93,25 +92,20 @@ bool AllToAllConnector::group_connect(const ConnectionDescriptor &descr,
 void OneToOneConnector::connect(const ConnectionDescriptor &descr,
                                 std::vector<Connection> &tar) const
 {
-	for (size_t i = 0; i < descr.nsrc(); i++) {
+	for (NeuronIndex i = 0; i < descr.nsrc(); i++) {
 		tar.emplace_back(descr.pid_src(), descr.pid_tar(), descr.nid_src0() + i,
-		                 descr.nid_tar0() + i, weight(), delay());
+		                 descr.nid_tar0() + i, *m_synapse);
 	}
 }
 
 bool OneToOneConnector::group_connect(const ConnectionDescriptor &descr,
-	                     GroupConnction &tar) const
+                                      GroupConnection &tar) const
 {
-	tar.psrc = descr.pid_src();
-	tar.src0 = descr.nid_src0();
-	tar.src1 = descr.nid_src1();
-	tar.ptar = descr.pid_tar();
-	tar.tar0 = descr.nid_tar0();
-    tar.tar1 = descr.nid_tar1();
-	tar.synapse = Synapse(m_weight, m_delay);
-	tar.additional_parameter = 0;
-    tar.connection_name = "OneToOneConnector";
-    return true;
+	tar = GroupConnection(descr.pid_src(), descr.pid_tar(), descr.nid_src0(),
+	                      descr.nid_src1(), descr.nid_tar0(), descr.nid_tar1(),
+	                      m_synapse->parameters(), 0, "OneToOneConnector",
+	                      m_synapse->name());
+	return true;
 }
 
 /*
@@ -122,17 +116,23 @@ void FromListConnector::connect(const ConnectionDescriptor &descr,
                                 std::vector<Connection> &tar) const
 {
 	for (const LocalConnection &c : m_connections) {
+		if (c.SynapseParameters.size() > 2) {
+			// TODO
+			throw ExecutionError(
+			    "Only static synapses are supported for this backend!");
+		}
+		StaticSynapse temp(c.SynapseParameters);
 		if (c.src >= descr.nid_src0() && c.src < descr.nid_src1() &&
 		    c.tar >= descr.nid_tar0() && c.tar < descr.nid_tar1()) {
 			tar.emplace_back(descr.pid_src(), descr.pid_tar(), c.src, c.tar,
-			                 c.synapse.weight, c.synapse.delay);
+			                 temp);
 		}
 	}
 }
 
 bool FromListConnector::group_connect(const ConnectionDescriptor &,
-	                   GroupConnction &) const 
+                                      GroupConnection &) const
 {
-    return false;
+	return false;
 }
-}
+}  // namespace cypress

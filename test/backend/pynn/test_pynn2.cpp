@@ -754,8 +754,7 @@ TEST(pynn2, get_connector7)
 		py::module pynn = py::module::import("pyNN.hardware.spikey");
 		pynn.attr("setup")();
 
-		GroupConnction conn = GroupConnction::create_group_connection(
-		    0, 1, 0, 16, 0, 16, 0.15, 1, 3, "asd");
+		GroupConnection conn(0, 1, 0, 16, 0, 16, 0.15, 1, 3, "asd");
 		EXPECT_NO_THROW(PyNN_::get_connector7("AllToAllConnector", conn, pynn));
 		EXPECT_NO_THROW(PyNN_::get_connector7("OneToOneConnector", conn, pynn));
 
@@ -775,20 +774,20 @@ TEST(pynn2, get_connector7)
 	// TODO BRAINSCALES
 }
 
-void check_projection(py::object projection, GroupConnction &conn)
+void check_projection(py::object projection, GroupConnection &conn)
 {
 	py::list weights = py::list(projection.attr("getWeights")());
 	py::list delays = py::list(projection.attr("getDelays")());
 	for (auto i : delays) {
-		EXPECT_EQ(conn.synapse.delay, py::cast<Real>(i));
+		EXPECT_EQ(conn.synapse_parameters[1], py::cast<Real>(i));
 	}
-	if (conn.synapse.weight >= 0) {
+	if (conn.synapse_parameters[0] >= 0) {
 		if (version > 8) {
 			EXPECT_EQ("excitatory",
 			          py::cast<std::string>(projection.attr("receptor_type")));
 		}
 		for (auto i : weights) {
-			EXPECT_NEAR(conn.synapse.weight, py::cast<Real>(i), 1e-4);
+			EXPECT_NEAR(conn.synapse_parameters[0], py::cast<Real>(i), 1e-4);
 		}
 	}
 	else {
@@ -797,13 +796,13 @@ void check_projection(py::object projection, GroupConnction &conn)
 			          py::cast<std::string>(projection.attr("receptor_type")));
 		}
 		for (auto i : weights) {
-			EXPECT_NEAR(-conn.synapse.weight, py::cast<Real>(i), 1e-4);
+			EXPECT_NEAR(-conn.synapse_parameters[0], py::cast<Real>(i), 1e-4);
 		}
 	}
 }
 
 void check_all_to_all_list_projection(py::object projection,
-                                      GroupConnction &conn)
+                                      Real weight, Real delay)
 {
 	//"getWeights"/ "getDelays" only returns a list of set synapses. It is
 	// therefor unfeasible to keep track which synapse in python belongs to
@@ -811,15 +810,15 @@ void check_all_to_all_list_projection(py::object projection,
 	py::list weights = py::list(projection.attr("getWeights")());
 	py::list delays = py::list(projection.attr("getDelays")());
 	for (auto i : delays) {
-		EXPECT_EQ(conn.synapse.delay, py::cast<Real>(i));
+		EXPECT_EQ(delay, py::cast<Real>(i));
 	}
-	if (conn.synapse.weight >= 0) {
+	if (weight >= 0) {
 		if (version > 8) {
 			EXPECT_EQ("excitatory",
 			          py::cast<std::string>(projection.attr("receptor_type")));
 		}
 		for (auto i : weights) {
-			EXPECT_NEAR(conn.synapse.weight, py::cast<Real>(i), 1e-4);
+			EXPECT_NEAR(weight, py::cast<Real>(i), 1e-4);
 		}
 	}
 	else {
@@ -829,7 +828,7 @@ void check_all_to_all_list_projection(py::object projection,
 			          py::cast<std::string>(projection.attr("receptor_type")));
 		}
 		for (auto i : weights) {
-			EXPECT_NEAR(-conn.synapse.weight, py::cast<Real>(i), 1e-4);
+			EXPECT_NEAR(-weight, py::cast<Real>(i), 1e-4);
 		}
 	}
 }
@@ -848,8 +847,7 @@ TEST(pynn2, group_connect)
 			std::vector<py::object> pypops{
 			    PyNN_::create_homogeneous_pop(pops[0], pynn, temp),
 			    PyNN_::create_homogeneous_pop(pops[1], pynn, temp)};
-			GroupConnction conn = GroupConnction::create_group_connection(
-			    0, 1, 0, 16, 0, 16, 0.15, 1, 3, "asd");
+			GroupConnection conn(0, 1, 0, 16, 0, 16, 0.15, 1, 3, "asd");
 			ConnectionDescriptor conn_desc(0, 0, 16, 1, 0, 16,
 			                               Connector::all_to_all(0.15, 1));
 			EXPECT_NO_THROW(PyNN_::group_connect(
@@ -911,7 +909,7 @@ TEST(pynn2, group_connect)
 				                         "FixedProbabilityConnector", 0.1),
 				    conn);
 
-				conn.synapse.weight = -0.015;
+				conn.synapse_parameters[0]= -0.015;
 				check_projection(
 				    PyNN_::group_connect(pops, pypops, conn_desc, conn, pynn,
 				                         "AllToAllConnector", 0.1),
@@ -959,8 +957,7 @@ TEST(pynn2, group_connect7)
 			std::vector<py::object> pypops{
 			    PyNN_::spikey_create_homogeneous_pop(pops[0], pynn),
 			    PyNN_::spikey_create_homogeneous_pop(pops[1], pynn)};
-			GroupConnction conn = GroupConnction::create_group_connection(
-			    0, 1, 0, 16, 0, 16, 0.15, 1, 3, "asd");
+			GroupConnection conn(0, 1, 0, 16, 0, 16, 0.15, 1, 3, "asd");
 			EXPECT_NO_THROW(PyNN_::group_connect7(pops, pypops, conn, pynn,
 			                                      "AllToAllConnector"));
 			EXPECT_NO_THROW(PyNN_::group_connect7(pops, pypops, conn, pynn,
@@ -1034,8 +1031,6 @@ TEST(pynn2, list_connect)
 		// excitatory
 		ConnectionDescriptor conn(0, 0, 15, 1, 0, 15,
 		                          Connector::all_to_all(0.015, 1));
-		GroupConnction group_conn;
-		conn.connector().group_connect(conn, group_conn);
 		std::tuple<py::object, py::object> connection;
 		if (import == "pyNN.hardware.spikey") {
 			connection = PyNN_::list_connect7(pypops, conn, pynn);
@@ -1050,7 +1045,7 @@ TEST(pynn2, list_connect)
 		}
 
 		if (!(version < 9 && import == "pyNN.nest")) {
-			check_all_to_all_list_projection(exc, group_conn);
+			check_all_to_all_list_projection(exc, 0.015, 1.0);
 		}
 
 		EXPECT_TRUE(py::object().is(inh));
@@ -1059,7 +1054,6 @@ TEST(pynn2, list_connect)
 		// inhibitory
 		conn = ConnectionDescriptor(0, 0, 15, 1, 0, 15,
 		                            Connector::all_to_all(-0.015, 1));
-		conn.connector().group_connect(conn, group_conn);
 		if (import == "pyNN.spiNNaker") {
 			pynn.attr("reset")();
 		}
@@ -1077,7 +1071,7 @@ TEST(pynn2, list_connect)
 			pynn.attr("run")(10);
 		}
 		if (!(version < 9 && import == "pyNN.nest")) {
-			check_all_to_all_list_projection(inh, group_conn);
+			check_all_to_all_list_projection(inh, -0.015,1.0);
 		}
 		EXPECT_TRUE(py::object().is(exc));
 		EXPECT_FALSE(py::object().is(inh));
@@ -1087,7 +1081,6 @@ TEST(pynn2, list_connect)
 		     LocalConnection(0, 3, -0.015, 1), LocalConnection(0, 4, -2.0, 3)});
 		conn = ConnectionDescriptor(0, 0, 15, 1, 0, 15,
 		                            Connector::from_list(conn_list));
-		conn.connector().group_connect(conn, group_conn);
 
 		if (import == "pyNN.spiNNaker") {
 			pynn.attr("reset")();
@@ -1341,8 +1334,7 @@ TEST(pynn2, fetch_data_nest)
 		    PyNN_::create_homogeneous_pop(pops[1], pynn, temp)};
 		PyNN_::set_homogeneous_rec(pops[1], pypops[1]);
 
-		GroupConnction conn = GroupConnction::create_group_connection(
-		    0, 1, 0, 1, 0, 3, 0.5, 1.0, 0, "AllToAllConnector");
+		GroupConnection conn(0, 1, 0, 1, 0, 3, 0.5, 1.0, 0, "AllToAllConnector");
 		ConnectionDescriptor conn_desc(0, 0, 16, 1, 0, 16,
 		                               Connector::all_to_all(0.15, 1));
 		PyNN_::group_connect(pops, pypops, conn_desc, conn, pynn,
@@ -1465,8 +1457,7 @@ TEST(pynn2, fetch_data_spinnaker)
 		    PyNN_::create_homogeneous_pop(pops[1], pynn, temp)};
 		PyNN_::set_homogeneous_rec(pops[1], pypops[1]);
 
-		GroupConnction conn = GroupConnction::create_group_connection(
-		    0, 1, 0, 1, 0, 3, 0.5, 1.0, 0, "AllToAllConnector");
+		GroupConnection conn(0, 1, 0, 1, 0, 3, 0.5, 1.0, 0, "AllToAllConnector");
 		ConnectionDescriptor conn_desc(0, 0, 16, 1, 0, 16,
 		                               Connector::all_to_all(0.15, 1));
 		PyNN_::group_connect(pops, pypops, conn_desc, conn, pynn,
@@ -1593,8 +1584,7 @@ TEST(pynn2, fetch_data_neo)
 			PyNN_::set_homogeneous_rec(pops[1], pypops[1]);
 			PyNN_::set_homogeneous_rec(pops[0], pypops[0]);
 
-			GroupConnction conn = GroupConnction::create_group_connection(
-			    0, 1, 0, 1, 0, 3, 0.5, 1.0, 0, "AllToAllConnector");
+			GroupConnection conn(0, 1, 0, 1, 0, 3, 0.5, 1.0, 0, "AllToAllConnector");
 			ConnectionDescriptor conn_desc(0, 0, 16, 1, 0, 16,
 			                               Connector::all_to_all(0.15, 1));
 			PyNN_::group_connect(pops, pypops, conn_desc, conn, pynn,
@@ -1713,8 +1703,7 @@ TEST(pynn2, fetch_data_neo)
 			PyNN_::set_homogeneous_rec(pops[1], pypops[1]);
 			PyNN_::set_homogeneous_rec(pops[0], pypops[0]);
 
-			GroupConnction conn = GroupConnction::create_group_connection(
-			    0, 1, 0, 1, 0, 3, 0.5, 1.0, 0, "AllToAllConnector");
+			GroupConnection conn(0, 1, 0, 1, 0, 3, 0.5, 1.0, 0, "AllToAllConnector");
 			ConnectionDescriptor conn_desc(0, 0, 16, 1, 0, 16,
 			                               Connector::all_to_all(0.15, 1));
 			PyNN_::group_connect(pops, pypops, conn_desc, conn, pynn,
@@ -1842,8 +1831,7 @@ TEST(pynn2, fetch_data_spikey)
 			    PyNN_::spikey_create_homogeneous_pop(pops[1], pynn)};
 			PyNN_::spikey_set_homogeneous_rec(pops[1], pypops[1], pynn);
 
-			GroupConnction conn = GroupConnction::create_group_connection(
-			    0, 1, 0, 10, 0, 1, 0.5, 1.0, 0, "AllToAllConnector");
+			GroupConnection conn(0, 1, 0, 10, 0, 1, 0.5, 1.0, 0, "AllToAllConnector");
 			PyNN_::group_connect7(pops, pypops, conn, pynn,
 			                      "AllToAllConnector");
 
@@ -1891,9 +1879,13 @@ TEST(pynn2, pynn2)
 		                                          .record_spikes()
 		                                          .record_gsyn_exc()
 		                                          .record_gsyn_inh())};
+		std::cout <<  "test" <<std::endl;
 		netw.add_connection(pops[0], pops[1], Connector::all_to_all(0.5, 1.0));
+		std::cout <<  "test" <<std::endl;
 		if (sim == "nest") {
+			std::cout << "run" <<std::endl;
 			netw.run("pynn." + sim + "={\"timestep\" : 0.1}", 100);
+			std::cout <<  "test" <<std::endl;
 			// Test fetching spikes
 			EXPECT_NEAR(pops[1][0].signals().data(0)[0], 20, 3);
 			EXPECT_NEAR(pops[1][1].signals().data(0)[0], 20, 3);

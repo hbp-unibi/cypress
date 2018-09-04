@@ -42,6 +42,7 @@
 #include <cypress/core/network.hpp>
 #include <cypress/core/neurons.hpp>
 #include <cypress/core/spike_time_generators.hpp>
+#include <cypress/core/synapses.hpp>
 #include <cypress/core/types.hpp>
 #include <cypress/util/logger.hpp>
 #include <cypress/util/matplotlib_cpp.hpp>

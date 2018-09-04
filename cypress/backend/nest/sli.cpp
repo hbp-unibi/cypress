@@ -17,8 +17,8 @@
  */
 
 #include <chrono>
-#include <iostream>
 #include <iomanip>
+#include <iostream>
 #include <map>
 #include <regex>
 
@@ -26,8 +26,8 @@
 #include <ctime>
 
 #include <cypress/backend/nest/sli.hpp>
-#include <cypress/core/neurons.hpp>
 #include <cypress/core/network.hpp>
+#include <cypress/core/neurons.hpp>
 #include <cypress/util/logger.hpp>
 
 namespace cypress {
@@ -190,8 +190,9 @@ RecordInfo record_info(const Neuron<EifCondExpIsfaIsta> &n)
 
 size_t create_recorder(std::ostream &os, const std::string &name, size_t &gid)
 {
-	os << "/" << name << " << /withtime true /withgid false /to_file false "
-	                     "/to_memory true >> Create\n";
+	os << "/" << name
+	   << " << /withtime true /withgid false /to_file false "
+	      "/to_memory true >> Create\n";
 	return ++gid;
 }
 
@@ -278,6 +279,13 @@ void write_connections(std::ostream &os,
 	// TODO: Here we blindly generate all connections. NEST directly supports
 	// most of our connection types, so this code could be much improved
 
+	for (auto i : descrs) {
+		if (i.connector().synapse_name() != StaticSynapse().name()) {
+			throw ExecutionError(
+			    "Only static synapses are supported for this backend!");
+		}
+	}
+
 	// Vector containing all connection objects
 	std::vector<Connection> connections = instantiate_connections(descrs);
 	for (const auto &connection : connections) {
@@ -288,9 +296,9 @@ void write_connections(std::ostream &os,
 		}
 		os << (it_src->second + connection.n.src) << " "
 		   << (it_tar->second + connection.n.tar) << " " << std::showpoint
-		   << connection.n.synapse.weight * 1e3 << " "
+		   << connection.n.SynapseParameters[0] * 1e3 << " "
 		   << std::showpoint  // uS -> nS
-		   << std::max(params.timestep, connection.n.synapse.delay)
+		   << std::max(params.timestep, connection.n.SynapseParameters[1])
 		   << " Connect\n";
 	}
 }
@@ -398,8 +406,8 @@ void write_readback_cmds(std::ostream &os,
 }
 
 std::shared_ptr<Matrix<Real>> fetch_data_matrix(PopulationBase pop,
-                                                 NeuronIndex nid, size_t len,
-                                                 int modality)
+                                                NeuronIndex nid, size_t len,
+                                                int modality)
 {
 	auto res = std::make_shared<Matrix<Real>>(
 	    len, modality == MODALITY_SPIKES ? 1 : 2);
@@ -410,7 +418,7 @@ std::shared_ptr<Matrix<Real>> fetch_data_matrix(PopulationBase pop,
 	pop[nid].signals().data(modality, res);
 	return res;
 }
-}
+}  // namespace
 
 void write_network(std::ostream &os, const NetworkBase &net, Real duration,
                    const Params &params)
@@ -544,7 +552,7 @@ void read_response(std::istream &is, NetworkBase &net)
 					state = STATE_DATA_LEN;
 					break;
 				case STATE_DATA_LEN:  // Load the data length and create the
-					                  // target matrix
+				                      // target matrix
 					len = std::stoull(line, &idx);
 					data = fetch_data_matrix(net[pid], nid, len, modality);
 					data_idx = 0;
@@ -640,5 +648,5 @@ void read_response(std::istream &is, NetworkBase &net)
 	             to_seconds(t_setup, t_simulate_start),
 	             to_seconds(t_simulate_stop, t_done)});
 }
-}
-}
+}  // namespace sli
+}  // namespace cypress

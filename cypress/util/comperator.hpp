@@ -54,7 +54,7 @@ struct Comperator {
 		 * @param f is the comperator function underlying the functor.
 		 * @param res is the result of the previous comperator evaluation.
 		 */
-		ComperatorFunctor(const F &f, int res = 0) : f(f), res(res) {}
+		explicit ComperatorFunctor(const F &f, int res = 0) : f(f), res(res) {}
 
 		/**
 		 * Compares the two given values t1 and t2 and returns a new functor.

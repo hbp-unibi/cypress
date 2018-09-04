@@ -186,7 +186,7 @@ struct list_con_header {
 };
 #pragma pack(pop)
 
-custom_conn_descr convert_non_list_connection(GroupConnction conn)
+custom_conn_descr convert_non_list_connection(GroupConnection conn)
 {
 	custom_conn_descr res;
 	res.pid_src = conn.psrc;
@@ -196,43 +196,53 @@ custom_conn_descr convert_non_list_connection(GroupConnction conn)
 	res.nid_tar_start = conn.tar0;
 	res.nid_tar_end = conn.tar1;
 	res.connector_id = binnf_connector_id(conn.connection_name);
-	res.weight = conn.synapse.weight;
-	res.delay = conn.synapse.delay;
+	res.weight = conn.synapse_parameters[0];
+	res.delay = conn.synapse_parameters[1];
 	res.parameter = conn.additional_parameter;
 	return res;
 }
 
 /**
-* Writes a vector of Local Connection (without population IDs) to file, which is
-* readable by PyNN's "FromFileConnector". This is probably slower, but will save
-* some RAM on the host machine
-*
-* @param filename name of the file to write to
-* @param conns List of local connections
-*/
+ * Writes a vector of Local Connection (without population IDs) to file, which
+ * is readable by PyNN's "FromFileConnector". This is probably slower, but will
+ * save some RAM on the host machine
+ *
+ * @param filename name of the file to write to
+ * @param conns List of local connections
+ */
 void write_local_connections_to_file(std::string filename,
                                      const std::vector<LocalConnection> &conns)
 {
 	std::ofstream file;
 	file.open(filename);
 	if (!file.good()) {
-		throw std::runtime_error("Could not write connections!");
+	    throw std::runtime_error("Could not write connections!");
 	}
 	file << "#columns=[\"weight\", \"delay\"]" << std::endl;
 	// TODO: compatibility hack for NEST: Delay must be above timestep. Doing so
 	// in Python is pain/not possible, so do it here. Change adaptivley to
 	// current used value missing
 	if (filename.find("nest") != std::string::npos) {
-		for (auto i : conns) {
-			file << i.src << " " << i.tar << " " << i.synapse.weight << " "
-			     << std::max(i.synapse.delay, 0.1) << std::endl;
-		}
+	    for (auto i : conns) {
+		    if (i.SynapseParameters.size() > 2) {
+		    	//TODO
+			    throw ExecutionError(
+				    "Only static synapses are supported for this backend!");
+		    }
+	        file << i.src << " " << i.tar << " " << i.SynapseParameters[0] << " "
+	             << std::max(i.SynapseParameters[1], 0.1) << std::endl;
+	    }
 	}
 	else {
-		for (auto i : conns) {
-			file << i.src << " " << i.tar << " " << i.synapse.weight << " "
-			     << i.synapse.delay << std::endl;
-		}
+	    for (auto i : conns){
+		    if (i.SynapseParameters.size() > 2) {
+		    	// TODO
+			    throw ExecutionError(
+				    "Only static synapses are supported for this backend!");
+		    }
+	        file << i.src << " " << i.tar << " " << i.SynapseParameters[0] << " "
+	             << i.SynapseParameters[1] << std::endl;
+	    }
 	}
 	file.close();
 }
@@ -257,11 +267,16 @@ static void write_list_connections(
 	std::vector<list_con_header> pids;
 
 	for (auto des : descrs) {
+		if(des.connector().synapse_name() != "StaticSynapse"){
+			// TODO
+			throw ExecutionError(
+				"Only static synapses are supported for this backend!");
+		}
 		std::vector<LocalConnection> conns_exc, conns_inh;
 		std::vector<Connection> conns_full;
 		des.connect(conns_full);
 		for (auto i : conns_full) {
-			if (i.n.synapse.weight < 0) {
+			if (i.inhibitory()) {
 				conns_inh.emplace_back(i.n.absolute_connection());
 			}
 			else {
@@ -270,10 +285,10 @@ static void write_list_connections(
 		}
 
 		if (conns_inh.size() > 0) {
-            // Choose, whether connections should be written to file 
-            /* Currently disabled, as the FromFileConnector is slower, and 
-             * also does not stream data; TODO as soon as 
-             * https://github.com/NeuralEnsemble/PyNN/issues/549 gets closed*/
+			// Choose, whether connections should be written to file
+			/* Currently disabled, as the FromFileConnector is slower, and
+			 * also does not stream data; TODO as soon as
+			 * https://github.com/NeuralEnsemble/PyNN/issues/549 gets closed*/
 			if (conns_inh.size() < 1000000000 or base_filename == "") {
 				serialise_matrix(os, "list_connection", LOCAL_CONNECTION_HEADER,
 				                 reinterpret_cast<uint8_t *>(&conns_inh[0]),
@@ -295,7 +310,7 @@ static void write_list_connections(
 		}
 
 		if (conns_exc.size() > 0) {
-            // Choose, whether connections should be writenn to file 
+			// Choose, whether connections should be writenn to file
 			if (conns_exc.size() < 1000000000 or base_filename == "") {
 				serialise_matrix(os, "list_connection", LOCAL_CONNECTION_HEADER,
 				                 reinterpret_cast<uint8_t *>(&conns_exc[0]),
@@ -319,7 +334,7 @@ static void write_list_connections(
 	serialise_matrix(os, "list_connection_header", LIST_CONNECTIONS_HEADER,
 	                 reinterpret_cast<uint8_t *>(&pids[0]), pids.size());
 }
-}
+}  // namespace
 
 /**
  * Constructs and sends the connections to the simulator. There are two
@@ -344,7 +359,7 @@ static void write_connections(const std::vector<ConnectionDescriptor> &descrs,
 	std::vector<custom_conn_descr> group_connections;
 
 	for (auto desc : descrs) {
-		GroupConnction temp;
+		GroupConnection temp;
 		// Check wether connection can be used as grouped connection
 		if (desc.connector().group_connect(desc, temp)) {
 			group_connections.emplace_back(convert_non_list_connection(temp));
@@ -589,13 +604,12 @@ bool marshall_log(Logger &logger, std::istream &is)
 			}
 		}
 		catch (BinnfDecodeException &ex) {
-			logger.error(
-			    "cypress",
-			    std::string("Error while parsing BiNNF: ") + ex.what());
+			logger.error("cypress", std::string("Error while parsing BiNNF: ") +
+			                            ex.what());
 			continue;
 		}
 	}
 	return had_block;
 }
-}
-}
+}  // namespace binnf
+}  // namespace cypress

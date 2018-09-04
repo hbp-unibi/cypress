@@ -45,6 +45,10 @@ int main(int argc, const char *argv[])
 
 	global_logger().min_level(LogSeverity::INFO);
 
+	StaticSynapse synapse = StaticSynapse().weight(0.015).delay(1);
+	Connector::all_to_all(synapse);
+
+
 	auto net =
 	    Network()
 	        // Add a named population of poisson spike sources
@@ -62,7 +66,7 @@ int main(int argc, const char *argv[])
 	            IfFacetsHardware1Signals().record_spikes())
 	        // Project each neuron in the population "source" onto each neuron
 	        // in the population "target"
-	        .add_connection("source", "target", Connector::all_to_all(0.015))
+	        .add_connection("source", "target", Connector::all_to_all(synapse))
 	        .run(argv[1], 0.0, argc, argv);
 
 	// Print the spike times for each source neuron
@@ -85,7 +89,7 @@ int main(int argc, const char *argv[])
 		          << std::endl;
 		spikes.push_back(neuron.signals().get_spikes());
 	}
-	
+
 	// Plot spike times
 	std::map<std::string, std::string> keywords;
 	keywords["linewidths"] = "0.1";

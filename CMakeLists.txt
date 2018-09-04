@@ -127,6 +127,7 @@ add_library(cypress
 	cypress/core/network_base_objects
 	cypress/core/network_mixins
 	cypress/core/spike_time_generators
+	cypress/core/synapses
 	cypress/core/transformation
 	cypress/core/transformation_util
 	cypress/core/types

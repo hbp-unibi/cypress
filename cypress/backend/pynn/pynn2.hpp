@@ -286,7 +286,7 @@ public:
 	 * @return py::object reference to the connector
 	 */
 	static py::object get_connector7(const std::string &connector_name,
-	                                 const GroupConnction group_conn,
+	                                 const GroupConnection group_conn,
 	                                 const py::module &pynn);
 
 	/**
@@ -317,7 +317,7 @@ public:
 	static py::object group_connect(
 	    const std::vector<PopulationBase> &populations,
 	    const std::vector<py::object> &pypopulations,
-	    const ConnectionDescriptor &conn, const GroupConnction &group_conn,
+	    const ConnectionDescriptor &conn, const GroupConnection &group_conn,
 	    const py::module &pynn, const std::string &conn_name,
 	    const Real timestep = 0.0);
 
@@ -336,7 +336,7 @@ public:
 	static py::object group_connect7(
 	    const std::vector<PopulationBase> &populations,
 	    const std::vector<py::object> &pypopulations,
-	    const GroupConnction &group_conn, const py::module &pynn,
+	    const GroupConnection &group_conn, const py::module &pynn,
 	    const std::string &conn_name);
 
 	/**

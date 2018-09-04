@@ -36,26 +36,16 @@ TEST(connector, all_to_all)
 	});
 
 	EXPECT_EQ(std::vector<Connection>({
-	              {0, 1, 0, 0, 0.16, 0.1},
-	              {0, 1, 0, 1, 0.16, 0.1},
-	              {0, 1, 0, 2, 0.16, 0.1},
-	              {0, 1, 0, 3, 0.16, 0.1},
-	              {0, 1, 0, 4, 0.16, 0.1},
-	              {0, 1, 1, 0, 0.16, 0.1},
-	              {0, 1, 1, 1, 0.16, 0.1},
-	              {0, 1, 1, 2, 0.16, 0.1},
-	              {0, 1, 1, 3, 0.16, 0.1},
-	              {0, 1, 1, 4, 0.16, 0.1},
-	              {0, 2, 2, 0, 0.1, 0.05},
-	              {0, 2, 2, 1, 0.1, 0.05},
-	              {0, 2, 2, 2, 0.1, 0.05},
-	              {0, 2, 2, 3, 0.1, 0.05},
-	              {0, 2, 2, 4, 0.1, 0.05},
-	              {0, 2, 3, 0, 0.1, 0.05},
-	              {0, 2, 3, 1, 0.1, 0.05},
-	              {0, 2, 3, 2, 0.1, 0.05},
-	              {0, 2, 3, 3, 0.1, 0.05},
-	              {0, 2, 3, 4, 0.1, 0.05},
+	              {0, 1, 0, 0, 0.16, 0.1}, {0, 1, 0, 1, 0.16, 0.1},
+	              {0, 1, 0, 2, 0.16, 0.1}, {0, 1, 0, 3, 0.16, 0.1},
+	              {0, 1, 0, 4, 0.16, 0.1}, {0, 1, 1, 0, 0.16, 0.1},
+	              {0, 1, 1, 1, 0.16, 0.1}, {0, 1, 1, 2, 0.16, 0.1},
+	              {0, 1, 1, 3, 0.16, 0.1}, {0, 1, 1, 4, 0.16, 0.1},
+	              {0, 2, 2, 0, 0.1, 0.05}, {0, 2, 2, 1, 0.1, 0.05},
+	              {0, 2, 2, 2, 0.1, 0.05}, {0, 2, 2, 3, 0.1, 0.05},
+	              {0, 2, 2, 4, 0.1, 0.05}, {0, 2, 3, 0, 0.1, 0.05},
+	              {0, 2, 3, 1, 0.1, 0.05}, {0, 2, 3, 2, 0.1, 0.05},
+	              {0, 2, 3, 3, 0.1, 0.05}, {0, 2, 3, 4, 0.1, 0.05},
 	          }),
 	          connections);
 }
@@ -79,15 +69,16 @@ TEST(connector, one_to_one)
 TEST(connector, from_list)
 {
 	std::vector<Connection> connections = instantiate_connections({
-	    {0, 0, 16, 1, 0, 16, Connector::from_list({
-	                             {0, 1, 0.16, 0.0},
-	                             {10, 8, 0.1, 0.0},
-	                             {11, 3, 0.12},
-	                             {12, 3, 0.00, 0.0},
-	                             {12, 3, 0.05},
-	                             {14, 3, -0.05, 0.0},
-	                             {12, 2, 0.00, -1.0},
-	                         })},
+	    {0, 0, 16, 1, 0, 16,
+	     Connector::from_list({
+	         {0, 1, 0.16, 0.0},
+	         {10, 8, 0.1, 0.0},
+	         {11, 3, 0.12},
+	         {12, 3, 0.00, 0.0},
+	         {12, 3, 0.05},
+	         {14, 3, -0.05, 0.0},
+	         {12, 2, 0.00, -1.0},
+	     })},
 	});
 
 	EXPECT_EQ(std::vector<Connection>({
@@ -133,7 +124,7 @@ TEST(connector, functor)
 			     return Synapse(0.16, 0.1);
 		     }
 		     return Synapse();
-		 })},
+	     })},
 	});
 
 	EXPECT_EQ(std::vector<Connection>({
@@ -149,7 +140,7 @@ TEST(connector, uniform_functor)
 {
 	std::vector<Connection> connections = instantiate_connections({
 	    {0, 0, 16, 1, 0, 4,
-	    Connector::functor(
+	     Connector::functor(
 	         [](NeuronIndex src, NeuronIndex tar) { return src == tar; }, 0.16,
 	         0.1)},
 	});
@@ -166,12 +157,12 @@ TEST(connector, uniform_functor)
 TEST(connector, uniform_functor_huge_matrix)
 {
 	std::vector<Connection> connections = instantiate_connections({
-	    {0, 0, 10000, 1, 0, 10000, Connector::functor(
-	                                   [](NeuronIndex src, NeuronIndex tar) {
-		                                   return src == tar && src < 4 &&
-		                                          tar < 4;
-		                               },
-	                                   0.16, 0.1)},
+	    {0, 0, 10000, 1, 0, 10000,
+	     Connector::functor(
+	         [](NeuronIndex src, NeuronIndex tar) {
+		         return src == tar && src < 4 && tar < 4;
+	         },
+	         0.16, 0.1)},
 	});
 
 	EXPECT_EQ(std::vector<Connection>({
@@ -197,17 +188,24 @@ TEST(connector, fixed_probability)
 	EXPECT_TRUE(connections1.size() < 16 * 16);
 	EXPECT_TRUE(connections2.size() < 16 * 16);
 	EXPECT_TRUE(connections1 != connections2);
+
+	StaticSynapse synap({0.015, 1});
+	connections1 = instantiate_connections({
+	    {0, 0, 16, 1, 0, 16,
+	     Connector::fixed_probability(Connector::all_to_all(synap), 0.1)},
+	});
+	EXPECT_TRUE(connections1.size() < 16 * 16);
 }
 
 TEST(connector, fixed_probability_seed)
 {
 	std::vector<Connection> connections1 = instantiate_connections({
-	    {0, 0, 16, 1, 0, 16, Connector::fixed_probability(
-	                             Connector::all_to_all(), 0.1, 436283)},
+	    {0, 0, 16, 1, 0, 16,
+	     Connector::fixed_probability(Connector::all_to_all(), 0.1, 436283)},
 	});
 	std::vector<Connection> connections2 = instantiate_connections({
-	    {0, 0, 16, 1, 0, 16, Connector::fixed_probability(
-	                             Connector::all_to_all(), 0.1, 436283)},
+	    {0, 0, 16, 1, 0, 16,
+	     Connector::fixed_probability(Connector::all_to_all(), 0.1, 436283)},
 	});
 
 	EXPECT_TRUE(connections1.size() < 16 * 16);
@@ -243,16 +241,13 @@ TEST(connector, fixed_fan_in)
 TEST(connector, fixed_fan_in_seed)
 {
 	std::vector<Connection> connections1 = instantiate_connections({
-	    {0, 0, 16, 1, 0, 16,
-	     Connector::fixed_fan_in(8, 0.1, 1.0, 8791)},
+	    {0, 0, 16, 1, 0, 16, Connector::fixed_fan_in(8, 0.1, 1.0, 8791)},
 	});
 	std::vector<Connection> connections2 = instantiate_connections({
-	    {0, 0, 16, 1, 0, 16,
-	     Connector::fixed_fan_in(8, 0.1, 1.0, 8791)},
+	    {0, 0, 16, 1, 0, 16, Connector::fixed_fan_in(8, 0.1, 1.0, 8791)},
 	});
 	std::vector<Connection> connections3 = instantiate_connections({
-	    {0, 0, 16, 1, 0, 16,
-	     Connector::fixed_fan_in(8, 0.1, 1.0, 8792)},
+	    {0, 0, 16, 1, 0, 16, Connector::fixed_fan_in(8, 0.1, 1.0, 8792)},
 	});
 
 	EXPECT_TRUE(connections1 == connections2);
@@ -287,19 +282,16 @@ TEST(connector, fixed_fan_out)
 TEST(connector, fixed_fan_out_seed)
 {
 	std::vector<Connection> connections1 = instantiate_connections({
-	    {0, 0, 16, 1, 0, 16,
-	     Connector::fixed_fan_out(8, 0.1, 1.0, 8791)},
+	    {0, 0, 16, 1, 0, 16, Connector::fixed_fan_out(8, 0.1, 1.0, 8791)},
 	});
 	std::vector<Connection> connections2 = instantiate_connections({
-	    {0, 0, 16, 1, 0, 16,
-	     Connector::fixed_fan_out(8, 0.1, 1.0, 8791)},
+	    {0, 0, 16, 1, 0, 16, Connector::fixed_fan_out(8, 0.1, 1.0, 8791)},
 	});
 	std::vector<Connection> connections3 = instantiate_connections({
-	    {0, 0, 16, 1, 0, 16,
-	     Connector::fixed_fan_out(8, 0.1, 1.0, 8792)},
+	    {0, 0, 16, 1, 0, 16, Connector::fixed_fan_out(8, 0.1, 1.0, 8792)},
 	});
 
 	EXPECT_TRUE(connections1 == connections2);
 	EXPECT_TRUE(connections2 != connections3);
 }
-}
+}  // namespace cypress
