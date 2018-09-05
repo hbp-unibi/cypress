@@ -695,35 +695,30 @@ py::object PyNN_::get_connector7(const std::string &connector_name,
 	Real delay = group_conn.synapse_parameters[1];
 	if (connector_name == "AllToAllConnector") {
 		return pynn.attr(connector_name.c_str())(
-		    "weights"_a = weight,
-		    "delays"_a = delay,
+		    "weights"_a = weight, "delays"_a = delay,
 		    "allow_self_connections"_a = py::cast(false));
 	}
 	else if (connector_name == "OneToOneConnector") {
-		return pynn.attr(connector_name.c_str())(
-		    "weights"_a = weight,
-		    "delays"_a = delay);
+		return pynn.attr(connector_name.c_str())("weights"_a = weight,
+		                                         "delays"_a = delay);
 	}
 	else if (connector_name == "FixedProbabilityConnector") {
 		return pynn.attr(connector_name.c_str())(
-		    "weights"_a = weight,
-		    "delays"_a = delay,
+		    "weights"_a = weight, "delays"_a = delay,
 		    "p_connect"_a = group_conn.additional_parameter,
 		    "allow_self_connections"_a = py::cast(false));
 	}
 	else if (connector_name == "FixedNumberPreConnector") {
 		py::module np = py::module::import("numpy");
 		return pynn.attr(connector_name.c_str())(
-		    "weights"_a = weight,
-		    "delays"_a = delay,
+		    "weights"_a = weight, "delays"_a = delay,
 		    "n"_a = np.attr("int")(group_conn.additional_parameter),
 		    "allow_self_connections"_a = py::cast(false));
 	}
 	else if (connector_name == "FixedNumberPostConnector") {
 		py::module np = py::module::import("numpy");
 		return pynn.attr(connector_name.c_str())(
-		    "weights"_a = weight,
-		    "delays"_a = delay,
+		    "weights"_a = weight, "delays"_a = delay,
 		    "n"_a = np.attr("int")(group_conn.additional_parameter),
 		    "allow_self_connections"_a = py::cast(false));
 	}
@@ -795,23 +790,43 @@ py::object PyNN_::group_connect(const std::vector<PopulationBase> &populations,
 	if (group_conn.inhibitory()) {
 		receptor = "inhibitory";
 	}
-	if (group_conn.synapse_name == "StaticSynapse") {
-		return pynn.attr("Projection")(
-			source, target,
-			get_connector(conn_name, pynn, group_conn.additional_parameter),
-			"synapse_type"_a = pynn.attr("StaticSynapse")(
-				"weight"_a = fabs(group_conn.synapse_parameters[0]),
-				"delay"_a =
-					std::max(round(group_conn.synapse_parameters[1] / timestep), 1.0) *
-						timestep),
-			"receptor_type"_a = receptor);
+	Real delay = group_conn.synapse_parameters[1];
+	if (timestep != 0) {
+		delay =
+		    std::max(round(group_conn.synapse_parameters[1] / timestep), 1.0) *
+		    timestep;
 	}
-	else{
-		// TODO
-		throw ExecutionError(
-			"Only static synapses are supported for this backend!");
 
+	py::object synapse;
+	std::vector<std::string> param_names = StaticSynapse().parameter_names();
+	if (group_conn.synapse_name == "StaticSynapse") {
+		synapse = pynn.attr("StaticSynapse")(
+		    "weight"_a = fabs(group_conn.synapse_parameters[0]),
+		    "delay"_a = delay);
 	}
+	else if (group_conn.synapse_name == "SpikePairRuleAdditive") {
+		py::object timing_dependence = pynn.attr("SpikePairRule")(
+		    "tau_plus"_a = group_conn.synapse_parameters[2],
+		    "tau_minus"_a = group_conn.synapse_parameters[3],
+		    "A_plus"_a = group_conn.synapse_parameters[4],
+		    "A_minus"_a = group_conn.synapse_parameters[5]);
+		py::object weight_dependence = pynn.attr("AdditiveWeightDependence")(
+		    "w_min"_a = group_conn.synapse_parameters[6],
+		    "w_max"_a = group_conn.synapse_parameters[7]);
+		synapse = pynn.attr("STDPMechanism")(
+		    "weight"_a = fabs(group_conn.synapse_parameters[0]),
+		    "delay"_a = delay, "timing_dependence"_a = timing_dependence,
+		    "weight_dependence"_a = weight_dependence);
+	}
+	else {
+		throw ExecutionError(group_conn.synapse_name +
+		                     "is not supported for this backend!");
+	}
+
+	return pynn.attr("Projection")(
+	    source, target,
+	    get_connector(conn_name, pynn, group_conn.additional_parameter),
+	    "synapse_type"_a = synapse, "receptor_type"_a = receptor);
 }
 
 py::object PyNN_::group_connect7(const std::vector<PopulationBase> &,
@@ -853,10 +868,10 @@ std::tuple<py::object, py::object> PyNN_::list_connect(
     const ConnectionDescriptor conn, const py::module &pynn,
     const Real timestep)
 {
-	if(conn.connector().synapse_name() != "StaticSynapse"){
+	if (conn.connector().synapse_name() != "StaticSynapse") {
 		// TODO
 		throw ExecutionError(
-			"Only static synapses are supported for this backend!");
+		    "Only static synapses are supported for this backend!");
 	}
 	std::tuple<py::object, py::object> ret =
 	    std::make_tuple(py::object(), py::object());
@@ -884,7 +899,7 @@ std::tuple<py::object, py::object> PyNN_::list_connect(
 			(*conns_exc)(counter_ex, 2) = i.n.SynapseParameters[0];
 			if (timestep != 0) {
 				Real delay =
-				    std::max(round(i.n.SynapseParameters[1]/ timestep), 1.0) *
+				    std::max(round(i.n.SynapseParameters[1] / timestep), 1.0) *
 				    timestep;
 				(*conns_exc)(counter_ex, 3) = delay;
 			}
@@ -948,10 +963,10 @@ std::tuple<py::object, py::object> PyNN_::list_connect7(
     const std::vector<py::object> &pypopulations,
     const ConnectionDescriptor conn, const py::module &pynn)
 {
-	if(conn.connector().synapse_name() != "StaticSynapse"){
+	if (conn.connector().synapse_name() != "StaticSynapse") {
 		// TODO
 		throw ExecutionError(
-			"Only static synapses are supported for this backend!");
+		    "Only static synapses are supported for this backend!");
 	}
 	std::vector<Connection> conns_full;
 	conn.connect(conns_full);
@@ -1527,7 +1542,7 @@ void PyNN_::do_run(NetworkBase &source, Real duration) const
 	if (!m_keep_log) {
 	    unlink(log_path.c_str());
 	}*/
-}  // namespace cypress
+}
 
 std::string PyNN_::nmpi_platform() const
 {
