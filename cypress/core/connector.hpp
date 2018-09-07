@@ -1229,7 +1229,7 @@ public:
 		    descr.nid_src0(), descr.nsrc(), m_n_fan_in, descr.nid_tar0(),
 		    descr.nid_tar1(), [&](size_t i, size_t r) {
 			    tar.emplace_back(descr.pid_src(), descr.pid_tar(), r, i,
-			                     *Base::m_synapse);
+			                     *this->m_synapse);
 		    });
 	}
 
@@ -1301,7 +1301,7 @@ public:
 		    descr.nid_tar0(), descr.ntar(), m_n_fan_out, descr.nid_src0(),
 		    descr.nid_src1(), [&](size_t i, size_t r) {
 			    tar.emplace_back(descr.pid_src(), descr.pid_tar(), i, r,
-			                     *Base::m_synapse);
+			                     *this->m_synapse);
 		    });
 	}
 
