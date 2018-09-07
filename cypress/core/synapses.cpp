@@ -29,8 +29,16 @@ std::shared_ptr<SynapseBase> SynapseBase::make_shared(SynapseBase &synapse)
 		return std::make_shared<SpikePairRuleAdditive>(
 			SpikePairRuleAdditive(synapse.parameters()));
 	}
+	else if (synapse.name() == "SpikePairRuleMultiplicative") {
+		return std::make_shared<SpikePairRuleMultiplicative>(
+			SpikePairRuleMultiplicative(synapse.parameters()));
+	}
+	else if (synapse.name() == "TsodyksMarkramMechanism") {
+		return std::make_shared<TsodyksMarkramMechanism>(
+			TsodyksMarkramMechanism(synapse.parameters()));
+	}
 	else {
-		throw "New synapse type not registered internally";
+		throw CypressException("New synapse type not registered internally");
 	}
 }
 }

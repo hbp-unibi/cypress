@@ -818,9 +818,32 @@ py::object PyNN_::group_connect(const std::vector<PopulationBase> &populations,
 		    "delay"_a = delay, "timing_dependence"_a = timing_dependence,
 		    "weight_dependence"_a = weight_dependence);
 	}
+	else if (group_conn.synapse_name ==
+	         "SpikePairRuleMultiplicative") {
+		py::object timing_dependence = pynn.attr("SpikePairRule")(
+		    "tau_plus"_a = group_conn.synapse_parameters[2],
+		    "tau_minus"_a = group_conn.synapse_parameters[3],
+		    "A_plus"_a = group_conn.synapse_parameters[4],
+		    "A_minus"_a = group_conn.synapse_parameters[5]);
+		py::object weight_dependence =
+		    pynn.attr("MultiplicativeWeightDependence")(
+		        "w_min"_a = group_conn.synapse_parameters[6],
+		        "w_max"_a = group_conn.synapse_parameters[7]);
+		synapse = pynn.attr("STDPMechanism")(
+		    "weight"_a = fabs(group_conn.synapse_parameters[0]),
+		    "delay"_a = delay, "timing_dependence"_a = timing_dependence,
+		    "weight_dependence"_a = weight_dependence);
+	}
+	else if (group_conn.synapse_name == "TsodyksMarkramMechanism") {
+		synapse = pynn.attr("TsodyksMarkramSynapse")(
+		    "weight"_a = fabs(group_conn.synapse_parameters[0]),
+		    "delay"_a = delay, "U"_a = group_conn.synapse_parameters[2],
+		    "tau_rec"_a = group_conn.synapse_parameters[3],
+		    "tau_facil"_a = group_conn.synapse_parameters[4]);
+	}
 	else {
 		throw ExecutionError(group_conn.synapse_name +
-		                     "is not supported for this backend!");
+		                     " is not supported for this backend!");
 	}
 
 	return pynn.attr("Projection")(

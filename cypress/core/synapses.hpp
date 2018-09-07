@@ -191,10 +191,25 @@ static const SynapseParametersBase StaticSynapseParameters(
     {0.015, 1.0}, false);
 static const SynapseParametersBase SpikePairRuleAdditiveParameters(
     "SpikePairRuleAdditive",
-    {"weight", "delay", "tau_plus", "tau_minus", "A_plus", "A_minus", "w_min", "w_max"},
-    {"microSiemens/nA", "ms", "ms", "ms", "microSiemens/nA", "microSiemens/nA", "microSiemens/nA",
-     "microSiemens/nA"},
+    {"weight", "delay", "tau_plus", "tau_minus", "A_plus", "A_minus", "w_min",
+     "w_max"},
+    {"microSiemens/nA", "ms", "ms", "ms", "microSiemens/nA", "microSiemens/nA",
+     "microSiemens/nA", "microSiemens/nA"},
     {0.015, 1.0, 20.0, 20.0, 0.01, 0.01, 0, 0.1}, true);
+
+static const SynapseParametersBase TsodyksMarkramMechanismParameters(
+    "TsodyksMarkramMechanism", {"weight", "delay", "U", "tau_rec", "tau_facil"},
+    {"microSiemens/nA", "ms", "", "ms", "ms"}, {0.015, 1.0, 0.0, 100.0, 0.0},
+    false);
+
+static const SynapseParametersBase SpikePairRuleMultiplicativeParameters(
+    "SpikePairRuleMultiplicative",
+    {"weight", "delay", "tau_plus", "tau_minus", "A_plus", "A_minus", "w_min",
+     "w_max"},
+    {"microSiemens/nA", "ms", "ms", "ms", "microSiemens/nA", "microSiemens/nA",
+     "microSiemens/nA", "microSiemens/nA"},
+    {0.015, 1.0, 20.0, 20.0, 0.01, 0.01, 0, 0.1}, true);
+
 }  // namespace
 
 class StaticSynapse : public SynapseBase {
@@ -274,6 +289,90 @@ public:
 	NAMED_PARAMETER(w_min, 6);
 	NAMED_PARAMETER(w_max, 7);
 };
+
+class SpikePairRuleMultiplicative final : public SynapseBase {
+public:
+	using SynapseBase::SynapseBase;
+	SpikePairRuleMultiplicative()
+	    : SynapseBase(SpikePairRuleMultiplicativeParameters.parameter_defaults)
+	{
+		check_parameter_size();
+	}
+	SpikePairRuleMultiplicative(const StaticSynapse &synapse)
+	    : SynapseBase(synapse.parameters())
+	{
+		check_parameter_size();
+	}
+	const std::string name() const override
+	{
+		return SpikePairRuleMultiplicativeParameters.name;
+	};
+	const std::vector<std::string> &parameter_names() const override
+	{
+		return SpikePairRuleMultiplicativeParameters.parameter_names;
+	};
+	const std::vector<std::string> &parameter_units() const override
+	{
+		return SpikePairRuleMultiplicativeParameters.parameter_units;
+	};
+	const std::vector<Real> &parameter_defaults() const override
+	{
+		return SpikePairRuleMultiplicativeParameters.parameter_defaults;
+	};
+	bool learning() const override
+	{
+		return SpikePairRuleMultiplicativeParameters.learning;
+	};
+	NAMED_PARAMETER(weight, 0);
+	NAMED_PARAMETER(delay, 1);
+	NAMED_PARAMETER(tau_plus, 2);
+	NAMED_PARAMETER(tau_minus, 3);
+	NAMED_PARAMETER(A_plus, 4);
+	NAMED_PARAMETER(A_minus, 5);
+	NAMED_PARAMETER(w_min, 6);
+	NAMED_PARAMETER(w_max, 7);
+};
+
+class TsodyksMarkramMechanism final : public SynapseBase {
+public:
+	using SynapseBase::SynapseBase;
+	TsodyksMarkramMechanism()
+	    : SynapseBase(TsodyksMarkramMechanismParameters.parameter_defaults)
+	{
+		check_parameter_size();
+	}
+	TsodyksMarkramMechanism(const StaticSynapse &synapse)
+	    : SynapseBase(synapse.parameters())
+	{
+		check_parameter_size();
+	}
+	const std::string name() const override
+	{
+		return TsodyksMarkramMechanismParameters.name;
+	};
+	const std::vector<std::string> &parameter_names() const override
+	{
+		return TsodyksMarkramMechanismParameters.parameter_names;
+	};
+	const std::vector<std::string> &parameter_units() const override
+	{
+		return TsodyksMarkramMechanismParameters.parameter_units;
+	};
+	const std::vector<Real> &parameter_defaults() const override
+	{
+		return TsodyksMarkramMechanismParameters.parameter_defaults;
+	};
+	bool learning() const override
+	{
+		return TsodyksMarkramMechanismParameters.learning;
+	};
+	NAMED_PARAMETER(weight, 0);
+	NAMED_PARAMETER(delay, 1);
+	NAMED_PARAMETER(U, 2);
+	NAMED_PARAMETER(tau_rec, 3);
+	NAMED_PARAMETER(tau_facil, 4);
+};
+
 }  // namespace cypress
 
 #undef NAMED_PARAMETER
