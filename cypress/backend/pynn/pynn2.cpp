@@ -818,8 +818,7 @@ py::object PyNN_::group_connect(const std::vector<PopulationBase> &populations,
 		    "delay"_a = delay, "timing_dependence"_a = timing_dependence,
 		    "weight_dependence"_a = weight_dependence);
 	}
-	else if (group_conn.synapse_name ==
-	         "SpikePairRuleMultiplicative") {
+	else if (group_conn.synapse_name == "SpikePairRuleMultiplicative") {
 		py::object timing_dependence = pynn.attr("SpikePairRule")(
 		    "tau_plus"_a = group_conn.synapse_parameters[2],
 		    "tau_minus"_a = group_conn.synapse_parameters[3],
@@ -860,19 +859,49 @@ py::object PyNN_::group_connect7(const std::vector<PopulationBase> &,
 {
 	py::object source = pypopulations[group_conn.psrc];
 	py::object target = pypopulations[group_conn.ptar];
+	std::string receptor = "excitatory";
+	if (group_conn.inhibitory()) {
+		receptor = "inhibitory";
+	}
 	if (group_conn.synapse_name == "StaticSynapse") {
-		std::string receptor = "excitatory";
-		if (group_conn.inhibitory()) {
-			receptor = "inhibitory";
-		}
 		return pynn.attr("Projection")(
 		    source, target, get_connector7(conn_name, group_conn, pynn),
 		    "target"_a = receptor);
 	}
 	else {
-		// TODO
-		throw ExecutionError(
-		    "Only static synapses are supported for this backend!");
+		py::object synapse;
+		if (group_conn.synapse_name == "SpikePairRuleAdditive") {
+			synapse = pynn.attr("STDPMechanism")(
+			    "timing_dependence"_a = pynn.attr("SpikePairRule")(
+			        "tau_plus"_a = group_conn.synapse_parameters[2],
+			        "tau_minus"_a = group_conn.synapse_parameters[3]),
+			    "weight_dependence"_a = pynn.attr("AdditiveWeightDependence")(
+			        "w_min"_a = group_conn.synapse_parameters[6],
+			        "w_max"_a = group_conn.synapse_parameters[7],
+			        "A_plus"_a = group_conn.synapse_parameters[4],
+			        "A_minus"_a = group_conn.synapse_parameters[5]));
+			return pynn.attr("Projection")(
+			    source, target, get_connector7(conn_name, group_conn, pynn),
+			    "target"_a = receptor,
+			    "synapse_dynamics"_a =
+			        pynn.attr("SynapseDynamics")("slow"_a = synapse));
+		}
+		else if (group_conn.synapse_name == "TsodyksMarkramMechanism") {
+			synapse = pynn.attr("TsodyksMarkramMechanism")(
+			    "U"_a = group_conn.synapse_parameters[2],
+			    "tau_rec"_a = group_conn.synapse_parameters[3],
+			    "tau_facil"_a = group_conn.synapse_parameters[4]);
+			return pynn.attr("Projection")(
+			    source, target, get_connector7(conn_name, group_conn, pynn),
+			    "target"_a = receptor,
+			    "synapse_dynamics"_a =
+			        pynn.attr("SynapseDynamics")("fast"_a = synapse));
+		}
+
+		else {
+			throw ExecutionError(
+			    "Only static synapses are supported for this backend!");
+		}
 	}
 }
 
@@ -1895,8 +1924,10 @@ void PyNN_::spikey_run(NetworkBase &source, Real duration, py::module &pynn,
 			list_connect7(pypopulations, conn, pynn);
 		}
 	}
+
 	auto buildconn = std::chrono::system_clock::now();
 
+	pynn.attr("hardware").attr("hwa").attr("autoSTDPFrequency") = duration;
 	try {
 		pynn.attr("run")(duration);
 	}
