@@ -1449,6 +1449,31 @@ void PyNN_::fetch_data_neo(const std::vector<PopulationBase> &populations,
 	}
 }
 
+namespace{
+    /**
+    * Used internally to get weights and delays from plastic synapses.
+    * 
+    * @param proj Pynn Projection object
+    * @return A list of local connections
+    */
+    std::vector<LocalConnection> get_weights(py::object& proj){
+    py::list arguments;
+    arguments.append("weight");
+    arguments.append("delay");
+    py::list list = proj.attr("get")(arguments, "format"_a = "list");
+			std::vector<LocalConnection> weights;
+			for (size_t j = 0; j < py::len(list); j++) {
+				py::list lc = list[j];
+				weights.push_back(LocalConnection(
+				    py::cast<Real>(lc[0]), py::cast<Real>(lc[1]),
+				    py::cast<Real>(lc[2]), py::cast<Real>(lc[3])));
+			}
+			return weights;
+}
+    
+}
+
+
 void PyNN_::do_run(NetworkBase &source, Real duration) const
 {
 	py::module sys = py::module::import("sys");
@@ -1533,14 +1558,18 @@ void PyNN_::do_run(NetworkBase &source, Real duration) const
 		}
 	}
 
-	for (auto conn : source.connections()) {
+	std::vector<std::tuple<size_t, py::object>> group_projections;
+	for (size_t i = 0; i < source.connections().size(); i++) {
+		auto conn = source.connections()[i];
 		auto it = SUPPORTED_CONNECTIONS.find(conn.connector().name());
 		GroupConnection group_conn;
+
 		if (it != SUPPORTED_CONNECTIONS.end() &&
 		    conn.connector().group_connect(conn, group_conn)) {
 			// Group connections
-			group_connect(populations, pypopulations, conn, group_conn, pynn,
-			              it->second, timestep);
+			auto proj = group_connect(populations, pypopulations, conn,
+			                          group_conn, pynn, it->second, timestep);
+			group_projections.push_back(std::make_tuple(i, proj));
 		}
 		else {
 			list_connect(pypopulations, conn, pynn, timestep);
@@ -1579,6 +1608,15 @@ void PyNN_::do_run(NetworkBase &source, Real duration) const
 	}
 	else {
 		fetch_data_neo(populations, pypopulations);
+	}
+
+	for (size_t i = 0; i < group_projections.size(); i++) {
+		size_t index = std::get<0>(group_projections[i]);
+		if (source.connections()[index].connector().synapse()->learning()) {
+            auto weights = get_weights(std::get<1>(group_projections[i]));
+			source.connections()[index].connector()._store_learned_weights(
+			    std::move(weights));
+		}
 	}
 	pynn.attr("end")();
 
@@ -1838,7 +1876,61 @@ static std::map<LogSeverity, std::string> loglevelnames{{DEBUG, "DEBUG"},
                                                         {WARNING, "WARN"},
                                                         {ERROR, "ERROR"},
                                                         {FATAL_ERROR, "FATAL"}};
+
+/**
+* Used internally to get weights from plastic synaptic connections
+* 
+* @param proj python projection object
+* @param pypop_src Python source population
+* @param pypop_tar Python target population
+* @return std::vector< cypress::LocalConnection > List of local connections
+*/
+std::vector<LocalConnection> spikey_get_weights(py::object &proj,
+                                                py::object &pypop_src,
+                                                py::object &pypop_tar)
+{
+
+	std::vector<LocalConnection> weights;
+	py::list pyweights =
+	    proj.attr("getWeightsHW")("readHW"_a = true, "format"_a = "list");
+	py::list delays = proj.attr("getDelays")();
+
+	py::object connections = proj.attr("connections")();
+	for (size_t connect_id = 0; connect_id < pyweights.size(); connect_id++) {
+		py::list conn = connections.attr("next")();
+		weights.push_back(LocalConnection(py::cast<NeuronIndex>(conn[0]),
+		                                  py::cast<NeuronIndex>(conn[1]),
+		                                  py::cast<Real>(pyweights[connect_id]),
+		                                  py::cast<Real>(delays[connect_id])));
+	}
+
+	int64_t first_id = py::cast<int64_t>(py::list(pypop_src)[0]);
+	if (first_id > 0) {
+		for (auto &w : weights) {
+			w.src = w.src - first_id;
+		}
+	}
+	else if (first_id < 0) {
+		for (auto &w : weights) {
+			w.src = -w.src + first_id;
+		}
+	}
+
+	first_id = py::cast<int64_t>(py::list(pypop_tar)[0]);
+	if (first_id > 0) {
+		for (auto &w : weights) {
+			w.tar = w.tar - first_id;
+		}
+	}
+	else if (first_id < 0) {
+		for (auto &w : weights) {
+			w.tar = -w.tar + first_id;
+		}
+	}
+	
+    return weights;
 }
+}  // namespace
 
 void PyNN_::spikey_run(NetworkBase &source, Real duration, py::module &pynn,
                        py::dict dict)
@@ -1866,8 +1958,6 @@ void PyNN_::spikey_run(NetworkBase &source, Real duration, py::module &pynn,
 
 	const std::vector<PopulationBase> &populations = source.populations();
 	std::vector<py::object> pypopulations;
-
-	// TODO :: neuron count?
 
 	for (size_t i = 0; i < populations.size(); i++) {
 		if (populations.size() == 0) {
@@ -1909,7 +1999,10 @@ void PyNN_::spikey_run(NetworkBase &source, Real duration, py::module &pynn,
 		}
 	}
 
-	for (auto conn : source.connections()) {
+	std::vector<std::tuple<size_t, py::object>> group_projections;
+
+	for (size_t i = 0; i < source.connections().size(); i++) {
+		auto conn = source.connections()[i];
 		auto it = SUPPORTED_CONNECTIONS.find(conn.connector().name());
 		GroupConnection group_conn;
 
@@ -1917,8 +2010,9 @@ void PyNN_::spikey_run(NetworkBase &source, Real duration, py::module &pynn,
 		    conn.connector().group_connect(conn, group_conn) &&
 		    check_full_pop(group_conn, populations)) {
 			// Group connections
-			group_connect7(populations, pypopulations, group_conn, pynn,
-			               it->second);
+			auto proj = group_connect7(populations, pypopulations, group_conn,
+			                           pynn, it->second);
+			group_projections.push_back(std::make_tuple(i, proj));
 		}
 		else {
 			list_connect7(pypopulations, conn, pynn);
@@ -1968,6 +2062,20 @@ void PyNN_::spikey_run(NetworkBase &source, Real duration, py::module &pynn,
 			}
 		}
 	}
+
+	// Get Weights for learned/plastic synapses
+	for (size_t i = 0; i < group_projections.size(); i++) {
+		size_t index = std::get<0>(group_projections[i]);
+		if (source.connections()[index].connector().synapse()->learning()) {
+			auto proj = std::get<1>(group_projections[i]);
+			auto weights = spikey_get_weights(
+			    proj, pypopulations[source.connections()[index].pid_src()],
+			    pypopulations[source.connections()[index].pid_tar()]);
+			source.connections()[index].connector()._store_learned_weights(
+			    std::move(weights));
+		}
+	}
+
 	pynn.attr("end")();
 	auto finished = std::chrono::system_clock::now();
 

@@ -358,6 +358,7 @@ class FixedFanOutConnector;
 class Connector {
 protected:
 	std::shared_ptr<SynapseBase> m_synapse;
+	std::vector<LocalConnection> m_weights;
 
 	/**
 	 * Default constructor.
@@ -442,6 +443,29 @@ public:
 	 * @return string containing the name
 	 */
 	const std::string synapse_name() const { return m_synapse->name(); }
+
+	/**
+	 * Returns a vector of (source, target, weight, delay) for learning synapses
+     * The returned structure can be used for a new FromListConnector...
+	 */
+	const std::vector<LocalConnection> &learned_weights() const
+	{
+		if (!m_synapse->learning()) {
+			throw CypressException(
+			    "Requested learned weights, although Synapse is static");
+		}
+		return m_weights;
+	}
+
+	/**
+	 * Used internally to store the learned weights
+	 *
+	 * @param weights matrix of new weights
+	 */
+	void _store_learned_weights(std::vector<LocalConnection> weights)
+	{
+		m_weights = std::move(weights);
+	}
 
 	/**
 	 * Creates an all-to-all connector and returns a pointer at the connector.
@@ -760,7 +784,7 @@ public:
 	 * Returns a const reference at the underlying connector instance -- the
 	 * class which actually fills the connection table.
 	 */
-	const Connector &connector() const { return *m_connector; }
+	Connector &connector() const { return *m_connector; }
 
 	/**
 	 * Tells the Connector to actually create the neuron-to-neuron connections
