@@ -45,3 +45,6 @@ target_link_libraries(winner_take_all cypress)
 add_executable(time_consumption_connectors time_consumption_connectors)
 target_link_libraries(time_consumption_connectors cypress)
 
+add_executable(plastic_synapses STDP)
+target_link_libraries(plastic_synapses cypress)
+
