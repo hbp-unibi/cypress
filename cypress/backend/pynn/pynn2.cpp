@@ -1449,30 +1449,30 @@ void PyNN_::fetch_data_neo(const std::vector<PopulationBase> &populations,
 	}
 }
 
-namespace{
-    /**
-    * Used internally to get weights and delays from plastic synapses.
-    * 
-    * @param proj Pynn Projection object
-    * @return A list of local connections
-    */
-    std::vector<LocalConnection> get_weights(py::object& proj){
-    py::list arguments;
-    arguments.append("weight");
-    arguments.append("delay");
-    py::list list = proj.attr("get")(arguments, "format"_a = "list");
-			std::vector<LocalConnection> weights;
-			for (size_t j = 0; j < py::len(list); j++) {
-				py::list lc = list[j];
-				weights.push_back(LocalConnection(
-				    py::cast<Real>(lc[0]), py::cast<Real>(lc[1]),
-				    py::cast<Real>(lc[2]), py::cast<Real>(lc[3])));
-			}
-			return weights;
-}
-    
+namespace {
+/**
+ * Used internally to get weights and delays from plastic synapses.
+ *
+ * @param proj Pynn Projection object
+ * @return A list of local connections
+ */
+std::vector<LocalConnection> get_weights(py::object &proj)
+{
+	py::list arguments;
+	arguments.append("weight");
+	arguments.append("delay");
+	py::list list = proj.attr("get")(arguments, "format"_a = "list");
+	std::vector<LocalConnection> weights;
+	for (size_t j = 0; j < py::len(list); j++) {
+		py::list lc = list[j];
+		weights.push_back(
+		    LocalConnection(py::cast<Real>(lc[0]), py::cast<Real>(lc[1]),
+		                    py::cast<Real>(lc[2]), py::cast<Real>(lc[3])));
+	}
+	return weights;
 }
 
+}  // namespace
 
 void PyNN_::do_run(NetworkBase &source, Real duration) const
 {
@@ -1488,7 +1488,10 @@ void PyNN_::do_run(NetworkBase &source, Real duration) const
 		a.append("--quiet");
 		sys.attr("argv") = a;
 	}
-
+	int neurons_per_core = 0;
+	if (m_setup.find("neurons_per_core") != m_setup.end()) {
+		neurons_per_core = m_setup["neurons_per_core"];
+	}
 	// Setup simulator
 	py::module pynn = py::module::import(import.c_str());
 	auto dict = json_to_dict(m_setup);
@@ -1501,6 +1504,15 @@ void PyNN_::do_run(NetworkBase &source, Real duration) const
 	}
 	catch (const pybind11::error_already_set &e) {
 		throw ExecutionError(e.what());
+	}
+
+	if ((import == "pyNN.spiNNaker") && (neurons_per_core > 0)) {
+		global_logger().info(
+		    "cypress",
+		    "Setting Number of Neurons per core for the IF_cond_exp model to " +
+		        std::to_string(neurons_per_core));
+		pynn.attr("set_number_of_neurons_per_core")(pynn.attr("IF_cond_exp"),
+		                                            neurons_per_core);
 	}
 
 	// Create populations
@@ -1613,7 +1625,7 @@ void PyNN_::do_run(NetworkBase &source, Real duration) const
 	for (size_t i = 0; i < group_projections.size(); i++) {
 		size_t index = std::get<0>(group_projections[i]);
 		if (source.connections()[index].connector().synapse()->learning()) {
-            auto weights = get_weights(std::get<1>(group_projections[i]));
+			auto weights = get_weights(std::get<1>(group_projections[i]));
 			source.connections()[index].connector()._store_learned_weights(
 			    std::move(weights));
 		}
@@ -1878,13 +1890,13 @@ static std::map<LogSeverity, std::string> loglevelnames{{DEBUG, "DEBUG"},
                                                         {FATAL_ERROR, "FATAL"}};
 
 /**
-* Used internally to get weights from plastic synaptic connections
-* 
-* @param proj python projection object
-* @param pypop_src Python source population
-* @param pypop_tar Python target population
-* @return std::vector< cypress::LocalConnection > List of local connections
-*/
+ * Used internally to get weights from plastic synaptic connections
+ *
+ * @param proj python projection object
+ * @param pypop_src Python source population
+ * @param pypop_tar Python target population
+ * @return std::vector< cypress::LocalConnection > List of local connections
+ */
 std::vector<LocalConnection> spikey_get_weights(py::object &proj,
                                                 py::object &pypop_src,
                                                 py::object &pypop_tar)
@@ -1927,8 +1939,8 @@ std::vector<LocalConnection> spikey_get_weights(py::object &proj,
 			w.tar = -w.tar + first_id;
 		}
 	}
-	
-    return weights;
+
+	return weights;
 }
 }  // namespace
 
