@@ -758,6 +758,9 @@ py::object PyNN_::get_connector(const std::string &connector_name,
 	                            " is not supported");
 }
 
+namespace {
+bool popview_warnign_emitted = false;
+}
 py::object PyNN_::group_connect(const std::vector<PopulationBase> &populations,
                                 const std::vector<py::object> &pypopulations,
                                 const ConnectionDescriptor &conn,
@@ -777,8 +780,11 @@ py::object PyNN_::group_connect(const std::vector<PopulationBase> &populations,
 		                      group_conn.tar1);
 	}
 	catch (...) {
-		global_logger().info("cypress",
-		                     "PopViews not supported. Using list connector");
+		if (!popview_warnign_emitted) {
+			global_logger().info(
+			    "cypress", "PopViews not supported. Using list connector");
+			popview_warnign_emitted = true;
+		}
 		std::tuple<py::object, py::object> ret =
 		    list_connect(pypopulations, conn, pynn, timestep);
 		if (group_conn.excitatory() > 0) {
