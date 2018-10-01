@@ -199,6 +199,12 @@ public:
 	               NeuronIndex nid0, NeuronIndex nid1)
 	    : m_view(network, pid, nid0, nid1)
 	{
+		if ((network.populations()[pid].size() < size_t(nid1)) ||
+		    (nid1 < nid0)) {
+			throw CypressException(
+			    "2nd Neuron index " + std::to_string(nid1) +
+			    "is either bigger than Population size or start neuron id");
+		}
 	}
 
 	/**
