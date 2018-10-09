@@ -1494,10 +1494,13 @@ void PyNN_::do_run(NetworkBase &source, Real duration) const
 		a.append("--quiet");
 		sys.attr("argv") = a;
 	}
-	int neurons_per_core = 0;
+	int neurons_per_core = 0, sneurons_per_core = 0;
 	if (m_setup.find("neurons_per_core") != m_setup.end()) {
 		neurons_per_core = m_setup["neurons_per_core"];
 	}
+	if (m_setup.find("source_neurons_per_core") != m_setup.end()) {	
+		sneurons_per_core = m_setup["source_neurons_per_core"];
+    }
 	// Setup simulator
 	py::module pynn = py::module::import(import.c_str());
 	auto dict = json_to_dict(m_setup);
@@ -1512,13 +1515,23 @@ void PyNN_::do_run(NetworkBase &source, Real duration) const
 		throw ExecutionError(e.what());
 	}
 
-	if ((import == "pyNN.spiNNaker") && (neurons_per_core > 0)) {
+	if (import == "pyNN.spiNNaker") {
+        if(neurons_per_core > 0){
 		global_logger().info(
 		    "cypress",
 		    "Setting Number of Neurons per core for the IF_cond_exp model to " +
 		        std::to_string(neurons_per_core));
 		pynn.attr("set_number_of_neurons_per_core")(pynn.attr("IF_cond_exp"),
 		                                            neurons_per_core);
+        }
+        if(sneurons_per_core > 0){
+		global_logger().info(
+		    "cypress",
+		    "Setting Number of Neurons per core for Source Neurons to " +
+		        std::to_string(sneurons_per_core));
+		pynn.attr("set_number_of_neurons_per_core")(pynn.attr("SpikeSourceArray"),
+		                                            sneurons_per_core);
+        }
 	}
 
 	// Create populations
