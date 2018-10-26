@@ -568,8 +568,8 @@ py::object PyNN_::create_source_population(const PopulationBase &pop,
 	py::list spikes;
 	for (auto neuron : pop) {
 		const std::vector<Real> &temp = neuron.parameters().parameters();
-		auto capsule = py::capsule(&temp, [](void *) {});
-		spikes.append(py::array(temp.size(), temp.data(), capsule));
+		spikes.append(
+		    py::array_t<Real>({temp.size()}, {sizeof(Real)}, temp.data()));
 	}
 
 	auto neuron_type = pynn.attr("SpikeSourceArray")("spike_times"_a = spikes);
