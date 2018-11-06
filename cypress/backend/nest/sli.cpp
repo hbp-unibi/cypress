@@ -129,6 +129,21 @@ void write_parameters(std::ostream &os, const IfCondExpParameters &params)
 }
 
 /**
+ * Writes the parameters for a IfCurrExp neuron.
+ */
+void write_parameters(std::ostream &os, const IfCurrExpParameters &params)
+{
+	os << "<< " << kv("C_m", params.cm() * 1e3)  // nF -> pF
+	   << kv("tau_m", params.tau_m())
+	   << kv("tau_syn_ex", params.tau_syn_E())
+	   << kv("tau_syn_in", params.tau_syn_I())
+	   << kv("t_ref", params.tau_refrac()) << kv("V_reset", params.v_reset())
+	   << kv("V_th", params.v_thresh()) << kv("E_L", params.v_rest())
+	   << kv("V_m", params.v_rest()) << kv("I_e", params.i_offset() * 1e3)
+	   << ">>";  // nA -> pA
+}
+
+/**
  * Writes the parameters for a EifCondExpIsfaIsta (AdEx) neuron.
  */
 void write_parameters(std::ostream &os,
@@ -175,6 +190,12 @@ RecordInfo record_info(const Neuron<IfCondExp> &n)
 	return {n.signals().is_recording_spikes(), n.signals().is_recording_v(),
 	        n.signals().is_recording_gsyn_exc(),
 	        n.signals().is_recording_gsyn_inh()};
+}
+
+RecordInfo record_info(const Neuron<IfCurrExp> &n)
+{
+	return {n.signals().is_recording_spikes(), n.signals().is_recording_v(),
+            false, false};
 }
 
 RecordInfo record_info(const Neuron<EifCondExpIsfaIsta> &n)
@@ -254,6 +275,10 @@ void write_populations(std::ostream &os,
 		if (&population.type() == &IfCondExp::inst()) {
 			write_population(os, "iaf_cond_exp",
 			                 Population<IfCondExp>(population), gid);
+		}
+		else if (&population.type() == &IfCurrExp::inst()) {
+			write_population(os, "iaf_psc_exp",
+			                 Population<IfCurrExp>(population), gid);
 		}
 		else if (&population.type() == &EifCondExpIsfaIsta::inst()) {
 			write_population(os, "aeif_cond_alpha",
@@ -345,6 +370,9 @@ std::vector<RecorderInfo> write_recorders(
 			}
 			else if (&population.type() == &SpikeSourceArray::inst()) {
 				info = record_info(Neuron<SpikeSourceArray>(population[i]));
+			}
+			else if (&population.type() == &IfCurrExp::inst()) {
+				info = record_info(Neuron<IfCurrExp>(population[i]));
 			}
 
 			// Create a recorder for each signal and connect the source neuron

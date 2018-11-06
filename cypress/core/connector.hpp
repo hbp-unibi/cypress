@@ -42,8 +42,9 @@ namespace cypress {
 struct Synapse {
 	/**
 	 * Synaptic weight -- for conductance-based neurons the synaptic weight
-	 * is usually measured in micro-siemens. Inhibitory connections are
-	 * indicated by smaller-than-zero connection weights.
+	 * is usually measured in micro-siemens, current-based neurons in nano 
+     * Ampere. Inhibitory connections are indicated by smaller-than-zero 
+     * connection weights.
 	 */
 	Real weight;
 
@@ -55,8 +56,11 @@ struct Synapse {
 	/**
 	 * Constructor of the Synapse structure. Per default initialises all member
 	 * variables with zero.
-	 */
-	explicit Synapse(Real weight = 0.0, Real delay = 0.0)
+    * 
+    * @param weight weight in micro-Siemens or nano-Ampere
+    * @param delay delay in milliseconds
+    */
+    explicit Synapse(Real weight = 0.0, Real delay = 0.0)
 	    : weight(weight), delay(delay)
 	{
 	}

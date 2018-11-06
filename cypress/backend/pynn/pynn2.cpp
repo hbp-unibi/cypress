@@ -162,7 +162,7 @@ static const std::unordered_map<std::string, Json> DEFAULT_SETUPS = {
 static const std::unordered_map<std::string,
                                 std::unordered_set<const NeuronType *>>
     SUPPORTED_NEURON_TYPE_MAP = {
-        {"nmmc1", {&SpikeSourceArray::inst(), &IfCondExp::inst()}},
+        {"nmmc1", {&SpikeSourceArray::inst(), &IfCondExp::inst(), &IfCurrExp::inst()}},
         {"nmpm1",
          {&SpikeSourceArray::inst(), &IfCondExp::inst(),
           &EifCondExpIsfaIsta::inst()}},
@@ -172,7 +172,7 @@ static const std::unordered_map<std::string,
         {"spikey", {&SpikeSourceArray::inst(), &IfFacetsHardware1::inst()}},
         {"__default__",
          {&SpikeSourceArray::inst(), &IfCondExp::inst(),
-          &EifCondExpIsfaIsta::inst()}}};
+          &EifCondExpIsfaIsta::inst(), &IfCurrExp::inst()}}};
 
 /**
  * Map containing connections
@@ -333,7 +333,8 @@ static PyNNUtil PYNN_UTIL;
 }  // namespace
 
 PyNN_::PyNN_(const std::string &simulator, const Json &setup)
-    : m_simulator(simulator), m_setup(setup)
+    //: m_simulator(simulator), m_setup(setup)
+    : PyNN(simulator, setup)
 {
 	PythonInstance::instance();
 	// Lookup the canonical simulator name and the
@@ -542,6 +543,9 @@ std::string PyNN_::get_neuron_class(const NeuronType &neuron_type)
 	}
 	else if (&neuron_type == &SpikeSourceArray::inst()) {
 		return "SpikeSourceArray";
+	}
+	else if (&neuron_type == &IfCurrExp::inst()) {
+		return "IF_curr_exp";
 	}
 	else {
 		throw NotSupportedException("This neuron type is not supported yet!");

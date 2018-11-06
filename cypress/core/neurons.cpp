@@ -154,4 +154,26 @@ const EifCondExpIsfaIsta &EifCondExpIsfaIsta::inst()
 	static const EifCondExpIsfaIsta inst;
 	return inst;
 }
+
+/*
+ * Class IfCurrExp
+ */
+
+IfCurrExp::IfCurrExp()
+    : NeuronTypeBase(
+          "IfCurrExp",
+          {"cm", "tau_m", "tau_syn_E", "tau_syn_I", "tau_refrac", "v_rest",
+           "v_thresh", "v_reset", "i_offset"},
+          {"nF", "ms", "ms", "ms", "ms", "mV", "mV", "mV", "nA"},
+          {1.0, 20.0, 5.0, 5.0, 0.1, -65.0, -50.0, -65.0, 0.0},
+          {"spikes", "v"}, {"ms", "mV"},
+          true, false)
+{
+}
+
+const IfCurrExp &IfCurrExp::inst()
+{
+	static const IfCurrExp inst;
+	return inst;
+}
 }

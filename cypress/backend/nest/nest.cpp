@@ -129,7 +129,8 @@ std::unordered_set<const NeuronType *> NEST::supported_neuron_types() const
 {
 	return std::unordered_set<const NeuronType *>{&SpikeSourceArray::inst(),
 	                                              &IfCondExp::inst(),
-	                                              &EifCondExpIsfaIsta::inst()};
+	                                              &EifCondExpIsfaIsta::inst(),
+                                                  &IfCurrExp::inst()};
 }
 
 bool NEST::installed() { return NEST_UTIL.installed(); }

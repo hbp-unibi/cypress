@@ -94,6 +94,9 @@ class IfFacetsHardware1Signals;
 class EifCondExpIsfaIsta;
 class EifCondExpIsfaIstaParameters;
 class EifCondExpIsfaIstaSignals;
+class IfCurrExp;
+class IfCurrExpParameters;
+class IfCurrExpSignals;
 
 /*
  * SpikeSourceArray
@@ -498,6 +501,61 @@ public:
 	NAMED_SIGNAL(v, 1);
 	NAMED_SIGNAL(gsyn_exc, 2);
 	NAMED_SIGNAL(gsyn_inh, 3);
+};
+
+
+/*
+ * IfCurrExp
+ */
+
+/**
+ * Neuron type representing an integrate and fire neuron with current based
+ * synapses with exponential decay.
+ */
+class IfCurrExp final
+    : public NeuronTypeBase<IfCurrExpParameters, IfCurrExpSignals> {
+private:
+	IfCurrExp();
+
+public:
+	static const IfCurrExp &inst();
+};
+
+class IfCurrExpParameters final
+    : public ConstantSizeNeuronParametersBase<IfCurrExpParameters, IfCurrExp,
+                                              9> {
+public:
+	using ConstantSizeNeuronParametersBase<
+	    IfCurrExpParameters, IfCurrExp, 9>::ConstantSizeNeuronParametersBase;
+
+	NAMED_PARAMETER(cm, 0);
+	NAMED_PARAMETER(tau_m, 1);
+	NAMED_PARAMETER(tau_syn_E, 2);
+	NAMED_PARAMETER(tau_syn_I, 3);
+	NAMED_PARAMETER(tau_refrac, 4);
+	NAMED_PARAMETER(v_rest, 5);
+	NAMED_PARAMETER(v_thresh, 6);
+	NAMED_PARAMETER(v_reset, 7);
+	NAMED_PARAMETER(i_offset, 8);
+
+	auto &g_leak(Real x) { return tau_m(cm() / x); }
+	Real g_leak() const { return cm() / tau_m(); }
+};
+
+class IfCurrExpSignals final
+    : public NeuronSignalsBase<IfCurrExpSignals, IfCurrExp, 2> {
+public:
+	using NeuronSignalsBase<IfCurrExpSignals, IfCurrExp, 2>::NeuronSignalsBase;
+
+	IfCurrExpSignals() : NeuronSignalsBase(2) {}
+
+	IfCurrExpSignals(std::initializer_list<IfCurrExpSignals> list)
+	    : NeuronSignalsBase(PopulationDataView::from_sequence(list))
+	{
+	}
+
+	NAMED_SIGNAL(spikes, 0);
+	NAMED_SIGNAL(v, 1);
 };
 
 /*
