@@ -333,8 +333,7 @@ static PyNNUtil PYNN_UTIL;
 }  // namespace
 
 PyNN_::PyNN_(const std::string &simulator, const Json &setup)
-    //: m_simulator(simulator), m_setup(setup)
-    : PyNN(simulator, setup)
+    : m_simulator(simulator), m_setup(setup)
 {
 	PythonInstance::instance();
 	// Lookup the canonical simulator name and the
