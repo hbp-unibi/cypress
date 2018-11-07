@@ -23,6 +23,8 @@
 #include <sstream>
 #include <thread>
 
+#include <cypress/backend/power/energenie.hpp>
+#include <cypress/backend/power/netio4.hpp>
 #include <cypress/backend/power/power.hpp>
 #include <cypress/core/exceptions.hpp>
 #include <cypress/util/logger.hpp>
@@ -160,12 +162,32 @@ public:
 		}
 	}
 };
-}
+}  // namespace
 
 PowerManagementBackend::PowerManagementBackend(
     std::shared_ptr<PowerDevice> device, std::unique_ptr<Backend> backend)
     : m_device(std::move(device)), m_backend(std::move(backend))
 {
+}
+
+PowerManagementBackend::PowerManagementBackend(
+    std::unique_ptr<Backend> backend, const std::string &config_filename)
+    : m_backend(std::move(backend))
+{
+	if (config_filename == "") {
+		m_device = std::make_shared<NetIO4>();
+		if (m_device->has_config()) {
+			return;
+		}
+		m_device = std::make_shared<energenie>();
+	}
+	else {
+		m_device = std::make_shared<NetIO4>(config_filename);
+		if (m_device->has_config()) {
+			return;
+		}
+		m_device = std::make_shared<energenie>(config_filename);
+	}
 }
 
 PowerManagementBackend::~PowerManagementBackend()
@@ -214,4 +236,4 @@ void PowerManagementBackend::do_run(NetworkBase &network, Real duration) const
 		}
 	}
 }
-}
+}  // namespace cypress

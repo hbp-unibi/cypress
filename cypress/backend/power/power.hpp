@@ -46,6 +46,8 @@ class PowerDevice {
 public:
 	virtual ~PowerDevice(){};
 
+	virtual bool has_config() = 0;
+
 	/**
 	 * Returns the state of the device with the given name. If the device cannot
 	 * be controlled, false should be returned.
@@ -108,6 +110,9 @@ public:
 	PowerManagementBackend(std::shared_ptr<PowerDevice> device,
 	                       std::unique_ptr<Backend> backend);
 
+	PowerManagementBackend(std::unique_ptr<Backend> backend,
+	                       const std::string &config_filename = "");
+
 	/**
 	 * Destroys the PowerManagementBackend backend instance.
 	 */
@@ -128,6 +133,6 @@ public:
 	 */
 	std::string name() const override { return m_backend->name(); }
 };
-}
+}  // namespace cypress
 
 #endif /* CYPRESS_BACKEND_POWER_POWER_HPP */

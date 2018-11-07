@@ -87,7 +87,7 @@ public:
 	 * Returns true if the configuration was sucessfully read in the
 	 * constructor.
 	 */
-	bool has_config() { return m_has_config; }
+	bool has_config() override { return m_has_config; }
 
 	/**
 	 * Returns true if the class can successfully communicate with the device.
