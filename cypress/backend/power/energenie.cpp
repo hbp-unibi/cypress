@@ -74,10 +74,11 @@ std::string energenie::control(const std::string &cmd) const
 
 	// Call curl to communicate with the device
 	if (cmd == "") {
-		if (cypress::Process::exec("curl",
-		                           {"http://" + m_addr + "/login.html", "-s",
-		                            "-d", "pw=" + m_passwd},
-		                           ss_in, ss_out, ss_err) != 0) {
+		if (cypress::Process::exec(
+		        "curl",
+		        {"http://" + m_addr + "/login.html", "-s", "-d",
+		         "pw=" + m_passwd, "--connect-timeout", "3"},
+		        ss_in, ss_out, ss_err) != 0) {
 			throw std::runtime_error(
 			    "energenie: Error while executing curl, make sure the "
 			    "program "
@@ -86,8 +87,10 @@ std::string energenie::control(const std::string &cmd) const
 	}
 	else {
 		if (cypress::Process::exec(
-		        "curl", {"-sd", "\'" + cmd + "\'", "http://" + m_addr}, ss_in,
-		        ss_out, ss_err) != 0) {
+		        "curl",
+		        {"-sd", "\'" + cmd + "\'", "http://" + m_addr,
+		         "--connect-timeout", "3"},
+		        ss_in, ss_out, ss_err) != 0) {
 			throw std::runtime_error(
 			    "energenie: Error while executing curl, make sure the "
 			    "program "
