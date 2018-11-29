@@ -31,7 +31,7 @@ add_subdirectory(external/pybind11)
 find_package(PythonLibs 2.7 REQUIRED )
 
 # Enable C++14 support
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=gnu++11")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=gnu++14")
 
 # Enable all warnings on MSVC and GCC/Clang/Intel
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
