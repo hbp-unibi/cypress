@@ -65,6 +65,7 @@ add_executable(test_cypress_util
 	util/test_process
 	util/test_range
 	util/test_resource
+	util/test_spiking_utils
 )
 add_dependencies(test_cypress_util googletest)
 target_link_libraries(test_cypress_util

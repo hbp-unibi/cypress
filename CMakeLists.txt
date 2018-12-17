@@ -143,10 +143,12 @@ add_library(cypress
 	cypress/util/logger
 	cypress/util/matplotlib_cpp
 	cypress/util/matrix
+	cypress/util/neuron_parameters
 	cypress/util/optional
 	cypress/util/process
 	cypress/util/range
 	cypress/util/resource
+	cypress/util/spiking_utils
 	cypress/util/terminal
 )
 

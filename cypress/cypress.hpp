@@ -46,7 +46,8 @@
 #include <cypress/core/types.hpp>
 #include <cypress/util/logger.hpp>
 #include <cypress/util/matplotlib_cpp.hpp>
+#include <cypress/util/neuron_parameters.hpp>
 #include <cypress/util/range.hpp>
+#include <cypress/util/spiking_utils.hpp>
 
 #endif /* CYPRESS_HPP */
-
