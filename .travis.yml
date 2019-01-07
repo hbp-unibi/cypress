@@ -124,7 +124,9 @@ matrix:
         on:
           branch: master
 
-
+install:
+    - sudo pip install requests pyminifier numpy
+    - pip install requests pyminifier numpy
 
 before_install:
     - eval "${MATRIX_EVAL}"
