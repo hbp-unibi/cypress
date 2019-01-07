@@ -129,9 +129,6 @@ matrix:
 before_install:
     - eval "${MATRIX_EVAL}"
 
-install: 
-  - sudo pip install neo==0.5.2 pyNN==0.9.2 requests pyminifier numpy 
-  - pip install neo==0.5.2 pyNN==0.9.2 requests pyminifier numpy
 script: 
   - mkdir build_gcc 
   - cd build_gcc 
