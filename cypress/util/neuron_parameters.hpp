@@ -122,7 +122,7 @@ std::vector<T> read_check(std::map<std::string, T> &input,
 		}
 		else {
 			res[i] = defaults.at(i);
-			global_logger().debug("Cypress",
+			global_logger().info("Cypress",
 			                      "For " + names[i] + " the default value " +
 			                          std::to_string(defaults[i]) + " is used");
 		}
