@@ -777,10 +777,17 @@ py::object PyNN_::group_connect(const std::vector<PopulationBase> &populations,
 		source = get_pop_view(pynn, pypopulations[group_conn.psrc],
 		                      populations[group_conn.psrc], group_conn.src0,
 		                      group_conn.src1);
-
-		target = get_pop_view(pynn, pypopulations[group_conn.ptar],
-		                      populations[group_conn.ptar], group_conn.tar0,
-		                      group_conn.tar1);
+		if ((group_conn.psrc == group_conn.ptar) &&
+		    (group_conn.src0 == group_conn.tar0) &&
+		    (group_conn.src1 == group_conn.tar1)) {
+			// Workaround for pyNN to make the allow_self_connections flag
+			// Issue #622
+			target = source;
+		}
+		else {
+			target = get_pop_view(pynn, pypopulations[group_conn.ptar],
+			                      populations[group_conn.ptar], group_conn.tar0,
+			                      group_conn.tar1);
 	}
 	catch (...) {
 		if (!popview_warnign_emitted) {
