@@ -22,11 +22,11 @@
 
 namespace cypress {
 
-//	for (auto c : connections) {
-//		std::cout << c.psrc << ", " << c.ptar << ", " << c.n.src << ", "
-//		          << c.n.tar << ", " << c.n.synapse.weight << ", "
-//		          << c.n.synapse.delay << std::endl;
-//	}
+// 	for (auto c : connections) {
+// 		std::cout << c.psrc << ", " << c.ptar << ", " << c.n.src << ", "
+// 		          << c.n.tar << ", " << c.n.SynapseParameters[0] << ", "
+// 		          << c.n.SynapseParameters[1] << std::endl;
+// 	}
 
 TEST(connector, all_to_all)
 {
@@ -41,12 +41,61 @@ TEST(connector, all_to_all)
 	              {0, 1, 0, 4, 0.16, 0.1}, {0, 1, 1, 0, 0.16, 0.1},
 	              {0, 1, 1, 1, 0.16, 0.1}, {0, 1, 1, 2, 0.16, 0.1},
 	              {0, 1, 1, 3, 0.16, 0.1}, {0, 1, 1, 4, 0.16, 0.1},
+
 	              {0, 2, 2, 0, 0.1, 0.05}, {0, 2, 2, 1, 0.1, 0.05},
 	              {0, 2, 2, 2, 0.1, 0.05}, {0, 2, 2, 3, 0.1, 0.05},
 	              {0, 2, 2, 4, 0.1, 0.05}, {0, 2, 3, 0, 0.1, 0.05},
 	              {0, 2, 3, 1, 0.1, 0.05}, {0, 2, 3, 2, 0.1, 0.05},
 	              {0, 2, 3, 3, 0.1, 0.05}, {0, 2, 3, 4, 0.1, 0.05},
 	          }),
+	          connections);
+
+	connections = instantiate_connections({
+	    {0, 0, 2, 1, 0, 5, Connector::all_to_all(0.16, 0.1, false)},
+	    {0, 2, 4, 2, 0, 5, Connector::all_to_all(0.1, 0.05, false)},
+	});
+
+	EXPECT_EQ(std::vector<Connection>({
+	              {0, 1, 0, 0, 0.16, 0.1}, {0, 1, 0, 1, 0.16, 0.1},
+	              {0, 1, 0, 2, 0.16, 0.1}, {0, 1, 0, 3, 0.16, 0.1},
+	              {0, 1, 0, 4, 0.16, 0.1}, {0, 1, 1, 0, 0.16, 0.1},
+	              {0, 1, 1, 1, 0.16, 0.1}, {0, 1, 1, 2, 0.16, 0.1},
+	              {0, 1, 1, 3, 0.16, 0.1}, {0, 1, 1, 4, 0.16, 0.1},
+	              {0, 2, 2, 0, 0.1, 0.05}, {0, 2, 2, 1, 0.1, 0.05},
+	              {0, 2, 2, 2, 0.1, 0.05}, {0, 2, 2, 3, 0.1, 0.05},
+	              {0, 2, 2, 4, 0.1, 0.05}, {0, 2, 3, 0, 0.1, 0.05},
+	              {0, 2, 3, 1, 0.1, 0.05}, {0, 2, 3, 2, 0.1, 0.05},
+	              {0, 2, 3, 3, 0.1, 0.05}, {0, 2, 3, 4, 0.1, 0.05},
+	          }),
+	          connections);
+
+	connections = instantiate_connections(
+	    {{0, 0, 2, 0, 0, 5, Connector::all_to_all(0.16, 0.1, true)}});
+
+	EXPECT_EQ(std::vector<Connection>({{0, 0, 0, 0, 0.16, 0.1},
+	                                   {0, 0, 0, 1, 0.16, 0.1},
+	                                   {0, 0, 0, 2, 0.16, 0.1},
+	                                   {0, 0, 0, 3, 0.16, 0.1},
+	                                   {0, 0, 0, 4, 0.16, 0.1},
+	                                   {0, 0, 1, 0, 0.16, 0.1},
+	                                   {0, 0, 1, 1, 0.16, 0.1},
+	                                   {0, 0, 1, 2, 0.16, 0.1},
+	                                   {0, 0, 1, 3, 0.16, 0.1},
+	                                   {0, 0, 1, 4, 0.16, 0.1}}),
+	          connections);
+
+	// pid_src nid_src0 nid_src1 pid_tar nid_tar0 nid_tar1 connector
+	connections = instantiate_connections(
+	    {{0, 0, 2, 0, 0, 5, Connector::all_to_all(0.16, 0.1, false)}});
+
+	EXPECT_EQ(std::vector<Connection>({{0, 0, 0, 1, 0.16, 0.1},
+	                                   {0, 0, 0, 2, 0.16, 0.1},
+	                                   {0, 0, 0, 3, 0.16, 0.1},
+	                                   {0, 0, 0, 4, 0.16, 0.1},
+	                                   {0, 0, 1, 0, 0.16, 0.1},
+	                                   {0, 0, 1, 2, 0.16, 0.1},
+	                                   {0, 0, 1, 3, 0.16, 0.1},
+	                                   {0, 0, 1, 4, 0.16, 0.1}}),
 	          connections);
 }
 
@@ -185,8 +234,8 @@ TEST(connector, fixed_probability)
 	     Connector::fixed_probability(Connector::all_to_all(), 0.1)},
 	});
 
-	EXPECT_TRUE(connections1.size() < 16 * 16);
-	EXPECT_TRUE(connections2.size() < 16 * 16);
+	EXPECT_TRUE(connections1.size() < 16 * 16 * 0.3);
+	EXPECT_TRUE(connections2.size() < 16 * 16 * 0.3);
 	EXPECT_TRUE(connections1 != connections2);
 
 	StaticSynapse synap({0.015, 1});
@@ -194,23 +243,70 @@ TEST(connector, fixed_probability)
 	    {0, 0, 16, 1, 0, 16,
 	     Connector::fixed_probability(Connector::all_to_all(synap), 0.1)},
 	});
-	EXPECT_TRUE(connections1.size() < 16 * 16);
+	EXPECT_TRUE(connections1.size() < 16 * 16 * 0.3);
+
+	for (size_t i = 0; i < 20; i++) {
+		connections1 = instantiate_connections({
+		    {0, 0, 16, 0, 0, 16,
+		     Connector::fixed_probability(Connector::all_to_all(), 0.1, true)},
+		});
+		EXPECT_TRUE(connections1.size() < 16 * 16 * 0.3);
+
+		connections1 = instantiate_connections({
+		    {0, 0, 16, 0, 0, 16,
+		     Connector::fixed_probability(Connector::all_to_all(), 1.0, true)},
+		});
+		EXPECT_TRUE(connections1.size() == 16 * 16);
+
+		connections1 = instantiate_connections({
+		    {0, 0, 16, 0, 0, 16,
+		     Connector::fixed_probability(Connector::all_to_all(), 1.0, false)},
+		});
+		EXPECT_TRUE(connections1.size() == 15 * 16);
+		for (auto conn : connections1) {
+			EXPECT_TRUE(conn.n.src != conn.n.tar);
+		}
+
+		connections1 = instantiate_connections({
+		    {0, 0, 16, 0, 0, 16,
+		     Connector::fixed_probability(Connector::all_to_all(), 0.1, false)},
+		});
+		EXPECT_TRUE(connections1.size() < 16 * 16 * 0.3);
+		for (auto conn : connections1) {
+			EXPECT_TRUE(conn.n.src != conn.n.tar);
+		}
+	}
 }
 
 TEST(connector, fixed_probability_seed)
 {
 	std::vector<Connection> connections1 = instantiate_connections({
 	    {0, 0, 16, 1, 0, 16,
-	     Connector::fixed_probability(Connector::all_to_all(), 0.1, 436283)},
+	     Connector::fixed_probability(Connector::all_to_all(), 0.1,
+	                                  size_t(436283))},
 	});
 	std::vector<Connection> connections2 = instantiate_connections({
 	    {0, 0, 16, 1, 0, 16,
-	     Connector::fixed_probability(Connector::all_to_all(), 0.1, 436283)},
+	     Connector::fixed_probability(Connector::all_to_all(), 0.1,
+	                                  size_t(436283))},
 	});
 
-	EXPECT_TRUE(connections1.size() < 16 * 16);
-	EXPECT_TRUE(connections2.size() < 16 * 16);
+	EXPECT_TRUE(connections1.size() < 16 * 16 * 0.3);
+	EXPECT_TRUE(connections2.size() < 16 * 16 * 0.3);
 	EXPECT_TRUE(connections1 == connections2);
+
+	for (size_t i = 0; i < 20; i++) {
+		std::vector<Connection> connections3 = instantiate_connections({
+		    {0, 0, 16, 0, 0, 16,
+		     Connector::fixed_probability(Connector::all_to_all(), 0.1, 436283,
+		                                  false)},
+		});
+		EXPECT_TRUE(connections1.size() < 16 * 16 * 0.3);
+		for (auto conn : connections3) {
+			EXPECT_TRUE(conn.n.src != conn.n.tar);
+		}
+		EXPECT_TRUE(connections3 != connections2);
+	}
 }
 
 TEST(connector, fixed_fan_in)
@@ -236,22 +332,85 @@ TEST(connector, fixed_fan_in)
 	EXPECT_TRUE(connections1.size() == 8 * 16);
 	EXPECT_TRUE(connections2.size() == 16 * 16);
 	EXPECT_TRUE(connections2 == connections3);
+
+	// No self Connections
+	connections1 = instantiate_connections({
+	    {0, 0, 16, 0, 0, 16, Connector::fixed_fan_in(8, 0.1, 1.0, false)},
+	});
+	connections2 = instantiate_connections({
+	    {0, 0, 16, 0, 0, 16, Connector::fixed_fan_in(16, 0.1, 1.0, false)},
+	});
+	connections3 = instantiate_connections({
+	    {0, 0, 16, 0, 0, 16, Connector::all_to_all(0.1, 1.0, false)},
+	});
+	std::vector<size_t> fan_in2(16);
+	for (auto c : connections1) {
+		fan_in2[c.n.tar]++;
+	}
+	for (size_t fi : fan_in2) {
+		EXPECT_EQ(8U, fi);
+	}
+	for (auto conn : connections1) {
+		EXPECT_TRUE(conn.n.src != conn.n.tar);
+	}
+
+	for (auto conn : connections2) {
+		EXPECT_TRUE(conn.n.src != conn.n.tar);
+	}
+	EXPECT_EQ(size_t(8 * 16), connections1.size());
+	EXPECT_EQ(size_t(16 * 15), connections2.size());
+	EXPECT_TRUE(connections2 == connections3);
+
+	// No self connections, different pops
+	connections1 = instantiate_connections({
+	    {0, 0, 16, 1, 0, 16, Connector::fixed_fan_in(8, 0.1, 1.0, false)},
+	});
+	connections2 = instantiate_connections({
+	    {0, 0, 16, 1, 0, 16, Connector::fixed_fan_in(16, 0.1, 1.0, false)},
+	});
+	connections3 = instantiate_connections({
+	    {0, 0, 16, 1, 0, 16, Connector::all_to_all(0.1, 1.0, false)},
+	});
+	std::vector<size_t> fan_in3(16);
+	for (auto c : connections1) {
+		fan_in3[c.n.tar]++;
+	}
+	for (size_t fi : fan_in3) {
+		EXPECT_EQ(8U, fi);
+	}
+
+	EXPECT_EQ(size_t(8 * 16), connections1.size());
+	EXPECT_EQ(size_t(16 * 16), connections2.size());
+	EXPECT_TRUE(connections2 == connections3);
 }
 
 TEST(connector, fixed_fan_in_seed)
 {
 	std::vector<Connection> connections1 = instantiate_connections({
-	    {0, 0, 16, 1, 0, 16, Connector::fixed_fan_in(8, 0.1, 1.0, 8791)},
+	    {0, 0, 16, 1, 0, 16,
+	     Connector::fixed_fan_in(8, 0.1, 1.0, size_t(8791))},
 	});
 	std::vector<Connection> connections2 = instantiate_connections({
-	    {0, 0, 16, 1, 0, 16, Connector::fixed_fan_in(8, 0.1, 1.0, 8791)},
+	    {0, 0, 16, 1, 0, 16,
+	     Connector::fixed_fan_in(8, 0.1, 1.0, size_t(8791))},
 	});
 	std::vector<Connection> connections3 = instantiate_connections({
-	    {0, 0, 16, 1, 0, 16, Connector::fixed_fan_in(8, 0.1, 1.0, 8792)},
+	    {0, 0, 16, 1, 0, 16,
+	     Connector::fixed_fan_in(8, 0.1, 1.0, size_t(8792))},
 	});
 
 	EXPECT_TRUE(connections1 == connections2);
 	EXPECT_TRUE(connections2 != connections3);
+
+	connections1 = instantiate_connections({
+	    {0, 0, 16, 0, 0, 16,
+	     Connector::fixed_fan_in(8, 0.1, 1.0, size_t(8791), false)},
+	});
+	connections2 = instantiate_connections({
+	    {0, 0, 16, 0, 0, 16,
+	     Connector::fixed_fan_in(8, 0.1, 1.0, size_t(8791), false)},
+	});
+	EXPECT_TRUE(connections1 == connections2);
 }
 
 TEST(connector, fixed_fan_out)
@@ -277,21 +436,84 @@ TEST(connector, fixed_fan_out)
 	EXPECT_TRUE(connections1.size() == 8 * 16);
 	EXPECT_TRUE(connections2.size() == 16 * 16);
 	EXPECT_TRUE(connections2 == connections3);
+
+	// No self Connections
+	connections1 = instantiate_connections({
+	    {0, 0, 16, 0, 0, 16, Connector::fixed_fan_out(8, 0.1, 1.0, false)},
+	});
+	connections2 = instantiate_connections({
+	    {0, 0, 16, 0, 0, 16, Connector::fixed_fan_out(16, 0.1, 1.0, false)},
+	});
+	connections3 = instantiate_connections({
+	    {0, 0, 16, 0, 0, 16, Connector::all_to_all(0.1, 1.0, false)},
+	});
+	std::vector<size_t> fan_out2(16);
+	for (auto c : connections1) {
+		fan_out2[c.n.src]++;
+	}
+	for (size_t fo : fan_out2) {
+		EXPECT_EQ(8U, fo);
+	}
+	for (auto conn : connections1) {
+		EXPECT_TRUE(conn.n.src != conn.n.tar);
+	}
+
+	for (auto conn : connections2) {
+		EXPECT_TRUE(conn.n.src != conn.n.tar);
+	}
+	EXPECT_EQ(size_t(8 * 16), connections1.size());
+	EXPECT_EQ(size_t(16 * 15), connections2.size());
+	EXPECT_TRUE(connections2 == connections3);
+
+	// No self connections, different pops
+	connections1 = instantiate_connections({
+	    {0, 0, 16, 1, 0, 16, Connector::fixed_fan_out(8, 0.1, 1.0, false)},
+	});
+	connections2 = instantiate_connections({
+	    {0, 0, 16, 1, 0, 16, Connector::fixed_fan_out(16, 0.1, 1.0, false)},
+	});
+	connections3 = instantiate_connections({
+	    {0, 0, 16, 1, 0, 16, Connector::all_to_all(0.1, 1.0, false)},
+	});
+	std::vector<size_t> fan_out3(16);
+	for (auto c : connections1) {
+		fan_out3[c.n.src]++;
+	}
+	for (size_t fo : fan_out3) {
+		EXPECT_EQ(8U, fo);
+	}
+
+	EXPECT_EQ(size_t(8 * 16), connections1.size());
+	EXPECT_EQ(size_t(16 * 16), connections2.size());
+	EXPECT_TRUE(connections2 == connections3);
 }
 
 TEST(connector, fixed_fan_out_seed)
 {
 	std::vector<Connection> connections1 = instantiate_connections({
-	    {0, 0, 16, 1, 0, 16, Connector::fixed_fan_out(8, 0.1, 1.0, 8791)},
+	    {0, 0, 16, 1, 0, 16,
+	     Connector::fixed_fan_out(8, 0.1, 1.0, size_t(8791))},
 	});
 	std::vector<Connection> connections2 = instantiate_connections({
-	    {0, 0, 16, 1, 0, 16, Connector::fixed_fan_out(8, 0.1, 1.0, 8791)},
+	    {0, 0, 16, 1, 0, 16,
+	     Connector::fixed_fan_out(8, 0.1, 1.0, size_t(8791))},
 	});
 	std::vector<Connection> connections3 = instantiate_connections({
-	    {0, 0, 16, 1, 0, 16, Connector::fixed_fan_out(8, 0.1, 1.0, 8792)},
+	    {0, 0, 16, 1, 0, 16,
+	     Connector::fixed_fan_out(8, 0.1, 1.0, size_t(8792))},
 	});
 
 	EXPECT_TRUE(connections1 == connections2);
 	EXPECT_TRUE(connections2 != connections3);
+
+	connections1 = instantiate_connections({
+	    {0, 0, 16, 0, 0, 16,
+	     Connector::fixed_fan_out(8, 0.1, 1.0, size_t(8791), false)},
+	});
+	connections2 = instantiate_connections({
+	    {0, 0, 16, 0, 0, 16,
+	     Connector::fixed_fan_out(8, 0.1, 1.0, size_t(8791), false)},
+	});
+	EXPECT_TRUE(connections1 == connections2);
 }
 }  // namespace cypress

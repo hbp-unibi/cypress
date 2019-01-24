@@ -21,6 +21,7 @@
 #ifndef CYPRESS_CORE_CONNECTOR_HPP
 #define CYPRESS_CORE_CONNECTOR_HPP
 
+#include <algorithm>
 #include <memory>
 #include <random>
 #include <string>
@@ -42,9 +43,9 @@ namespace cypress {
 struct Synapse {
 	/**
 	 * Synaptic weight -- for conductance-based neurons the synaptic weight
-	 * is usually measured in micro-siemens, current-based neurons in nano 
-     * Ampere. Inhibitory connections are indicated by smaller-than-zero 
-     * connection weights.
+	 * is usually measured in micro-siemens, current-based neurons in nano
+	 * Ampere. Inhibitory connections are indicated by smaller-than-zero
+	 * connection weights.
 	 */
 	Real weight;
 
@@ -56,11 +57,11 @@ struct Synapse {
 	/**
 	 * Constructor of the Synapse structure. Per default initialises all member
 	 * variables with zero.
-    * 
-    * @param weight weight in micro-Siemens or nano-Ampere
-    * @param delay delay in milliseconds
-    */
-    explicit Synapse(Real weight = 0.0, Real delay = 0.0)
+	 *
+	 * @param weight weight in micro-Siemens or nano-Ampere
+	 * @param delay delay in milliseconds
+	 */
+	explicit Synapse(Real weight = 0.0, Real delay = 0.0)
 	    : weight(weight), delay(delay)
 	{
 	}
@@ -218,6 +219,7 @@ struct Connection {
 	}
 };
 
+#pragma pack(pop)
 /**
  * For some connectors and backends it may not be necessary to list all
  * connections, but to describe the connector
@@ -273,6 +275,11 @@ struct GroupConnection {
 	std::string synapse_name = "invalid";
 
 	/**
+	 * Flag for allowing self connections
+	 */
+	bool allow_self_connections = true;
+
+	/**
 	 * Checks whether the connection is valid.
 	 */
 	bool valid() const { return connection_name != "invalid"; }
@@ -290,7 +297,7 @@ struct GroupConnection {
 	                NeuronIndex src0, NeuronIndex src1, NeuronIndex tar0,
 	                NeuronIndex tar1, std::vector<Real> synapse_parameters,
 	                Real additional_parameter, std::string name,
-	                std::string synapse_name)
+	                std::string synapse_name, bool self_connections)
 	    : psrc(psrc),
 	      ptar(ptar),
 	      src0(src0),
@@ -300,11 +307,13 @@ struct GroupConnection {
 	      synapse_parameters(std::move(synapse_parameters)),
 	      additional_parameter(additional_parameter),
 	      connection_name(std::move(name)),
-	      synapse_name(std::move(synapse_name)){};
+	      synapse_name(std::move(synapse_name)),
+	      allow_self_connections(self_connections){};
+
 	GroupConnection(uint32_t psrc, uint32_t ptar, NeuronIndex src0,
 	                NeuronIndex src1, NeuronIndex tar0, NeuronIndex tar1,
 	                Real weight, Real delay, Real additional_parameter,
-	                std::string name)
+	                std::string name, bool self_connections)
 	    : psrc(psrc),
 	      ptar(ptar),
 	      src0(src0),
@@ -314,11 +323,10 @@ struct GroupConnection {
 	      synapse_parameters({weight, delay}),
 	      additional_parameter(additional_parameter),
 	      connection_name(std::move(name)),
-	      synapse_name("StaticSynapse"){};
+	      synapse_name("StaticSynapse"),
+	      allow_self_connections(self_connections){};
 	GroupConnection() = default;
 };
-
-#pragma pack(pop)
 
 /*
  * Forward declarations.
@@ -364,21 +372,27 @@ protected:
 	std::shared_ptr<SynapseBase> m_synapse;
 	std::vector<LocalConnection> m_weights;
 
+	bool m_self_connections = true;
+
 	/**
 	 * Default constructor.
 	 */
-	explicit Connector(SynapseBase &synapse)
+	explicit Connector(SynapseBase &synapse, bool self_connections)
 	{
 		m_synapse = SynapseBase::make_shared(synapse);
+		m_self_connections = self_connections;
 	}
-	explicit Connector(std::shared_ptr<SynapseBase> synapse)
+	explicit Connector(std::shared_ptr<SynapseBase> synapse,
+	                   bool self_connections)
 	{
 		m_synapse = std::move(synapse);
+		m_self_connections = self_connections;
 	}
-	Connector(Real weight, Real delay)
+	Connector(Real weight, Real delay, bool self_connections)
 	{
 		m_synapse =
 		    std::make_shared<StaticSynapse>(StaticSynapse({weight, delay}));
+		m_self_connections = self_connections;
 	}
 
 public:
@@ -417,6 +431,11 @@ public:
 	 */
 	virtual bool valid(const ConnectionDescriptor &descr) const = 0;
 
+    /**
+     * Flag which either allows (true) or forbids self connections if the source and target population are the same
+     */
+	bool allow_self_connections() const { return m_self_connections; }
+
 	/**
 	 * Function which should return a name identifying the connector type --
 	 * this name can be used for printing error messages or for visualisation
@@ -450,7 +469,7 @@ public:
 
 	/**
 	 * Returns a vector of (source, target, weight, delay) for learning synapses
-     * The returned structure can be used for a new FromListConnector...
+	 * The returned structure can be used for a new FromListConnector...
 	 */
 	const std::vector<LocalConnection> &learned_weights() const
 	{
@@ -478,19 +497,30 @@ public:
 	 * connections.
 	 * @param delay is the synaptic delay that should be used for all
 	 * connections.
+     * @param allow_self_connections Flag which either allows (true) or forbids self connections if the source and target population are the same
+	 * @return Unique pointer to the connector
 	 */
-	static std::unique_ptr<AllToAllConnector> all_to_all(Real weight = 1.0,
-	                                                     Real delay = 0.0);
+	static std::unique_ptr<AllToAllConnector> all_to_all(
+	    Real weight = 1.0, Real delay = 0.0,
+	    bool allow_self_connections = true);
 	/**
 	 * Creates an all-to-all connector and returns a pointer at the connector.
 	 *
 	 * @param synapse Synapse object containing model and parameters
+     * @param allow_self_connections Flag which either allows (true) or forbids self connections if the source and target population are the same
 	 * @return Unique pointer to the connector
 	 */
-	static std::unique_ptr<AllToAllConnector> all_to_all(SynapseBase &synapse);
+	static std::unique_ptr<AllToAllConnector> all_to_all(
+	    SynapseBase &synapse, bool allow_self_connections = true);
 
 	/**
-	 * Createa a one-to-one connector and returns a pointer at the connector.
+	 * Create a a one-to-one connector and returns a pointer at the connector.
+     *
+	 * @param weight is the synaptic weight that should be used for all
+	 * connections.
+	 * @param delay is the synaptic delay that should be used for all
+	 * connections.
+	 * @return Unique pointer to the connector
 	 */
 	static std::unique_ptr<OneToOneConnector> one_to_one(Real weight = 1.0,
 	                                                     Real delay = 0.0);
@@ -508,6 +538,7 @@ public:
 	 * list.
 	 *
 	 * @param connections is a list of connections that should be created.
+	 * @return Unique pointer to the connector
 	 */
 	static std::unique_ptr<FromListConnector> from_list(
 	    const std::vector<LocalConnection> &connections);
@@ -517,6 +548,7 @@ public:
 	 * list.
 	 *
 	 * @param connections is a list of connections that should be created.
+	 * @return Unique pointer to the connector
 	 */
 	static std::unique_ptr<FromListConnector> from_list(
 	    std::initializer_list<LocalConnection> connections);
@@ -528,6 +560,7 @@ public:
 	 * @param cback is a function which is called for each neuron-pair in the
 	 * two populations and which is supposed to return a synapse description. If
 	 * the returned synapse is invalid, no connection is created.
+	 * @return Unique pointer to the connector
 	 */
 	template <typename F>
 	static std::unique_ptr<FunctorConnector<F>> functor(const F &cback);
@@ -539,6 +572,11 @@ public:
 	 * @param cback is a function which is called for each neuron-pair in the
 	 * two populations and which is supposed to return a synapse description. If
 	 * the returned synapse is invalid, no connection is created.
+	 * @param weight is the synaptic weight that should be used for all
+	 * connections.
+	 * @param delay is the synaptic delay that should be used for all
+	 * connections.
+	 * @return Unique pointer to the connector
 	 */
 	template <typename F>
 	static std::unique_ptr<UniformFunctorConnector<F>> functor(
@@ -551,10 +589,12 @@ public:
 	 * @param connector another connector that should be modified by this
 	 * connector.
 	 * @param p probability with which an connection is created.
+	 * @return Unique pointer to the connector
 	 */
 	static std::unique_ptr<
 	    FixedProbabilityConnector<std::default_random_engine>>
-	fixed_probability(std::unique_ptr<Connector> connector, Real p = 1.0);
+	fixed_probability(std::unique_ptr<Connector> connector, Real p,
+	                  bool allow_self_connections = true);
 
 	/**
 	 * Connector adapter which ensures connections are only produced with a
@@ -565,11 +605,13 @@ public:
 	 * @param p probability with which an connection is created.
 	 * @param seed is the seed the random number generator should be initialised
 	 * with.
+     * @param allow_self_connections Flag which either allows (true) or forbids self connections if the source and target population are the same
+	 * @return Unique pointer to the connector
 	 */
 	static std::unique_ptr<
 	    FixedProbabilityConnector<std::default_random_engine>>
-	fixed_probability(std::unique_ptr<Connector> connector, Real p,
-	                  size_t seed);
+	fixed_probability(std::unique_ptr<Connector> connector, Real p, size_t seed,
+	                  bool allow_self_connections = true);
 
 	/**
 	 * Connector adapter which ensures connections are only produced with a
@@ -580,12 +622,25 @@ public:
 	 * @param delay is the synaptic delay that should be used for all
 	 * connections.
 	 * @param probability probability with which an connection is created.
+     * @param allow_self_connections Flag which either allows (true) or forbids self connections if the source and target population are the same
+	 * @return Unique pointer to the connector
 	 */
 	static std::unique_ptr<RandomConnector<std::default_random_engine>> random(
-	    Real weight = 1, Real delay = 0, Real probability = 1);
+	    Real weight = 1, Real delay = 0, Real probability = 1,
+	    bool allow_self_connections = true);
 
+    /**
+	 * Connector adapter which ensures connections are only produced with a
+	 * certain probability.
+	 *
+	 * @param synapse Synapse object containing model and parameters
+	 * @param probability probability with which an connection is created.
+     * @param allow_self_connections Flag which either allows (true) or forbids self connections if the source and target population are the same
+	 * @return Unique pointer to the connector
+	 */
 	static std::unique_ptr<RandomConnector<std::default_random_engine>> random(
-	    SynapseBase &synapse, Real probability = 1);
+	    SynapseBase &synapse, Real probability = 1,
+	    bool allow_self_connections = true);
 
 	/**
 	 * Connector adapter which ensures connections are only produced with a
@@ -598,9 +653,12 @@ public:
 	 * @param probability probability with which an connection is created.
 	 * @param seed is the seed the random number generator should be initialised
 	 * with.
+     * @param allow_self_connections Flag which either allows (true) or forbids self connections if the source and target population are the same
+	 * @return Unique pointer to the connector
 	 */
 	static std::unique_ptr<RandomConnector<std::default_random_engine>> random(
-	    Real weight, Real delay, Real probability, size_t seed);
+	    Real weight, Real delay, Real probability, size_t seed,
+	    bool allow_self_connections = true);
 
 	/**
 	 * Connector adapter which ensures connections are only produced with a
@@ -610,9 +668,12 @@ public:
 	 * @param probability probability with which an connection is created.
 	 * @param seed is the seed the random number generator should be initialised
 	 * with.
+     * @param allow_self_connections Flag which either allows (true) or forbids self connections if the source and target population are the same
+	 * @return Unique pointer to the connector
 	 */
 	static std::unique_ptr<RandomConnector<std::default_random_engine>> random(
-	    SynapseBase &synapse, Real probability, size_t seed);
+	    SynapseBase &synapse, Real probability, size_t seed,
+	    bool allow_self_connections = true);
 
 	/**
 	 * Connector which randomly selects neurons from the source population and
@@ -622,9 +683,12 @@ public:
 	 * @param n_fan_in is the fan in that should be ensured.
 	 * @param weight is the connection weight.
 	 * @param delay is the synaptic delay.
+     * @param allow_self_connections Flag which either allows (true) or forbids self connections if the source and target population are the same
+	 * @return Unique pointer to the connector
 	 */
 	static std::unique_ptr<FixedFanInConnector<std::default_random_engine>>
-	fixed_fan_in(size_t n_fan_in, Real weight, Real delay = 0.0);
+	fixed_fan_in(size_t n_fan_in, Real weight, Real delay = 0.0,
+	             bool allow_self_connections = true);
 
 	/**
 	 * Connector which randomly selects neurons from the source population and
@@ -633,9 +697,12 @@ public:
 	 *
 	 * @param n_fan_in is the fan in that should be ensured.
 	 * @param synapse Synapse object containing model and parameters
+     * @param allow_self_connections Flag which either allows (true) or forbids self connections if the source and target population are the same
+	 * @return Unique pointer to the connector
 	 */
 	static std::unique_ptr<FixedFanInConnector<std::default_random_engine>>
-	fixed_fan_in(size_t n_fan_in, SynapseBase &synapse);
+	fixed_fan_in(size_t n_fan_in, SynapseBase &synapse,
+	             bool allow_self_connections = true);
 
 	/**
 	 * Connector which randomly selects neurons from the source population and
@@ -648,9 +715,12 @@ public:
 	 * @param delay is the synaptic delay.
 	 * @param seed is the seed that should be used in order to initialize the
 	 * random engine.
+     * @param allow_self_connections Flag which either allows (true) or forbids self connections if the source and target population are the same
+	 * @return Unique pointer to the connector
 	 */
 	static std::unique_ptr<FixedFanInConnector<std::default_random_engine>>
-	fixed_fan_in(size_t n_fan_in, Real weight, Real delay, size_t seed);
+	fixed_fan_in(size_t n_fan_in, Real weight, Real delay, size_t seed,
+	             bool allow_self_connections = true);
 
 	/**
 	 * Connector which randomly selects neurons from the source population and
@@ -662,32 +732,41 @@ public:
 	 * @param synapse Synapse object containing model and parameters
 	 * @param seed is the seed that should be used in order to initialize the
 	 * random engine.
+     * @param allow_self_connections Flag which either allows (true) or forbids self connections if the source and target population are the same
+	 * @return Unique pointer to the connector
 	 */
 	static std::unique_ptr<FixedFanInConnector<std::default_random_engine>>
-	fixed_fan_in(size_t n_fan_in, SynapseBase &synapse, size_t seed);
+	fixed_fan_in(size_t n_fan_in, SynapseBase &synapse, size_t seed,
+	             bool allow_self_connections = true);
 
 	/**
 	 * Connector which randomly selects neurons from the target population and
 	 * ensures a fixed fan out (number of outgoing connections) in each of the
 	 * source neurons.
 	 *
-	 * @param n_fan_in is the fan in that should be ensured.
+	 * @param n_fan_out is the fan out that should be ensured.
 	 * @param weight is the connection weight.
 	 * @param delay is the synaptic delay.
+     * @param allow_self_connections Flag which either allows (true) or forbids self connections if the source and target population are the same
+	 * @return Unique pointer to the connector
 	 */
 	static std::unique_ptr<FixedFanOutConnector<std::default_random_engine>>
-	fixed_fan_out(size_t n_fan_out, Real weight, Real delay = 0.0);
+	fixed_fan_out(size_t n_fan_out, Real weight, Real delay = 0.0,
+	              bool allow_self_connections = true);
 
 	/**
 	 * Connector which randomly selects neurons from the target population and
 	 * ensures a fixed fan out (number of outgoing connections) in each of the
 	 * source neurons.
 	 *
-	 * @param n_fan_in is the fan in that should be ensured.
+	 * @param n_fan_out is the fan out that should be ensured.
 	 * @param synapse Synapse object containing model and parameters
+     * @param allow_self_connections Flag which either allows (true) or forbids self connections if the source and target population are the same
+	 * @return Unique pointer to the connector
 	 */
 	static std::unique_ptr<FixedFanOutConnector<std::default_random_engine>>
-	fixed_fan_out(size_t n_fan_out, SynapseBase &synapse);
+	fixed_fan_out(size_t n_fan_out, SynapseBase &synapse,
+	              bool allow_self_connections = true);
 
 	/**
 	 * Connector which randomly selects neurons from the target population and
@@ -700,9 +779,12 @@ public:
 	 * @param delay is the synaptic delay.
 	 * @param seed is the seed that should be used in order to initialize the
 	 * random engine.
+     * @param allow_self_connections Flag which either allows (true) or forbids self connections if the source and target population are the same
+	 * @return Unique pointer to the connector
 	 */
 	static std::unique_ptr<FixedFanOutConnector<std::default_random_engine>>
-	fixed_fan_out(size_t n_fan_out, Real weight, Real delay, size_t seed);
+	fixed_fan_out(size_t n_fan_out, Real weight, Real delay, size_t seed,
+	              bool allow_self_connections = true);
 
 	/**
 	 * Connector which randomly selects neurons from the target population and
@@ -711,12 +793,15 @@ public:
 	 * engine.
 	 *
 	 * @param n_fan_out is the fan out that should be ensured.
-	 * @param synapse Synapse object containing model and parametersma
+	 * @param synapse Synapse object containing model and parameters
 	 * @param seed is the seed that should be used in order to initialize the
 	 * random engine.
+     * @param allow_self_connections Flag which either allows (true) or forbids self connections if the source and target population are the same
+	 * @return Unique pointer to the connector
 	 */
 	static std::unique_ptr<FixedFanOutConnector<std::default_random_engine>>
-	fixed_fan_out(size_t n_fan_out, SynapseBase &synapse, size_t seed);
+	fixed_fan_out(size_t n_fan_out, SynapseBase &synapse, size_t seed,
+	              bool allow_self_connections = true);
 };
 
 /**
@@ -866,11 +951,16 @@ bool instantiate_connections_to_file(
  */
 class UniformConnector : public Connector {
 public:
-	explicit UniformConnector(Real weight = 0.0, Real delay = 0.0)
-	    : Connector(weight, delay)
+	explicit UniformConnector(Real weight = 0.0, Real delay = 0.0,
+	                          bool self_connections = true)
+	    : Connector(weight, delay, self_connections)
 	{
 	}
-	explicit UniformConnector(SynapseBase &synapse) : Connector(synapse) {}
+	explicit UniformConnector(SynapseBase &synapse,
+	                          bool self_connections = true)
+	    : Connector(synapse, self_connections)
+	{
+	}
 };
 
 /**
@@ -940,12 +1030,12 @@ private:
 
 public:
 	explicit FromListConnector(std::vector<LocalConnection> connections)
-	    : Connector(0.0, 0.0), m_connections(std::move(connections))
+	    : Connector(0.0, 0.0, true), m_connections(std::move(connections))
 	{
 	}
 
 	FromListConnector(std::initializer_list<LocalConnection> connections)
-	    : Connector(0.0, 0.0), m_connections(connections)
+	    : Connector(0.0, 0.0, true), m_connections(connections)
 	{
 	}
 
@@ -966,7 +1056,7 @@ public:
 
 class FunctorConnectorBase : public Connector {
 protected:
-	FunctorConnectorBase() : Connector(0, 0) {}
+	FunctorConnectorBase() : Connector(0, 0, true) {}
 
 public:
 	std::string name() const override { return "FunctorConnector"; }
@@ -1038,11 +1128,11 @@ private:
 public:
 	explicit UniformFunctorConnector(const Callback &cback, Real weight = 0.0,
 	                                 Real delay = 0.0)
-	    : UniformFunctorConnectorBase(weight, delay), m_cback(cback)
+	    : UniformFunctorConnectorBase(weight, delay, true), m_cback(cback)
 	{
 	}
 	UniformFunctorConnector(const Callback &cback, SynapseBase &synapse)
-	    : UniformFunctorConnectorBase(synapse), m_cback(cback)
+	    : UniformFunctorConnectorBase(synapse, true), m_cback(cback)
 	{
 	}
 
@@ -1069,8 +1159,9 @@ public:
 class FixedProbabilityConnectorBase : public Connector {
 protected:
 	std::string name_string = "FixedProbabilityConnector";
-	FixedProbabilityConnectorBase(std::shared_ptr<SynapseBase> synapse)
-	    : Connector(std::move(synapse))
+	FixedProbabilityConnectorBase(std::shared_ptr<SynapseBase> synapse,
+	                              bool self_connections)
+	    : Connector(std::move(synapse), self_connections)
 	{
 	}
 
@@ -1087,8 +1178,9 @@ protected:
 
 public:
 	FixedProbabilityConnector(std::unique_ptr<Connector> connector, Real p,
-	                          std::shared_ptr<RandomEngine> engine)
-	    : FixedProbabilityConnectorBase(connector->synapse()),
+	                          std::shared_ptr<RandomEngine> engine,
+	                          bool self_connections)
+	    : FixedProbabilityConnectorBase(connector->synapse(), self_connections),
 	      m_connector(std::move(connector)),
 	      m_engine(std::move(engine)),
 	      m_p(p)
@@ -1107,6 +1199,16 @@ public:
 			if (distr(*m_engine) >= m_p) {
 				tar[i].n.SynapseParameters[0] =
 				    0.0;  // Invalidate the connection
+			}
+		}
+
+		if ((!descr.connector().allow_self_connections()) &&
+		    descr.pid_src() == descr.pid_tar()) {
+			for (size_t i = first; i < tar.size(); i++) {
+				if (tar[i].n.src == tar[i].n.tar) {
+					tar[i].n.SynapseParameters[0] =
+					    0.0;  // Invalidate the connection
+				}
 			}
 		}
 	}
@@ -1139,16 +1241,18 @@ private:
 
 public:
 	RandomConnector(Real weight, Real delay, Real probability,
-	                std::shared_ptr<RandomEngine> engine)
+	                std::shared_ptr<RandomEngine> engine, bool self_connections)
 	    : FixedProbabilityConnector<RandomEngine>(
-	          Connector::all_to_all(weight, delay), probability, engine)
+	          Connector::all_to_all(weight, delay), probability, engine,
+	          self_connections)
 	{
 		FixedProbabilityConnectorBase::name_string = "RandomConnector";
 	}
 	RandomConnector(SynapseBase &synapse, Real probability,
-	                std::shared_ptr<RandomEngine> engine)
+	                std::shared_ptr<RandomEngine> engine, bool self_connections)
 	    : FixedProbabilityConnector<RandomEngine>(
-	          Connector::all_to_all(synapse), probability, engine)
+	          Connector::all_to_all(synapse), probability, engine,
+	          self_connections)
 	{
 		FixedProbabilityConnectorBase::name_string = "RandomConnector";
 	}
@@ -1156,17 +1260,12 @@ public:
 	bool group_connect(const ConnectionDescriptor &descr,
 	                   GroupConnection &tar) const override
 	{
-		tar.psrc = descr.pid_src();
-		tar.src0 = descr.nid_src0();
-		tar.src1 = descr.nid_src1();
-		tar.ptar = descr.pid_tar();
-		tar.tar0 = descr.nid_tar0();
-		tar.tar1 = descr.nid_tar1();
-		tar.synapse_parameters = Base::m_synapse->parameters();
-		tar.synapse_name = Base::m_synapse->name();
-		tar.additional_parameter = Base::m_p;
-		tar.connection_name = "RandomConnector";
-		tar.synapse_name = Base::m_synapse->name();
+		tar = GroupConnection(descr.pid_src(), descr.pid_tar(),
+		                      descr.nid_src0(), descr.nid_src1(),
+		                      descr.nid_tar0(), descr.nid_tar1(),
+		                      Base::m_synapse->parameters(), Base::m_p,
+		                      "RandomConnector", Base::m_synapse->name(),
+		                      descr.connector().allow_self_connections());
 		return true;
 	}
 
@@ -1186,7 +1285,7 @@ private:
 protected:
 	template <typename F>
 	void generate_connections(size_t offs, size_t len, size_t subset_len,
-	                          size_t i0, size_t i1, const F &f) const
+	                          size_t i0, size_t i1, const F &f, bool self) const
 	{
 		// Initialize a vector with the identity permutation
 		std::vector<size_t> perm(len);
@@ -1202,23 +1301,39 @@ protected:
 			for (size_t j = 0; j < subset_len; j++) {
 				std::swap(perm[j], perm[distr(*m_engine)]);
 			}
-
 			// Create the connections
-			for (size_t j = 0; j < subset_len; j++) {
-				f(i, perm[j]);
+			if (self) {
+				for (size_t j = 0; j < subset_len; j++) {
+					f(i, perm[j]);
+				}
+			}
+			else {
+				size_t sub_len = subset_len;
+				for (size_t j = 0; j < sub_len; j++) {
+					if (i != perm[j]) {
+						f(i, perm[j]);
+					}
+					else {
+						sub_len = std::min(sub_len + 1, perm.size());
+					}
+				}
 			}
 		}
 	}
 
 public:
 	FixedFanConnectorBase(Real weight, Real delay,
-	                      std::shared_ptr<RandomEngine> engine)
-	    : UniformConnector(weight, delay), m_engine(std::move(engine))
+	                      std::shared_ptr<RandomEngine> engine,
+	                      bool self_connections)
+	    : UniformConnector(weight, delay, self_connections),
+	      m_engine(std::move(engine))
 	{
 	}
 	FixedFanConnectorBase(SynapseBase &synapse,
-	                      std::shared_ptr<RandomEngine> engine)
-	    : UniformConnector(synapse), m_engine(std::move(engine))
+	                      std::shared_ptr<RandomEngine> engine,
+	                      bool self_connections)
+	    : UniformConnector(synapse, self_connections),
+	      m_engine(std::move(engine))
 	{
 	}
 };
@@ -1236,14 +1351,18 @@ private:
 
 public:
 	FixedFanInConnector(size_t n_fan_in, Real weight, Real delay,
-	                    std::shared_ptr<RandomEngine> engine)
-	    : FixedFanConnectorBase<RandomEngine>(weight, delay, std::move(engine)),
+	                    std::shared_ptr<RandomEngine> engine,
+	                    bool self_connections)
+	    : FixedFanConnectorBase<RandomEngine>(weight, delay, std::move(engine),
+	                                          self_connections),
 	      m_n_fan_in(n_fan_in)
 	{
 	}
 	FixedFanInConnector(size_t n_fan_in, SynapseBase &synapse,
-	                    std::shared_ptr<RandomEngine> engine)
-	    : FixedFanConnectorBase<RandomEngine>(synapse, std::move(engine)),
+	                    std::shared_ptr<RandomEngine> engine,
+	                    bool self_connections)
+	    : FixedFanConnectorBase<RandomEngine>(synapse, std::move(engine),
+	                                          self_connections),
 	      m_n_fan_in(n_fan_in)
 	{
 	}
@@ -1253,28 +1372,37 @@ public:
 	void connect(const ConnectionDescriptor &descr,
 	             std::vector<Connection> &tar) const override
 	{
-		Base::generate_connections(
-		    descr.nid_src0(), descr.nsrc(), m_n_fan_in, descr.nid_tar0(),
-		    descr.nid_tar1(), [&](size_t i, size_t r) {
-			    tar.emplace_back(descr.pid_src(), descr.pid_tar(), r, i,
-			                     *this->m_synapse);
-		    });
+        if(descr.pid_src()==descr.pid_tar()){
+            Base::generate_connections(descr.nid_src0(), descr.nsrc(), m_n_fan_in,
+		                           descr.nid_tar0(), descr.nid_tar1(),
+		                           [&](size_t i, size_t r) {
+			                           tar.emplace_back(descr.pid_src(),
+			                                            descr.pid_tar(), r, i,
+			                                            *this->m_synapse);
+		                           },
+		                           descr.connector().allow_self_connections());
+        }
+        else{
+            Base::generate_connections(descr.nid_src0(), descr.nsrc(), m_n_fan_in,
+		                           descr.nid_tar0(), descr.nid_tar1(),
+		                           [&](size_t i, size_t r) {
+			                           tar.emplace_back(descr.pid_src(),
+			                                            descr.pid_tar(), r, i,
+			                                            *this->m_synapse);
+		                           },
+		                           true);
+        }
 	}
 
 	bool group_connect(const ConnectionDescriptor &descr,
 	                   GroupConnection &tar) const override
 	{
-		tar.psrc = descr.pid_src();
-		tar.src0 = descr.nid_src0();
-		tar.src1 = descr.nid_src1();
-		tar.ptar = descr.pid_tar();
-		tar.tar0 = descr.nid_tar0();
-		tar.tar1 = descr.nid_tar1();
-		tar.synapse_parameters = Base::m_synapse->parameters();
-		tar.synapse_name = Base::m_synapse->name();
-		tar.additional_parameter = m_n_fan_in;
-		tar.connection_name = "FixedFanInConnector";
-		tar.synapse_name = Base::m_synapse->name();
+		tar = GroupConnection(descr.pid_src(), descr.pid_tar(),
+		                      descr.nid_src0(), descr.nid_src1(),
+		                      descr.nid_tar0(), descr.nid_tar1(),
+		                      Base::m_synapse->parameters(), m_n_fan_in,
+		                      "FixedFanInConnector", Base::m_synapse->name(),
+		                      descr.connector().allow_self_connections());
 		return true;
 	};
 
@@ -1309,14 +1437,18 @@ private:
 
 public:
 	FixedFanOutConnector(size_t n_fan_out, Real weight, Real delay,
-	                     std::shared_ptr<RandomEngine> engine)
-	    : Base(weight, delay, std::move(engine)), m_n_fan_out(n_fan_out)
+	                     std::shared_ptr<RandomEngine> engine,
+	                     bool self_connections)
+	    : Base(weight, delay, std::move(engine), self_connections),
+	      m_n_fan_out(n_fan_out)
 	{
 	}
 
 	FixedFanOutConnector(size_t n_fan_out, SynapseBase &synapse,
-	                     std::shared_ptr<RandomEngine> engine)
-	    : Base(synapse, std::move(engine)), m_n_fan_out(n_fan_out)
+	                     std::shared_ptr<RandomEngine> engine,
+	                     bool self_connections)
+	    : Base(synapse, std::move(engine), self_connections),
+	      m_n_fan_out(n_fan_out)
 	{
 	}
 
@@ -1325,12 +1457,25 @@ public:
 	void connect(const ConnectionDescriptor &descr,
 	             std::vector<Connection> &tar) const override
 	{
-		Base::generate_connections(
-		    descr.nid_tar0(), descr.ntar(), m_n_fan_out, descr.nid_src0(),
-		    descr.nid_src1(), [&](size_t i, size_t r) {
-			    tar.emplace_back(descr.pid_src(), descr.pid_tar(), i, r,
-			                     *this->m_synapse);
-		    });
+        if(descr.pid_src()==descr.pid_tar()){
+            Base::generate_connections(descr.nid_tar0(), descr.ntar(), m_n_fan_out,
+		                           descr.nid_src0(), descr.nid_src1(),
+		                           [&](size_t i, size_t r) {
+			                           tar.emplace_back(descr.pid_src(),
+			                                            descr.pid_tar(), i, r,
+			                                            *this->m_synapse);
+		                           },
+		                           descr.connector().allow_self_connections());
+        }
+        else{
+            Base::generate_connections(descr.nid_tar0(), descr.ntar(), m_n_fan_out,
+		                           descr.nid_src0(), descr.nid_src1(),
+		                           [&](size_t i, size_t r) {
+			                           tar.emplace_back(descr.pid_src(),
+			                                            descr.pid_tar(), i, r,
+			                                            *this->m_synapse);
+		                           }, true);
+        }
 	}
 
 	bool group_connect(const ConnectionDescriptor &,
@@ -1373,15 +1518,15 @@ public:
  * Inline methods
  */
 
-inline std::unique_ptr<AllToAllConnector> Connector::all_to_all(Real weight,
-                                                                Real delay)
+inline std::unique_ptr<AllToAllConnector> Connector::all_to_all(
+    Real weight, Real delay, bool self_connections)
 {
-	return std::make_unique<AllToAllConnector>(weight, delay);
+	return std::make_unique<AllToAllConnector>(weight, delay, self_connections);
 }
 inline std::unique_ptr<AllToAllConnector> Connector::all_to_all(
-    SynapseBase &synapse)
+    SynapseBase &synapse, bool self_connections)
 {
-	return std::make_unique<AllToAllConnector>(synapse);
+	return std::make_unique<AllToAllConnector>(synapse, self_connections);
 }
 
 inline std::unique_ptr<OneToOneConnector> Connector::one_to_one(Real weight,
@@ -1427,96 +1572,117 @@ inline std::unique_ptr<UniformFunctorConnector<F>> Connector::functor(
 }*/
 
 inline std::unique_ptr<FixedProbabilityConnector<std::default_random_engine>>
-Connector::fixed_probability(std::unique_ptr<Connector> connector, Real p)
+Connector::fixed_probability(std::unique_ptr<Connector> connector, Real p,
+                             bool self_connections)
 {
-	return fixed_probability(std::move(connector), p, std::random_device()());
+	return fixed_probability(std::move(connector), p, std::random_device()(),
+	                         self_connections);
 }
 
 inline std::unique_ptr<FixedProbabilityConnector<std::default_random_engine>>
 Connector::fixed_probability(std::unique_ptr<Connector> connector, Real p,
-                             size_t seed)
+                             size_t seed, bool self_connections)
 {
 	return std::make_unique<
 	    FixedProbabilityConnector<std::default_random_engine>>(
 	    std::move(connector), p,
-	    std::make_shared<std::default_random_engine>(seed));
+	    std::make_shared<std::default_random_engine>(seed), self_connections);
 }
 
 inline std::unique_ptr<RandomConnector<std::default_random_engine>>
-Connector::random(Real weight, Real delay, Real probability)
+Connector::random(Real weight, Real delay, Real probability,
+                  bool self_connections)
 {
-	return random(weight, delay, probability, std::random_device()());
+	return random(weight, delay, probability, std::random_device()(),
+	              self_connections);
 }
 
 inline std::unique_ptr<RandomConnector<std::default_random_engine>>
-Connector::random(SynapseBase &synapse, Real probability)
+Connector::random(SynapseBase &synapse, Real probability, bool self_connections)
 {
-	return random(synapse, probability, std::random_device()());
+	return random(synapse, probability, std::random_device()(),
+	              self_connections);
 }
 
 inline std::unique_ptr<RandomConnector<std::default_random_engine>>
-Connector::random(Real weight, Real delay, Real probability, size_t seed)
+Connector::random(Real weight, Real delay, Real probability, size_t seed,
+                  bool self_connections)
 {
 	return std::make_unique<RandomConnector<std::default_random_engine>>(
 	    weight, delay, probability,
-	    std::make_shared<std::default_random_engine>(seed));
+	    std::make_shared<std::default_random_engine>(seed), self_connections);
 }
 inline std::unique_ptr<RandomConnector<std::default_random_engine>>
-Connector::random(SynapseBase &synapse, Real probability, size_t seed)
+Connector::random(SynapseBase &synapse, Real probability, size_t seed,
+                  bool self_connections)
 {
 	return std::make_unique<RandomConnector<std::default_random_engine>>(
 	    synapse, probability,
-	    std::make_shared<std::default_random_engine>(seed));
+	    std::make_shared<std::default_random_engine>(seed), self_connections);
 }
 
 inline std::unique_ptr<FixedFanInConnector<std::default_random_engine>>
-Connector::fixed_fan_in(size_t n_fan_in, Real weight, Real delay)
+Connector::fixed_fan_in(size_t n_fan_in, Real weight, Real delay,
+                        bool self_connections)
 {
-	return fixed_fan_in(n_fan_in, weight, delay, std::random_device()());
+	return fixed_fan_in(n_fan_in, weight, delay, std::random_device()(),
+	                    self_connections);
 }
 inline std::unique_ptr<FixedFanInConnector<std::default_random_engine>>
-Connector::fixed_fan_in(size_t n_fan_in, SynapseBase &synapse)
+Connector::fixed_fan_in(size_t n_fan_in, SynapseBase &synapse,
+                        bool self_connections)
 {
-	return fixed_fan_in(n_fan_in, synapse, std::random_device()());
+	return fixed_fan_in(n_fan_in, synapse, std::random_device()(),
+	                    self_connections);
 }
 
 inline std::unique_ptr<FixedFanInConnector<std::default_random_engine>>
-Connector::fixed_fan_in(size_t n_fan_in, Real weight, Real delay, size_t seed)
+Connector::fixed_fan_in(size_t n_fan_in, Real weight, Real delay, size_t seed,
+                        bool self_connections)
 {
 	return std::make_unique<FixedFanInConnector<std::default_random_engine>>(
 	    n_fan_in, weight, delay,
-	    std::make_shared<std::default_random_engine>(seed));
+	    std::make_shared<std::default_random_engine>(seed), self_connections);
 }
 inline std::unique_ptr<FixedFanInConnector<std::default_random_engine>>
-Connector::fixed_fan_in(size_t n_fan_in, SynapseBase &synapse, size_t seed)
+Connector::fixed_fan_in(size_t n_fan_in, SynapseBase &synapse, size_t seed,
+                        bool self_connections)
 {
 	return std::make_unique<FixedFanInConnector<std::default_random_engine>>(
-	    n_fan_in, synapse, std::make_shared<std::default_random_engine>(seed));
+	    n_fan_in, synapse, std::make_shared<std::default_random_engine>(seed),
+	    self_connections);
 }
 
 inline std::unique_ptr<FixedFanOutConnector<std::default_random_engine>>
-Connector::fixed_fan_out(size_t n_fan_out, Real weight, Real delay)
+Connector::fixed_fan_out(size_t n_fan_out, Real weight, Real delay,
+                         bool self_connections)
 {
-	return fixed_fan_out(n_fan_out, weight, delay, std::random_device()());
+	return fixed_fan_out(n_fan_out, weight, delay, std::random_device()(),
+	                     self_connections);
 }
 inline std::unique_ptr<FixedFanOutConnector<std::default_random_engine>>
-Connector::fixed_fan_out(size_t n_fan_out, SynapseBase &synapse)
+Connector::fixed_fan_out(size_t n_fan_out, SynapseBase &synapse,
+                         bool self_connections)
 {
-	return fixed_fan_out(n_fan_out, synapse, std::random_device()());
+	return fixed_fan_out(n_fan_out, synapse, std::random_device()(),
+	                     self_connections);
 }
 
 inline std::unique_ptr<FixedFanOutConnector<std::default_random_engine>>
-Connector::fixed_fan_out(size_t n_fan_out, Real weight, Real delay, size_t seed)
+Connector::fixed_fan_out(size_t n_fan_out, Real weight, Real delay, size_t seed,
+                         bool self_connections)
 {
 	return std::make_unique<FixedFanOutConnector<std::default_random_engine>>(
 	    n_fan_out, weight, delay,
-	    std::make_shared<std::default_random_engine>(seed));
+	    std::make_shared<std::default_random_engine>(seed), self_connections);
 }
 inline std::unique_ptr<FixedFanOutConnector<std::default_random_engine>>
-Connector::fixed_fan_out(size_t n_fan_out, SynapseBase &synapse, size_t seed)
+Connector::fixed_fan_out(size_t n_fan_out, SynapseBase &synapse, size_t seed,
+                         bool self_connections)
 {
 	return std::make_unique<FixedFanOutConnector<std::default_random_engine>>(
-	    n_fan_out, synapse, std::make_shared<std::default_random_engine>(seed));
+	    n_fan_out, synapse, std::make_shared<std::default_random_engine>(seed),
+	    self_connections);
 }
 }  // namespace cypress
 

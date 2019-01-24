@@ -62,12 +62,27 @@ std::vector<Connection> instantiate_connections(
 void AllToAllConnector::connect(const ConnectionDescriptor &descr,
                                 std::vector<Connection> &tar) const
 {
-	for (NeuronIndex n_src = descr.nid_src0(); n_src < descr.nid_src1();
-	     n_src++) {
-		for (NeuronIndex n_tar = descr.nid_tar0(); n_tar < descr.nid_tar1();
-		     n_tar++) {
-			tar.emplace_back(descr.pid_src(), descr.pid_tar(), n_src, n_tar,
-			                 *m_synapse);
+	if ((!descr.connector().allow_self_connections()) &&
+	    descr.pid_src() == descr.pid_tar()) {
+		for (NeuronIndex n_src = descr.nid_src0(); n_src < descr.nid_src1();
+		     n_src++) {
+			for (NeuronIndex n_tar = descr.nid_tar0(); n_tar < descr.nid_tar1();
+			     n_tar++) {
+				if (n_src != n_tar) {
+					tar.emplace_back(descr.pid_src(), descr.pid_tar(), n_src,
+					                 n_tar, *m_synapse);
+				}
+			}
+		}
+	}
+	else {
+		for (NeuronIndex n_src = descr.nid_src0(); n_src < descr.nid_src1();
+		     n_src++) {
+			for (NeuronIndex n_tar = descr.nid_tar0(); n_tar < descr.nid_tar1();
+			     n_tar++) {
+				tar.emplace_back(descr.pid_src(), descr.pid_tar(), n_src, n_tar,
+				                 *m_synapse);
+			}
 		}
 	}
 }
@@ -81,7 +96,8 @@ bool AllToAllConnector::group_connect(const ConnectionDescriptor &descr,
 	tar = GroupConnection(descr.pid_src(), descr.pid_tar(), descr.nid_src0(),
 	                      descr.nid_src1(), descr.nid_tar0(), descr.nid_tar1(),
 	                      m_synapse->parameters(), 0, "AllToAllConnector",
-	                      m_synapse->name());
+	                      m_synapse->name(),
+	                      descr.connector().allow_self_connections());
 	return true;
 }
 
@@ -104,7 +120,8 @@ bool OneToOneConnector::group_connect(const ConnectionDescriptor &descr,
 	tar = GroupConnection(descr.pid_src(), descr.pid_tar(), descr.nid_src0(),
 	                      descr.nid_src1(), descr.nid_tar0(), descr.nid_tar1(),
 	                      m_synapse->parameters(), 0, "OneToOneConnector",
-	                      m_synapse->name());
+	                      m_synapse->name(),
+	                      descr.connector().allow_self_connections());
 	return true;
 }
 
