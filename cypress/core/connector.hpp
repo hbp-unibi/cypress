@@ -371,6 +371,7 @@ class Connector {
 protected:
 	std::shared_ptr<SynapseBase> m_synapse;
 	std::vector<LocalConnection> m_weights;
+    Real m_additional_parameter = 0.0;
 
 	bool m_self_connections = true;
 
@@ -430,11 +431,13 @@ public:
 	 * create a connection, for example a one-to-one connector
 	 */
 	virtual bool valid(const ConnectionDescriptor &descr) const = 0;
-
+    
     /**
      * Flag which either allows (true) or forbids self connections if the source and target population are the same
      */
 	bool allow_self_connections() const { return m_self_connections; }
+	
+	Real additional_parameter() const {return m_additional_parameter; } 
 
 	/**
 	 * Function which should return a name identifying the connector type --
@@ -874,7 +877,7 @@ public:
 	 * class which actually fills the connection table.
 	 */
 	Connector &connector() const { return *m_connector; }
-
+	
 	/**
 	 * Tells the Connector to actually create the neuron-to-neuron connections
 	 * between certain neurons.
@@ -1174,7 +1177,6 @@ class FixedProbabilityConnector : public FixedProbabilityConnectorBase {
 protected:
 	std::unique_ptr<Connector> m_connector;
 	std::shared_ptr<RandomEngine> m_engine;
-	Real m_p = 1.0;
 
 public:
 	FixedProbabilityConnector(std::unique_ptr<Connector> connector, Real p,
@@ -1182,9 +1184,9 @@ public:
 	                          bool self_connections)
 	    : FixedProbabilityConnectorBase(connector->synapse(), self_connections),
 	      m_connector(std::move(connector)),
-	      m_engine(std::move(engine)),
-	      m_p(p)
+	      m_engine(std::move(engine))
 	{
+        m_additional_parameter = p;
 	}
 
 	~FixedProbabilityConnector() override = default;
@@ -1196,7 +1198,7 @@ public:
 		m_connector->connect(descr, tar);  // Instantiate the connections
 		std::uniform_real_distribution<Real> distr(0.0, 1.0);
 		for (size_t i = first; i < tar.size(); i++) {
-			if (distr(*m_engine) >= m_p) {
+			if (distr(*m_engine) >= m_additional_parameter) {
 				tar[i].n.SynapseParameters[0] =
 				    0.0;  // Invalidate the connection
 			}
@@ -1226,7 +1228,7 @@ public:
 
 	size_t size(size_t size_src_pop, size_t size_target_pop) const override
 	{
-		return size_t(Real(size_src_pop * size_target_pop) * m_p);
+		return size_t(Real(size_src_pop * size_target_pop) * m_additional_parameter);
 	}
 };
 
@@ -1263,7 +1265,7 @@ public:
 		tar = GroupConnection(descr.pid_src(), descr.pid_tar(),
 		                      descr.nid_src0(), descr.nid_src1(),
 		                      descr.nid_tar0(), descr.nid_tar1(),
-		                      Base::m_synapse->parameters(), Base::m_p,
+		                      Base::m_synapse->parameters(), Base::m_additional_parameter,
 		                      "RandomConnector", Base::m_synapse->name(),
 		                      descr.connector().allow_self_connections());
 		return true;
@@ -1347,24 +1349,22 @@ class FixedFanInConnector : public FixedFanConnectorBase<RandomEngine> {
 private:
 	using Base = FixedFanConnectorBase<RandomEngine>;
 
-	size_t m_n_fan_in;
-
 public:
 	FixedFanInConnector(size_t n_fan_in, Real weight, Real delay,
 	                    std::shared_ptr<RandomEngine> engine,
 	                    bool self_connections)
 	    : FixedFanConnectorBase<RandomEngine>(weight, delay, std::move(engine),
-	                                          self_connections),
-	      m_n_fan_in(n_fan_in)
+	                                          self_connections)
 	{
+        Base::m_additional_parameter = n_fan_in;
 	}
 	FixedFanInConnector(size_t n_fan_in, SynapseBase &synapse,
 	                    std::shared_ptr<RandomEngine> engine,
 	                    bool self_connections)
 	    : FixedFanConnectorBase<RandomEngine>(synapse, std::move(engine),
-	                                          self_connections),
-	      m_n_fan_in(n_fan_in)
+	                                          self_connections)
 	{
+        Base::m_additional_parameter = n_fan_in;
 	}
 
 	~FixedFanInConnector() override = default;
@@ -1373,7 +1373,7 @@ public:
 	             std::vector<Connection> &tar) const override
 	{
         if(descr.pid_src()==descr.pid_tar()){
-            Base::generate_connections(descr.nid_src0(), descr.nsrc(), m_n_fan_in,
+            Base::generate_connections(descr.nid_src0(), descr.nsrc(), Base::m_additional_parameter,
 		                           descr.nid_tar0(), descr.nid_tar1(),
 		                           [&](size_t i, size_t r) {
 			                           tar.emplace_back(descr.pid_src(),
@@ -1383,7 +1383,7 @@ public:
 		                           descr.connector().allow_self_connections());
         }
         else{
-            Base::generate_connections(descr.nid_src0(), descr.nsrc(), m_n_fan_in,
+            Base::generate_connections(descr.nid_src0(), descr.nsrc(), Base::m_additional_parameter,
 		                           descr.nid_tar0(), descr.nid_tar1(),
 		                           [&](size_t i, size_t r) {
 			                           tar.emplace_back(descr.pid_src(),
@@ -1400,7 +1400,7 @@ public:
 		tar = GroupConnection(descr.pid_src(), descr.pid_tar(),
 		                      descr.nid_src0(), descr.nid_src1(),
 		                      descr.nid_tar0(), descr.nid_tar1(),
-		                      Base::m_synapse->parameters(), m_n_fan_in,
+		                      Base::m_synapse->parameters(), Base::m_additional_parameter,
 		                      "FixedFanInConnector", Base::m_synapse->name(),
 		                      descr.connector().allow_self_connections());
 		return true;
@@ -1413,14 +1413,14 @@ public:
 	 */
 	bool valid(const ConnectionDescriptor &descr) const override
 	{
-		return descr.nsrc() >= NeuronIndex(m_n_fan_in);
+		return descr.nsrc() >= NeuronIndex(Base::m_additional_parameter);
 	}
 
 	std::string name() const override { return "FixedFanInConnector"; }
 
 	size_t size(size_t, size_t size_target_pop) const override
 	{
-		return m_n_fan_in * size_target_pop;
+		return Base::m_additional_parameter * size_target_pop;
 	}
 };
 
@@ -1433,23 +1433,22 @@ class FixedFanOutConnector : public FixedFanConnectorBase<RandomEngine> {
 private:
 	using Base = FixedFanConnectorBase<RandomEngine>;
 
-	size_t m_n_fan_out;
 
 public:
 	FixedFanOutConnector(size_t n_fan_out, Real weight, Real delay,
 	                     std::shared_ptr<RandomEngine> engine,
 	                     bool self_connections)
-	    : Base(weight, delay, std::move(engine), self_connections),
-	      m_n_fan_out(n_fan_out)
+	    : Base(weight, delay, std::move(engine), self_connections)
 	{
+        Base::m_additional_parameter = n_fan_out;
 	}
 
 	FixedFanOutConnector(size_t n_fan_out, SynapseBase &synapse,
 	                     std::shared_ptr<RandomEngine> engine,
 	                     bool self_connections)
-	    : Base(synapse, std::move(engine), self_connections),
-	      m_n_fan_out(n_fan_out)
+	    : Base(synapse, std::move(engine), self_connections)
 	{
+        Base::m_additional_parameter = n_fan_out;
 	}
 
 	~FixedFanOutConnector() override = default;
@@ -1458,7 +1457,7 @@ public:
 	             std::vector<Connection> &tar) const override
 	{
         if(descr.pid_src()==descr.pid_tar()){
-            Base::generate_connections(descr.nid_tar0(), descr.ntar(), m_n_fan_out,
+            Base::generate_connections(descr.nid_tar0(), descr.ntar(), Base::m_additional_parameter,
 		                           descr.nid_src0(), descr.nid_src1(),
 		                           [&](size_t i, size_t r) {
 			                           tar.emplace_back(descr.pid_src(),
@@ -1468,7 +1467,7 @@ public:
 		                           descr.connector().allow_self_connections());
         }
         else{
-            Base::generate_connections(descr.nid_tar0(), descr.ntar(), m_n_fan_out,
+            Base::generate_connections(descr.nid_tar0(), descr.ntar(), Base::m_additional_parameter,
 		                           descr.nid_src0(), descr.nid_src1(),
 		                           [&](size_t i, size_t r) {
 			                           tar.emplace_back(descr.pid_src(),
@@ -1482,18 +1481,6 @@ public:
 	                   GroupConnection &) const override
 	{
 		return false;
-		/*tar.psrc = descr.pid_src();
-		tar.src0 = descr.nid_src0();
-		tar.src1 = descr.nid_src1();
-		tar.ptar = descr.pid_tar();
-		tar.tar0 = descr.nid_tar0();
-		tar.tar1 = descr.nid_tar1();
-		tar.synapse_parameters = Base::m_synapse.parameters();
-		tar.synapse_name = Base::m_synapse.name();
-		tar.additional_parameter = m_n_fan_out;
-		tar.connection_name = "FixedFanOutConnector";
-		tar.synapse_name = m_synapse->name();
-		return true;*/
 	};
 
 	/**
@@ -1503,14 +1490,14 @@ public:
 	 */
 	bool valid(const ConnectionDescriptor &descr) const override
 	{
-		return descr.ntar() >= NeuronIndex(m_n_fan_out);
+		return descr.ntar() >= NeuronIndex(Base::m_additional_parameter);
 	}
 
 	std::string name() const override { return "FixedFanOutConnector"; }
 
 	size_t size(size_t size_src_pop, size_t) const override
 	{
-		return size_src_pop * m_n_fan_out;
+		return size_src_pop * Base::m_additional_parameter;
 	}
 };
 
@@ -1687,3 +1674,4 @@ Connector::fixed_fan_out(size_t n_fan_out, SynapseBase &synapse, size_t seed,
 }  // namespace cypress
 
 #endif /* CYPRESS_CORE_CONNECTOR_HPP */
+

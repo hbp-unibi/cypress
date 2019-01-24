@@ -285,8 +285,7 @@ public:
 	 * @param pynn Reference to the pynn module
 	 * @return py::object reference to the connector
 	 */
-	static py::object get_connector7(const std::string &connector_name,
-	                                 const GroupConnection group_conn,
+	static py::object get_connector7(const ConnectionDescriptor &conn,
 	                                 const py::module &pynn);
 
 	/**
@@ -296,11 +295,14 @@ public:
 	 * @param pynn Reference to the pynn module
 	 * @param additional_parameter Additional parameter
 	 * needed by the connector
+	 * @param allow_self_connections flag to allow self connections if source
+	 * and target populations are the same
 	 * @return py::object reference to the connector
 	 */
 	static py::object get_connector(const std::string &connector_name,
 	                                const py::module &pynn,
-	                                const Real &additional_parameter);
+	                                const Real &additional_parameter,
+	                                const bool allow_self_connections);
 
 	/**
 	 * Connect based on an existing PyNN connector
@@ -308,17 +310,14 @@ public:
 	 * @param populations vector of cypress populations
 	 * @param pypopulations vector of PyNN populations
 	 * @param conn Cypress connection descriptor
-	 * @param group_conn Cypress group connection descriptor
 	 * @param pynn Handler for PyNN module
-	 * @param conn_name PyNN name of the connector
 	 * @param timestep timestep of the simulator
 	 * @return Handler for the connector
 	 */
 	static py::object group_connect(
 	    const std::vector<PopulationBase> &populations,
 	    const std::vector<py::object> &pypopulations,
-	    const ConnectionDescriptor &conn, const GroupConnection &group_conn,
-	    const py::module &pynn, const std::string &conn_name,
+	    const ConnectionDescriptor &conn, const py::module &pynn,
 	    const Real timestep = 0.0);
 
 	/**
@@ -327,17 +326,13 @@ public:
 	 * @param populations vector of cypress populations
 	 * @param pypopulations vector of PyNN populations
 	 * @param conn Cypress connection descriptor
-	 * @param group_conn Cypress group connection descriptor
 	 * @param pynn Handler for PyNN module
-	 * @param conn_name PyNN name of the connector
-	 * @param timestep timestep of the simulator
 	 * @return Handler for the connector
 	 */
 	static py::object group_connect7(
 	    const std::vector<PopulationBase> &populations,
 	    const std::vector<py::object> &pypopulations,
-	    const GroupConnection &group_conn, const py::module &pynn,
-	    const std::string &conn_name);
+	    const ConnectionDescriptor &conn, const py::module &pynn);
 
 	/**
 	 * Creates a PyNN FromList Connection
