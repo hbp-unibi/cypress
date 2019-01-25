@@ -1335,6 +1335,9 @@ public:
 
 	bool group_connect(const ConnectionDescriptor &) const override
 	{
+		if (Base::m_seed_given) {
+			return false;
+		}
 		return true;
 	};
 
@@ -1412,6 +1415,10 @@ public:
 	bool group_connect(const ConnectionDescriptor &) const override
 	{
 		return false;
+		/*if (Base::m_seed_given) {
+			return false;
+		}
+		return true;*/
 	};
 
 	/**
