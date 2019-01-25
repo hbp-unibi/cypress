@@ -1416,7 +1416,7 @@ public:
 	{
 		return false;
 		/*if (Base::m_seed_given) {
-			return false;
+		    return false;
 		}
 		return true;*/
 	};
@@ -1521,15 +1521,19 @@ inline std::unique_ptr<RandomConnector<std::default_random_engine>>
 Connector::random(Real weight, Real delay, Real probability,
                   bool self_connections)
 {
-	return random(weight, delay, probability, std::random_device()(),
-	              self_connections);
+	return std::make_unique<RandomConnector<std::default_random_engine>>(
+	    weight, delay, probability,
+	    std::make_shared<std::default_random_engine>(std::random_device()()),
+	    self_connections);
 }
 
 inline std::unique_ptr<RandomConnector<std::default_random_engine>>
 Connector::random(SynapseBase &synapse, Real probability, bool self_connections)
 {
-	return random(synapse, probability, std::random_device()(),
-	              self_connections);
+	return std::make_unique<RandomConnector<std::default_random_engine>>(
+	    synapse, probability,
+	    std::make_shared<std::default_random_engine>(std::random_device()()),
+	    self_connections);
 }
 
 inline std::unique_ptr<RandomConnector<std::default_random_engine>>
@@ -1557,15 +1561,20 @@ inline std::unique_ptr<FixedFanInConnector<std::default_random_engine>>
 Connector::fixed_fan_in(size_t n_fan_in, Real weight, Real delay,
                         bool self_connections)
 {
-	return fixed_fan_in(n_fan_in, weight, delay, std::random_device()(),
-	                    self_connections);
+
+	return std::make_unique<FixedFanInConnector<std::default_random_engine>>(
+	    n_fan_in, weight, delay,
+	    std::make_shared<std::default_random_engine>(std::random_device()()),
+	    self_connections);
 }
 inline std::unique_ptr<FixedFanInConnector<std::default_random_engine>>
 Connector::fixed_fan_in(size_t n_fan_in, SynapseBase &synapse,
                         bool self_connections)
 {
-	return fixed_fan_in(n_fan_in, synapse, std::random_device()(),
-	                    self_connections);
+	return std::make_unique<FixedFanInConnector<std::default_random_engine>>(
+	    n_fan_in, synapse,
+	    std::make_shared<std::default_random_engine>(std::random_device()()),
+	    self_connections);
 }
 
 inline std::unique_ptr<FixedFanInConnector<std::default_random_engine>>
@@ -1597,15 +1606,19 @@ inline std::unique_ptr<FixedFanOutConnector<std::default_random_engine>>
 Connector::fixed_fan_out(size_t n_fan_out, Real weight, Real delay,
                          bool self_connections)
 {
-	return fixed_fan_out(n_fan_out, weight, delay, std::random_device()(),
-	                     self_connections);
+	return std::make_unique<FixedFanOutConnector<std::default_random_engine>>(
+	    n_fan_out, weight, delay,
+	    std::make_shared<std::default_random_engine>(std::random_device()()),
+	    self_connections);
 }
 inline std::unique_ptr<FixedFanOutConnector<std::default_random_engine>>
 Connector::fixed_fan_out(size_t n_fan_out, SynapseBase &synapse,
                          bool self_connections)
 {
-	return fixed_fan_out(n_fan_out, synapse, std::random_device()(),
-	                     self_connections);
+	return std::make_unique<FixedFanOutConnector<std::default_random_engine>>(
+	    n_fan_out, synapse,
+	    std::make_shared<std::default_random_engine>(std::random_device()()),
+	    self_connections);
 }
 
 inline std::unique_ptr<FixedFanOutConnector<std::default_random_engine>>
