@@ -800,7 +800,7 @@ class Cypress:
             else:
                 raise CypressException("Unknown Connector ID " + conn_id)
 
-        def connect_pop(pop1, pop2, conn_id, weight, delay, parameter=0):
+        def connect_pop(pop1, pop2, conn_id, weight, delay, parameter=0, self_c=True):
             """
             This function connects two populations with a PyNN connector.
             :param pop*: Population or PopulationView object
@@ -814,7 +814,7 @@ class Cypress:
                 # Weight*s*, delay*s* are part of the connector, use option
                 # "target"
                 self.projections.append(self.sim.Projection(pop1, pop2, get_connector_old(
-                    conn_id, np.abs(float(weight)), float(delay), parameter), target=mechanism))
+                    conn_id, np.abs(float(weight)), float(delay), parameter, self_c), target=mechanism))
             else:
                 # Weight, delay is part of a synapse object
                 if self.simulator == "nest":
@@ -825,7 +825,7 @@ class Cypress:
                 synapse = self.sim.StaticSynapse(
                     weight=float(weight), delay=float(delay))
                 self.projections.append(self.sim.Projection(pop1, pop2, connector=get_connector_new(
-                    conn_id, parameter), synapse_type=synapse))
+                    conn_id, parameter, self_c), synapse_type=synapse))
                 # Note: In PyNN 0.8 using both negative weights AND
                 # receptor_type="inhibitory" will create an excitatory synapse.
                 # Using receptor_type="excitatory" and negative weights will
@@ -852,7 +852,7 @@ class Cypress:
         for conn in connections:
             src = get_pop_view(populations[conn[0]]['obj'], conn[1], conn[2])
             tar = get_pop_view(populations[conn[3]]['obj'], conn[4], conn[5])
-            connect_pop(src, tar, conn[6], conn[7], conn[8], conn[9])
+            connect_pop(src, tar, conn[6], conn[7], conn[8], conn[9], bool(conn[10]))
 
     @staticmethod
     def _convert_pyNN7_spikes(spikes, n, idx_offs=0, t_scale=1.0):

@@ -341,7 +341,7 @@ def read_network(fd):
         "list_connection_header": ["pid_src", "pid_tar", "inh", "file"],
         "group_connections":
         ["pid_src", "nid_src_start", "nid_src_end", "pid_tar", "nid_tar_start",
-         "nid_tar_end", "connector_id", "weight", "delay", "parameter"],
+         "nid_tar_end", "connector_id", "weight", "delay", "parameter", "self"],
     }
 
     def validate_matrix(name, matrix):

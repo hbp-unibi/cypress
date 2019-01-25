@@ -168,6 +168,7 @@ struct custom_conn_descr {
 	Real weight = 0.0;
 	Real delay = 0.0;
 	Real parameter = 0.0;
+    int32_t self_connections = 0;
 };
 
 /*
@@ -202,6 +203,7 @@ custom_conn_descr convert_non_list_connection(const ConnectionDescriptor &conn)
 	res.weight = params[0];
 	res.delay = params[1];
 	res.parameter = conn.connector().additional_parameter();
+    res.self_connections = conn.connector().allow_self_connections();
 	return res;
 }
 
@@ -355,8 +357,8 @@ static void write_connections(const std::vector<ConnectionDescriptor> &descrs,
 
 	static const Header GROUP_CONNECTIONS_HEADER = {
 	    {"pid_src", "nid_src_start", "nid_src_end", "pid_tar", "nid_tar_start",
-	     "nid_tar_end", "connector_id", "weight", "delay", "parameter"},
-	    {INT, INT, INT, INT, INT, INT, INT, FLOAT, FLOAT, FLOAT}};
+	     "nid_tar_end", "connector_id", "weight", "delay", "parameter", "self"},
+	    {INT, INT, INT, INT, INT, INT, INT, FLOAT, FLOAT, FLOAT, INT}};
 
 	std::vector<ConnectionDescriptor> list_connections;
 	std::vector<custom_conn_descr> group_connections;
