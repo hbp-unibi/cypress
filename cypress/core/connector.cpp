@@ -87,20 +87,6 @@ void AllToAllConnector::connect(const ConnectionDescriptor &descr,
 	}
 }
 
-bool AllToAllConnector::group_connect(const ConnectionDescriptor &descr,
-                                      GroupConnection &tar) const
-{
-	if (!m_synapse) {
-		throw;
-	}
-	tar = GroupConnection(descr.pid_src(), descr.pid_tar(), descr.nid_src0(),
-	                      descr.nid_src1(), descr.nid_tar0(), descr.nid_tar1(),
-	                      m_synapse->parameters(), 0, "AllToAllConnector",
-	                      m_synapse->name(),
-	                      descr.connector().allow_self_connections());
-	return true;
-}
-
 /*
  * Class OneToOneConnector
  */
@@ -112,17 +98,6 @@ void OneToOneConnector::connect(const ConnectionDescriptor &descr,
 		tar.emplace_back(descr.pid_src(), descr.pid_tar(), descr.nid_src0() + i,
 		                 descr.nid_tar0() + i, *m_synapse);
 	}
-}
-
-bool OneToOneConnector::group_connect(const ConnectionDescriptor &descr,
-                                      GroupConnection &tar) const
-{
-	tar = GroupConnection(descr.pid_src(), descr.pid_tar(), descr.nid_src0(),
-	                      descr.nid_src1(), descr.nid_tar0(), descr.nid_tar1(),
-	                      m_synapse->parameters(), 0, "OneToOneConnector",
-	                      m_synapse->name(),
-	                      descr.connector().allow_self_connections());
-	return true;
 }
 
 /*
@@ -147,8 +122,7 @@ void FromListConnector::connect(const ConnectionDescriptor &descr,
 	}
 }
 
-bool FromListConnector::group_connect(const ConnectionDescriptor &,
-                                      GroupConnection &) const
+bool FromListConnector::group_connect(const ConnectionDescriptor &) const
 {
 	return false;
 }

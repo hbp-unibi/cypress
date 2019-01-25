@@ -282,7 +282,7 @@ public:
  * imports.
  */
 static PyNNUtil PYNN_UTIL;
-}
+}  // namespace
 
 PyNN::PyNN(const std::string &simulator, const Json &setup)
     : m_simulator(simulator), m_setup(setup)
@@ -381,7 +381,7 @@ void open_fifo_to_read(std::string file_name, std::filebuf &res)
 		usleep(3000);
 	}
 }
-}
+}  // namespace
 #endif
 
 std::string PyNN::get_import(const std::vector<std::string> &imports,
@@ -397,15 +397,16 @@ std::string PyNN::get_import(const std::vector<std::string> &imports,
 		}
 	}
 	auto normalised_simulator = PYNN_UTIL.lookup_simulator(simulator).first;
-	if(normalised_simulator == "nmpm1"){
+	if (normalised_simulator == "nmpm1") {
 		return "pyhmf";
 	}
 	if (import.empty()) {
 		std::stringstream ss;
 		ss << "The simulator \"" << simulator << "\" with canonical name \""
-		   << normalised_simulator << "\" was not found on this system or an "
-		                              "error occured during the import. The "
-		                              "following imports were tried: ";
+		   << normalised_simulator
+		   << "\" was not found on this system or an "
+		      "error occured during the import. The "
+		      "following imports were tried: ";
 		for (size_t i = 0; i < imports.size(); i++) {
 			if (i > 0) {
 				ss << ", ";
@@ -515,9 +516,8 @@ void PyNN::do_run(NetworkBase &source, Real duration) const
 			// Explicitly state if the process was killed by a signal
 			if (res < 0) {
 				source.logger().error(
-				    "cypress",
-				    "Simulator child process killed by signal " +
-				        std::to_string(-res));
+				    "cypress", "Simulator child process killed by signal " +
+				                   std::to_string(-res));
 			}
 
 			for (auto i : fifos) {
@@ -593,4 +593,4 @@ std::vector<std::string> PyNN::simulators()
 	}
 	return res;
 }
-}
+}  // namespace cypress

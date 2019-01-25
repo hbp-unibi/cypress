@@ -1603,10 +1603,9 @@ void PyNN_::do_run(NetworkBase &source, Real duration) const
 	for (size_t i = 0; i < source.connections().size(); i++) {
 		auto conn = source.connections()[i];
 		auto it = SUPPORTED_CONNECTIONS.find(conn.connector().name());
-		GroupConnection group_conn;
 
 		if (it != SUPPORTED_CONNECTIONS.end() &&
-		    conn.connector().group_connect(conn, group_conn)) {
+		    conn.connector().group_connect(conn)) {
 			// Group connections
 			auto proj =
 			    group_connect(populations, pypopulations, conn, pynn, timestep);
@@ -1827,14 +1826,14 @@ void PyNN_::spikey_set_inhomogeneous_parameters(const PopulationBase &pop,
 	}
 }
 namespace {
-bool inline check_full_pop(GroupConnection group_conn,
+bool inline check_full_pop(ConnectionDescriptor conn,
                            const std::vector<PopulationBase> &populations)
 {
-	return group_conn.src0 == 0 &&
-	       group_conn.src1 ==
-	           NeuronIndex(populations[group_conn.psrc].size()) &&
-	       group_conn.tar0 == 0 &&
-	       group_conn.tar1 == NeuronIndex(populations[group_conn.ptar].size());
+	return conn.nid_src0() == 0 &&
+	       conn.nid_src1() ==
+	           NeuronIndex(populations[conn.pid_src()].size()) &&
+	       conn.nid_tar0() == 0 &&
+	       conn.nid_tar1() == NeuronIndex(populations[conn.pid_tar()].size());
 }
 }  // namespace
 
@@ -2045,11 +2044,10 @@ void PyNN_::spikey_run(NetworkBase &source, Real duration, py::module &pynn,
 	for (size_t i = 0; i < source.connections().size(); i++) {
 		auto conn = source.connections()[i];
 		auto it = SUPPORTED_CONNECTIONS.find(conn.connector().name());
-		GroupConnection group_conn;
 
 		if (it != SUPPORTED_CONNECTIONS.end() &&
-		    conn.connector().group_connect(conn, group_conn) &&
-		    check_full_pop(group_conn, populations)) {
+		    conn.connector().group_connect(conn) &&
+		    check_full_pop(conn, populations)) {
 			// Group connections
 			auto proj = group_connect7(populations, pypopulations, conn, pynn);
 			group_projections.push_back(std::make_tuple(i, proj));

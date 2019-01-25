@@ -186,19 +186,22 @@ struct list_con_header {
 };
 #pragma pack(pop)
 
-custom_conn_descr convert_non_list_connection(GroupConnection conn)
+custom_conn_descr convert_non_list_connection(const ConnectionDescriptor &conn)
 {
+    
 	custom_conn_descr res;
-	res.pid_src = conn.psrc;
-	res.nid_src_start = conn.src0;
-	res.nid_src_end = conn.src1;
-	res.pid_tar = conn.ptar;
-	res.nid_tar_start = conn.tar0;
-	res.nid_tar_end = conn.tar1;
-	res.connector_id = binnf_connector_id(conn.connection_name);
-	res.weight = conn.synapse_parameters[0];
-	res.delay = conn.synapse_parameters[1];
-	res.parameter = conn.additional_parameter;
+	res.pid_src = conn.pid_src();
+	res.nid_src_start = conn.nid_src0();
+	res.nid_src_end = conn.nid_src1();
+	res.pid_tar = conn.pid_tar();
+	res.nid_tar_start = conn.nid_tar0();
+	res.nid_tar_end = conn.nid_tar1();
+	res.connector_id = binnf_connector_id(conn.connector().name());
+    auto params = conn.connector().synapse()->parameters();
+    
+	res.weight = params[0];
+	res.delay = params[1];
+	res.parameter = conn.connector().additional_parameter();
 	return res;
 }
 
@@ -359,10 +362,9 @@ static void write_connections(const std::vector<ConnectionDescriptor> &descrs,
 	std::vector<custom_conn_descr> group_connections;
 
 	for (auto desc : descrs) {
-		GroupConnection temp;
-		// Check wether connection can be used as grouped connection
-		if (desc.connector().group_connect(desc, temp)) {
-			group_connections.emplace_back(convert_non_list_connection(temp));
+		// Check whether connection can be used as grouped connection
+		if (desc.connector().group_connect(desc)) {
+			group_connections.emplace_back(convert_non_list_connection(desc));
 		}
 		else {
 			list_connections.emplace_back(desc);
