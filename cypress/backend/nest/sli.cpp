@@ -456,7 +456,8 @@ void write_network(std::ostream &os, const NetworkBase &net, Real duration,
 	// Create the network, setup recorder
 	size_t gid = 0;
 	os << "(##cypress_setup) =\n";
-	os << "0 <<" << kv("resolution", params.timestep) << ">> SetStatus\n";
+	os << "0 <<" << kv("resolution", params.timestep)
+	   << kv("local_num_threads", params.threads) << ">> SetStatus\n";
 	write_populations(os, net.populations(), gid, pop_gid_map);
 	write_connections(os, net.connections(), gid, pop_gid_map, params);
 	std::vector<RecorderInfo> recorder_info =

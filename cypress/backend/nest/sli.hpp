@@ -40,6 +40,7 @@ namespace sli {
 struct Params {
 	Real timestep = 0.1;
 	Real record_interval = 0.1;
+    int threads = 1;
 };
 
 /**

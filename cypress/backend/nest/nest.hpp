@@ -68,7 +68,8 @@ public:
 	 *
 	 * {
 	 *    "timestep": 0.1, // The simulation timestep
-	 *    "record_interval": 1.0 // Sample interval when recording
+	 *    "record_interval": 0.1 // Sample interval when recording
+	 *    "threads": 1.0 // number of threads
 	 * }
 	 */
 	NEST(const Json &setup = Json());

@@ -97,6 +97,10 @@ NEST::NEST(const Json &setup)
 	if (setup.count("record_interval") > 0) {
 		m_params.record_interval = setup["record_interval"];
 	}
+	
+	if (setup.count("threads") > 0) {
+		m_params.threads = setup["threads"];
+	}
 }
 
 void NEST::do_run(NetworkBase &source, Real duration) const
