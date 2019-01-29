@@ -26,8 +26,8 @@
 
 #include <cypress/backend/nest/nest.hpp>
 #include <cypress/core/neurons.hpp>
-#include <cypress/util/process.hpp>
 #include <cypress/util/filesystem.hpp>
+#include <cypress/util/process.hpp>
 
 namespace cypress {
 namespace {
@@ -87,7 +87,7 @@ public:
  * version.
  */
 static NESTUtil NEST_UTIL;
-}
+}  // namespace
 
 NEST::NEST(const Json &setup)
 {
@@ -116,11 +116,16 @@ void NEST::do_run(NetworkBase &source, Real duration) const
 
 	// Serialise the network into it and start the simulation
 	std::signal(SIGPIPE, SIG_IGN);
-	sli::write_network(proc.child_stdin(), source, duration, m_params);
-	proc.close_child_stdin();
+	std::thread thread_input(sli::write_network, std::ref(proc.child_stdin()),
+	                         std::ref(source), duration, std::ref(m_params));
 
 	// Read the network response and messages
-	sli::read_response(proc.child_stdout(), source);
+	std::thread thread_output(sli::read_response, std::ref(proc.child_stdout()),
+	                          std::ref(source));
+
+	thread_input.join();
+	proc.close_child_stdin();
+	thread_output.join();
 
 	// Wait for the subprocess to exit
 	if (proc.wait() != 0) {
@@ -140,4 +145,4 @@ std::unordered_set<const NeuronType *> NEST::supported_neuron_types() const
 bool NEST::installed() { return NEST_UTIL.installed(); }
 
 std::string NEST::version() { return NEST_UTIL.version(); }
-}
+}  // namespace cypress
