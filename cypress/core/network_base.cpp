@@ -386,8 +386,13 @@ std::unique_ptr<Backend> NetworkBase::make_backend(std::string backend_id,
 		}
 		auto backend = make_backend(join(elems, '.'), argc, argv, setup);
 		if (dynamic_cast<PyNN_ *>(backend.get()) == nullptr) {
-			throw std::invalid_argument(
-			    "NMPI backend only works in conjunction with PyNN backends!");
+            if( dynamic_cast<PyNN *>(backend.get()) == nullptr){
+                throw std::invalid_argument(
+                    "NMPI backend only works in conjunction with PyNN backends!");
+            }
+            std::unique_ptr<PyNN> pynn_backend(dynamic_cast<PyNN *>(backend.get()));
+            backend.release();
+            return std::make_unique<NMPI>(std::move(pynn_backend), argc, argv);
 		}
 		std::unique_ptr<PyNN_> pynn_backend(dynamic_cast<PyNN_ *>(backend.get()));
 		backend.release();

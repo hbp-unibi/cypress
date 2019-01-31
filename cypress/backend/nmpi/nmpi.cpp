@@ -23,9 +23,11 @@
 #include <iostream>
 
 #include <cypress/backend/nmpi/nmpi.hpp>
+#include <cypress/backend/pynn/pynn.hpp>
 #include <cypress/backend/resources.hpp>
 #include <cypress/util/filesystem.hpp>
 #include <cypress/util/process.hpp>
+#include <cypress/util/logger.hpp>
 
 namespace cypress {
 
@@ -37,7 +39,8 @@ static const std::string SERVER_ARG = "NMPI_SRV";
  */
 static int run_broker(const std::vector<std::string> &args,
                       const std::vector<std::string> &external_files,
-                      const std::string &base, const std::string &platform)
+                      const std::string &base, const std::string &platform,
+                      const int wafer = 0)
 {
 	std::vector<std::string> params;
 
@@ -66,10 +69,15 @@ static int run_broker(const std::vector<std::string> &args,
 	params.emplace_back("--platform");
 	params.emplace_back(platform);
 
+	if (wafer != 0) {
+		params.emplace_back("--wafer");
+		params.emplace_back(std::to_string(wafer));
+	}
+
 	return Process::exec_no_redirect("python", params);
 }
 
-NMPI::NMPI(std::unique_ptr<PyNN_> pynn, int &argc, const char *argv[],
+NMPI::NMPI(std::unique_ptr<PyNN> pynn, int &argc, const char *argv[],
            const std::vector<std::string> &files, bool scan_args)
     : m_pynn(std::move(pynn))
 {
@@ -135,8 +143,27 @@ NMPI::NMPI(std::unique_ptr<PyNN_> pynn, int &argc, const char *argv[],
 	// Add SERVER_ARG to the arguments
 	args.emplace_back(SERVER_ARG);
 
+	// If using BrainScaleS, get wafer
+	int wafer = 0;
+	if (platform == "BrainScaleS") {
+		auto json = m_pynn->setup();
+        if (json.find("wafer") != json.end()) {
+			if (json["wafer"].is_array()) {
+				global_logger().warn("cypress", "MISSING");  // TODO
+				wafer = json["wafer"][0];
+			}
+			else {
+				wafer = int(json["wafer"]);
+			}
+		}
+		else {
+			wafer = 33;
+			global_logger().info("cypress", "NMPI: Taking default wafer 33");
+		}
+	}
+
 	// Give control to the NMPI broker, relay its exit code
-	exit(run_broker(args, external_files, base, platform));
+	exit(run_broker(args, external_files, base, platform, wafer));
 }
 
 NMPI::NMPI(const std::string &pynn_backend, int &argc, const char *argv[],

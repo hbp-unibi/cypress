@@ -846,7 +846,8 @@ class Cypress:
                             " on populations! Connecting using the full Population!")
                 return pop
             else:
-                return pop[start:end]
+                popv = self.sim.PopulationView(pop, slice(long(start), long(end), 1))
+                return popv
 
         # Iterate through all connection descriptors
         for conn in connections:
@@ -1178,7 +1179,7 @@ class Cypress:
                         ).synapse_routing.synapses().find(proj)
                     for proj_item in proj_items:
                         synapse = proj_item.hardware_synapse()
-                        digital_weight = int(proj.getWeights()[0])
+                        digital_weight = abs(int(proj.getWeights()[0]))
 
                         proxy = self.backend_data["runtime"].wafer(
                         )[synapse.toHICANNOnWafer()].synapses[synapse]
