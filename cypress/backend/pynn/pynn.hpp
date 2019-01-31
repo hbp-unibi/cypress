@@ -143,11 +143,17 @@ public:
 	/**
 	 * After a PyNN simulation has finished and written the results back to a
 	 * file (@base_filename + _res), this function will parse the results
-	 * into @source and logging output to the logger in @source. if @log is set, the function expects a log file to exist (@base_filename + _log)
+	 * into @source and logging output to the logger in @source. if @log is set,
+	 * the function expects a log file to exist (@base_filename + _log)
 	 */
 	static void read_back_binnf(NetworkBase &source, std::string base_filename,
 	                            bool log = true);
+
+	/**
+	 * Return the system config
+	 */
+	Json setup() const { return m_setup; }
 };
-}
+}  // namespace cypress
 
 #endif /* CYPRESS_BACKEND_PYNN_HPP */

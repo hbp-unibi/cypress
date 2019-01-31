@@ -27,6 +27,7 @@
 #include <vector>
 
 #include <cypress/core/backend.hpp>
+#include <cypress/backend/pynn/pynn.hpp>
 
 namespace cypress {
 
@@ -42,7 +43,7 @@ private:
 	/**
 	 * Pointer at the actual PyNN backend instance.
 	 */
-	std::unique_ptr<PyNN_> m_pynn;
+	std::unique_ptr<PyNN> m_pynn;
 
 	/**
 	 * This method just forwards the given data to the PyNN instance -- it is
@@ -83,7 +84,7 @@ public:
 	 * @param scan_args if true, automagically scans the command line arguments
 	 * for for filenames and uploads these files too.
 	 */
-	NMPI(std::unique_ptr<PyNN_> pynn, int &argc, const char *argv[],
+	NMPI(std::unique_ptr<PyNN> pynn, int &argc, const char *argv[],
 	     const std::vector<std::string> &files = std::vector<std::string>(),
 	     bool scan_args = true);
 

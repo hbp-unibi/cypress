@@ -31,6 +31,7 @@
 #include <string>
 #include <vector>
 
+#include <cypress/backend/pynn/pynn.hpp>
 #include <cypress/core/backend.hpp>
 #include <cypress/core/network_base_objects.hpp>
 #include <cypress/util/json.hpp>
@@ -74,25 +75,11 @@ private:
  * The Backend class is an abstract base class which provides the facilities
  * for network execution.
  */
-class PyNN_ : public Backend {
-protected:
-	std::string m_simulator;
-	std::string m_normalised_simulator;
-	std::vector<std::string> m_imports;
-	bool m_keep_log;
-	Json m_setup;
-
+class PyNN_ : public PyNN {
 private:
 	void do_run(NetworkBase &network, Real duration) const override;
 
 public:
-	/**
-	 * Exception thrown if the given PyNN backend is not found.
-	 */
-	class PyNNSimulatorNotFound : public std::runtime_error {
-	public:
-		using std::runtime_error::runtime_error;
-	};
 
 	/**
 	 * Constructor of the PyNN backend. Throws an exception if the given PyNN
@@ -109,70 +96,6 @@ public:
 	 * Destructor of the PyNN class.
 	 */
 	~PyNN_() override;
-
-	/**
-	 * Calculates the timestep the simulation will be running with. This does
-	 * not make any sense for analogue hardware, why zero is returned in this
-	 * case.
-	 *
-	 * @return the simulation timestep in milliseconds.
-	 */
-	Real timestep();
-
-	/**
-	 * Returns a set of neuron types which are supported by this backend. Trying
-	 * to execute a network with other neurons than the ones specified in the
-	 * result of this function will result in an exception.
-	 *
-	 * @return a set of neuron types supported by this particular backend
-	 * instance.
-	 */
-	std::unordered_set<const NeuronType *> supported_neuron_types()
-	    const override;
-
-	/**
-	 * Returns the canonical name of the backend.
-	 */
-	std::string name() const override { return m_normalised_simulator; }
-
-	/**
-	 * Returns the simulator name as provided by the user.
-	 */
-	const std::string &simulator() const { return m_simulator; }
-
-	/**
-	 * Returns the canonical simulator name.
-	 */
-	const std::string &normalised_simulator() const
-	{
-		return m_normalised_simulator;
-	}
-
-	/**
-	 * Returns the Python imports that tried to be used when starting the
-	 * platform.
-	 */
-	const std::vector<std::string> &imports() const { return m_imports; }
-
-	/**
-	 * Returns the NMPI platform name corresponding to the currently chosen PyNN
-	 * backend.
-	 */
-	std::string nmpi_platform() const;
-
-	/**
-	 * Lists available PyNN simulators.
-	 */
-	static std::vector<std::string> simulators();
-
-	/**
-	 * Returns a string containing the import for given simulator. Throws an
-	 * error is simualator could not be found
-	 * @param imports list of possible/supported imports
-	 * @param simulator simulator string
-	 */
-	static std::string get_import(const std::vector<std::string> &imports,
-	                              const std::string &simulator);
 
 	/**
 	 * Returns the PyNN version, 8 represents version 0.8.x

@@ -333,87 +333,12 @@ static PyNNUtil PYNN_UTIL;
 }  // namespace
 
 PyNN_::PyNN_(const std::string &simulator, const Json &setup)
-    : m_simulator(simulator), m_setup(setup)
+    : PyNN(simulator, setup)
 {
 	PythonInstance::instance();
-	// Lookup the canonical simulator name and the
-	auto res = PYNN_UTIL.lookup_simulator(simulator);
-	m_normalised_simulator = res.first;
-	m_imports = res.second;
-
-	// Merge the default setup with the user-provided setup
-	auto it = DEFAULT_SETUPS.find(m_normalised_simulator);
-	if (it != DEFAULT_SETUPS.end()) {
-		m_setup = it->second;
-	}
-	join(m_setup, setup);  // Ensures m_setup is not null
-
-	// Read the keep_log flag from the setup. Do not pass it to the PyNN
-	// backend.
-	m_keep_log = false;
-	if (m_setup.count("keep_log") > 0 && m_setup["keep_log"]) {
-		m_keep_log = true;
-		m_setup.erase("keep_log");
-	}
-
-	// Delete config option for SLURM
-	m_setup.erase("slurm_mode");
-	m_setup.erase("slurm_filename");
-	m_setup.erase("station");
 }
 
 PyNN_::~PyNN_() = default;
-
-Real PyNN_::timestep()
-{
-	SystemProperties props = PyNNUtil::properties(m_normalised_simulator);
-	if (props.analogue()) {
-		return 0.0;  // No minimum timestep on analogue neuromorphic hardware
-	}
-	return m_setup.value("timestep", 0.1);  // Default is 0.1ms
-}
-
-std::unordered_set<const NeuronType *> PyNN_::supported_neuron_types() const
-{
-	auto it = SUPPORTED_NEURON_TYPE_MAP.find(m_normalised_simulator);
-	if (it != SUPPORTED_NEURON_TYPE_MAP.end()) {
-		return it->second;
-	}
-	return SUPPORTED_NEURON_TYPE_MAP.find("__default__")->second;
-}
-
-std::string PyNN_::get_import(const std::vector<std::string> &imports,
-                              const std::string &simulator)
-{
-	// Find the import that should be used
-	std::vector<bool> available = PYNN_UTIL.has_imports(imports);
-	std::string import;
-
-	for (size_t i = 0; i < available.size(); i++) {
-		if (available[i]) {
-			import = imports[i];
-			break;
-		}
-	}
-
-	auto normalised_simulator = PYNN_UTIL.lookup_simulator(simulator).first;
-	if (import.empty()) {
-		std::stringstream ss;
-		ss << "The simulator \"" << simulator << "\" with canonical name \""
-		   << normalised_simulator
-		   << "\" was not found on this system or an "
-		      "error occured during the import. The "
-		      "following imports were tried: ";
-		for (size_t i = 0; i < imports.size(); i++) {
-			if (i > 0) {
-				ss << ", ";
-			}
-			ss << imports[i];
-		}
-		throw PyNNSimulatorNotFound(ss.str());
-	}
-	return import;
-}
 
 int PyNN_::get_pynn_version()
 {
@@ -1666,37 +1591,6 @@ void PyNN_::do_run(NetworkBase &source, Real duration) const
 	if (!m_keep_log) {
 	    unlink(log_path.c_str());
 	}*/
-}
-
-std::string PyNN_::nmpi_platform() const
-{
-	auto it = SIMULATOR_NMPI_MAP.find(m_normalised_simulator);
-	if (it != SIMULATOR_NMPI_MAP.end()) {
-		return it->second;
-	}
-	return std::string();
-}
-
-std::vector<std::string> PyNN_::simulators()
-{
-	// Split the simulator import map into the
-	// simulators and the corresponding imports
-	std::vector<std::string> simulators;
-	std::vector<std::string> imports;
-	for (auto &e : SIMULATOR_IMPORT_MAP) {
-		simulators.emplace_back(e.first);
-		imports.emplace_back(e.second);
-	}
-
-	// Check which imports are available
-	std::vector<bool> available = PYNN_UTIL.has_imports(imports);
-	std::vector<std::string> res;
-	for (size_t i = 0; i < available.size(); i++) {
-		if (available[i]) {
-			res.push_back(simulators[i]);
-		}
-	}
-	return res;
 }
 
 py::object PyNN_::spikey_create_source_population(const PopulationBase &pop,
