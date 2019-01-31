@@ -524,7 +524,6 @@ py::object PyNN_::create_homogeneous_pop(const PopulationBase &pop,
 	    "size"_a = numpy.attr("int")(pop.size()),
 	    "cellclass"_a =
 	        pynn.attr(get_neuron_class(pop.type()).c_str())(**neuron_params));
-	init_available = false;
 	try {
 		auto idx = pop[0].type().parameter_index("v_rest");
 		if (idx.valid()) {
@@ -545,10 +544,10 @@ py::object PyNN_::create_homogeneous_pop(const PopulationBase &pop,
 void PyNN_::set_inhomogeneous_parameters(const PopulationBase &pop,
                                          py::object &pypop, bool init_available)
 {
-	auto idx = pop[0].type().signal_index("v_rest");
+	auto idx = pop[0].type().parameter_index("v_rest");
 	const auto &params = pop[0].parameters();
 	const auto &param_names = pop.type().parameter_names;
-
+    
 	for (size_t id = 0; id < params.size(); id++) {
 		std::vector<Real> new_params;
 		for (auto neuron : pop) {
