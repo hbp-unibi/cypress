@@ -240,6 +240,11 @@ TEST(pynn2, get_neuron_class)
 
 	for (auto import : all_avail_imports) {
 		if (import == "pyNN.nest") {
+			py::module sys = py::module::import("sys");
+			auto a = py::list();
+			a.append("pynest");
+			a.append("--quiet");
+			sys.attr("argv") = a;
 			py::module pynn = py::module::import(import.c_str());
 			EXPECT_NO_THROW(pynn.attr(
 			    PyNN_::get_neuron_class(cypress::IfCondExp::inst()).c_str())());
