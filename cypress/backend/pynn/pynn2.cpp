@@ -390,6 +390,15 @@ int PyNN_::get_neo_version()
 	return submain_n;
 }
 
+std::unordered_set<const NeuronType *> PyNN_::supported_neuron_types() const
+{
+	auto it = SUPPORTED_NEURON_TYPE_MAP.find(m_normalised_simulator);
+	if (it != SUPPORTED_NEURON_TYPE_MAP.end()) {
+		return it->second;
+	}
+	return SUPPORTED_NEURON_TYPE_MAP.find("__default__")->second;
+}
+
 py::dict PyNN_::json_to_dict(Json json)
 {
 	py::dict dict;
