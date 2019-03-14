@@ -1425,6 +1425,9 @@ std::vector<LocalConnection> get_weights(py::object &proj)
 
 void PyNN_::do_run(NetworkBase &source, Real duration) const
 {
+	auto gc = py::module::import("gc");
+	gc.attr("collect")();
+
 	py::module sys = py::module::import("sys");
 	std::string import = get_import(m_imports, m_simulator);
 	init_logger();
