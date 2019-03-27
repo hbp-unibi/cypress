@@ -1154,6 +1154,7 @@ class Cypress:
 
         if self.simulator == "nmpm1":
             from pymarocco import PyMarocco
+            import pysthal
             # Only mapping
             self.backend_data["marocco"].skip_mapping = False
             self.backend_data["marocco"].backend = PyMarocco.None
@@ -1167,7 +1168,7 @@ class Cypress:
             self.backend_data["marocco"].skip_mapping = True
             self.backend_data["marocco"].backend = PyMarocco.Hardware
             self.backend_data[
-                "marocco"].hicann_configurator = PyMarocco.ParallelHICANNv4Configurator
+                "marocco"].hicann_configurator = pysthal.HICANNConfigurator()
             if self.backend_data["digital_weight"]:
                 from pyhalbe import HICANN
                 from pymarocco.results import Marocco
