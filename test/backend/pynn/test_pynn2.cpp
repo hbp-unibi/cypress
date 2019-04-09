@@ -858,74 +858,79 @@ TEST(pynn2, group_connect)
 			py::module pynn = py::module::import(import.c_str());
 			pynn.attr("setup")();
 			bool temp;
+			bool nest_flag = import == "pyNN.nest";
 			std::vector<py::object> pypops{
 			    PyNN_::create_homogeneous_pop(pops[0], pynn, temp),
 			    PyNN_::create_homogeneous_pop(pops[1], pynn, temp)};
 
 			ConnectionDescriptor conn_desc(0, 0, 16, 1, 0, 16,
 			                               Connector::all_to_all(0.15, 1));
-			EXPECT_NO_THROW(
-			    PyNN_::group_connect(pops, pypops, conn_desc, pynn, 0.1));
+			EXPECT_NO_THROW(PyNN_::group_connect(pops, pypops, conn_desc, pynn,
+			                                     nest_flag, 0.1));
 
 			conn_desc = ConnectionDescriptor(0, 0, 16, 1, 0, 16,
 			                                 Connector::one_to_one(0.15, 1));
-			EXPECT_NO_THROW(
-			    PyNN_::group_connect(pops, pypops, conn_desc, pynn, 0.1));
+			EXPECT_NO_THROW(PyNN_::group_connect(pops, pypops, conn_desc, pynn,
+			                                     nest_flag, 0.1));
 
 			conn_desc = ConnectionDescriptor(0, 0, 16, 1, 0, 16,
 			                                 Connector::fixed_fan_in(3, 1));
-			EXPECT_NO_THROW(
-			    PyNN_::group_connect(pops, pypops, conn_desc, pynn, 0.1));
+			EXPECT_NO_THROW(PyNN_::group_connect(pops, pypops, conn_desc, pynn,
+			                                     nest_flag, 0.1));
 
 			conn_desc = ConnectionDescriptor(0, 0, 16, 1, 0, 16,
 			                                 Connector::fixed_fan_out(3, 1));
-			EXPECT_NO_THROW(
-			    PyNN_::group_connect(pops, pypops, conn_desc, pynn, 0.1));
+			EXPECT_NO_THROW(PyNN_::group_connect(pops, pypops, conn_desc, pynn,
+			                                     nest_flag, 0.1));
 
 			conn_desc = ConnectionDescriptor(0, 0, 16, 1, 0, 16,
 			                                 Connector::random(0.15, 1, 0.5));
-			EXPECT_NO_THROW(
-			    PyNN_::group_connect(pops, pypops, conn_desc, pynn, 0.1));
+			EXPECT_NO_THROW(PyNN_::group_connect(pops, pypops, conn_desc, pynn,
+			                                     nest_flag, 0.1));
 
 			if (import == "pyNN.nest" && version > 8) {
 				conn_desc = ConnectionDescriptor(
 				    0, 0, 10, 1, 5, 16, Connector::all_to_all(0.15, 1));
-				EXPECT_NO_THROW(
-				    PyNN_::group_connect(pops, pypops, conn_desc, pynn, 0.1));
-				auto conn =
-				    PyNN_::group_connect(pops, pypops, conn_desc, pynn, 0.1);
+				EXPECT_NO_THROW(PyNN_::group_connect(pops, pypops, conn_desc,
+				                                     pynn, nest_flag, 0.1));
+				auto conn = PyNN_::group_connect(pops, pypops, conn_desc, pynn,
+				                                 nest_flag, 0.1);
 				EXPECT_EQ(py::cast<int>(conn.attr("size")()), 10 * 11);
 				check_projection(conn, conn_desc);
 
 				conn_desc = ConnectionDescriptor(
 				    0, 0, 10, 1, 6, 16, Connector::one_to_one(0.15, 1));
-				EXPECT_NO_THROW(
-				    PyNN_::group_connect(pops, pypops, conn_desc, pynn, 0.1));
-				conn = PyNN_::group_connect(pops, pypops, conn_desc, pynn, 0.1);
+				EXPECT_NO_THROW(PyNN_::group_connect(pops, pypops, conn_desc,
+				                                     pynn, nest_flag, 0.1));
+				conn = PyNN_::group_connect(pops, pypops, conn_desc, pynn,
+				                            nest_flag, 0.1);
 				EXPECT_EQ(py::cast<int>(conn.attr("size")()), 10);
 				check_projection(conn, conn_desc);
 
 				conn_desc = ConnectionDescriptor(
 				    0, 0, 10, 1, 6, 16, Connector::fixed_fan_in(3, 0.015, 1));
-				EXPECT_NO_THROW(
-				    PyNN_::group_connect(pops, pypops, conn_desc, pynn, 0.1));
-				conn = PyNN_::group_connect(pops, pypops, conn_desc, pynn, 0.1);
+				EXPECT_NO_THROW(PyNN_::group_connect(pops, pypops, conn_desc,
+				                                     pynn, nest_flag, 0.1));
+				conn = PyNN_::group_connect(pops, pypops, conn_desc, pynn,
+				                            nest_flag, 0.1);
 				EXPECT_EQ(py::cast<int>(conn.attr("size")()), 10 * 3);
 				check_projection(conn, conn_desc);
 
 				conn_desc = ConnectionDescriptor(
 				    0, 0, 10, 1, 6, 16, Connector::fixed_fan_out(3, 0.1, 3));
-				EXPECT_NO_THROW(
-				    PyNN_::group_connect(pops, pypops, conn_desc, pynn, 0.1));
-				conn = PyNN_::group_connect(pops, pypops, conn_desc, pynn, 0.1);
+				EXPECT_NO_THROW(PyNN_::group_connect(pops, pypops, conn_desc,
+				                                     pynn, nest_flag, 0.1));
+				conn = PyNN_::group_connect(pops, pypops, conn_desc, pynn,
+				                            nest_flag, 0.1);
 				EXPECT_EQ(py::cast<int>(conn.attr("size")()), 10 * 3);
 				check_projection(conn, conn_desc);
 
 				conn_desc = ConnectionDescriptor(
 				    0, 0, 10, 1, 6, 16, Connector::random(0.15, 1, 0.5));
-				EXPECT_NO_THROW(
-				    PyNN_::group_connect(pops, pypops, conn_desc, pynn, 0.1));
-				conn = PyNN_::group_connect(pops, pypops, conn_desc, pynn, 0.1);
+				EXPECT_NO_THROW(PyNN_::group_connect(pops, pypops, conn_desc,
+				                                     pynn, nest_flag, 0.1));
+				conn = PyNN_::group_connect(pops, pypops, conn_desc, pynn,
+				                            nest_flag, 0.1);
 				check_projection(conn, conn_desc);
 
 				/**
@@ -933,17 +938,19 @@ TEST(pynn2, group_connect)
 				 */
 				conn_desc = ConnectionDescriptor(
 				    0, 0, 10, 1, 5, 16, Connector::all_to_all(0.15, 1, false));
-				EXPECT_NO_THROW(
-				    PyNN_::group_connect(pops, pypops, conn_desc, pynn, 0.1));
-				conn = PyNN_::group_connect(pops, pypops, conn_desc, pynn, 0.1);
+				EXPECT_NO_THROW(PyNN_::group_connect(pops, pypops, conn_desc,
+				                                     pynn, nest_flag, 0.1));
+				conn = PyNN_::group_connect(pops, pypops, conn_desc, pynn,
+				                            nest_flag, 0.1);
 				EXPECT_EQ(py::cast<int>(conn.attr("size")()), 10 * 11);
 				check_projection(conn, conn_desc);
 
 				conn_desc = ConnectionDescriptor(
 				    0, 0, 10, 0, 5, 16, Connector::all_to_all(0.15, 1, false));
-				EXPECT_NO_THROW(
-				    PyNN_::group_connect(pops, pypops, conn_desc, pynn, 0.1));
-				conn = PyNN_::group_connect(pops, pypops, conn_desc, pynn, 0.1);
+				EXPECT_NO_THROW(PyNN_::group_connect(pops, pypops, conn_desc,
+				                                     pynn, nest_flag, 0.1));
+				conn = PyNN_::group_connect(pops, pypops, conn_desc, pynn,
+				                            nest_flag, 0.1);
 				EXPECT_EQ(py::cast<int>(conn.attr("size")()), (10 * 11) - 5);
 				std::cout << "^^^^^^^^^^^^ This is a PyNN bug! ^^^^^^^^^^^^"
 				          << std::endl;
@@ -951,60 +958,67 @@ TEST(pynn2, group_connect)
 
 				conn_desc = ConnectionDescriptor(
 				    0, 0, 10, 0, 0, 10, Connector::all_to_all(0.15, 1, false));
-				EXPECT_NO_THROW(
-				    PyNN_::group_connect(pops, pypops, conn_desc, pynn, 0.1));
-				conn = PyNN_::group_connect(pops, pypops, conn_desc, pynn, 0.1);
+				EXPECT_NO_THROW(PyNN_::group_connect(pops, pypops, conn_desc,
+				                                     pynn, nest_flag, 0.1));
+				conn = PyNN_::group_connect(pops, pypops, conn_desc, pynn,
+				                            nest_flag, 0.1);
 				EXPECT_EQ(py::cast<int>(conn.attr("size")()), (10 * 9));
 				check_projection(conn, conn_desc);
 
 				conn_desc = ConnectionDescriptor(
 				    0, 0, 10, 1, 0, 10,
 				    Connector::fixed_fan_in(3, 0.015, 1, false));
-				EXPECT_NO_THROW(
-				    PyNN_::group_connect(pops, pypops, conn_desc, pynn, 0.1));
-				conn = PyNN_::group_connect(pops, pypops, conn_desc, pynn, 0.1);
+				EXPECT_NO_THROW(PyNN_::group_connect(pops, pypops, conn_desc,
+				                                     pynn, nest_flag, 0.1));
+				conn = PyNN_::group_connect(pops, pypops, conn_desc, pynn,
+				                            nest_flag, 0.1);
 				EXPECT_EQ(py::cast<int>(conn.attr("size")()), 10 * 3);
 				check_projection(conn, conn_desc);
 
 				conn_desc = ConnectionDescriptor(
 				    0, 0, 10, 0, 0, 10,
 				    Connector::fixed_fan_in(3, 0.015, 1, false));
-				EXPECT_NO_THROW(
-				    PyNN_::group_connect(pops, pypops, conn_desc, pynn, 0.1));
-				conn = PyNN_::group_connect(pops, pypops, conn_desc, pynn, 0.1);
+				EXPECT_NO_THROW(PyNN_::group_connect(pops, pypops, conn_desc,
+				                                     pynn, nest_flag, 0.1));
+				conn = PyNN_::group_connect(pops, pypops, conn_desc, pynn,
+				                            nest_flag, 0.1);
 				EXPECT_EQ(py::cast<int>(conn.attr("size")()), 10 * 3);
 				check_projection(conn, conn_desc);
 
 				conn_desc = ConnectionDescriptor(
 				    0, 0, 10, 1, 0, 10,
 				    Connector::fixed_fan_out(3, 0.1, 3, false));
-				EXPECT_NO_THROW(
-				    PyNN_::group_connect(pops, pypops, conn_desc, pynn, 0.1));
-				conn = PyNN_::group_connect(pops, pypops, conn_desc, pynn, 0.1);
+				EXPECT_NO_THROW(PyNN_::group_connect(pops, pypops, conn_desc,
+				                                     pynn, nest_flag, 0.1));
+				conn = PyNN_::group_connect(pops, pypops, conn_desc, pynn,
+				                            nest_flag, 0.1);
 				EXPECT_EQ(py::cast<int>(conn.attr("size")()), 10 * 3);
 				check_projection(conn, conn_desc);
 
 				conn_desc = ConnectionDescriptor(
 				    0, 0, 10, 0, 0, 10,
 				    Connector::fixed_fan_out(3, 0.1, 3, false));
-				EXPECT_NO_THROW(
-				    PyNN_::group_connect(pops, pypops, conn_desc, pynn, 0.1));
-				conn = PyNN_::group_connect(pops, pypops, conn_desc, pynn, 0.1);
+				EXPECT_NO_THROW(PyNN_::group_connect(pops, pypops, conn_desc,
+				                                     pynn, nest_flag, 0.1));
+				conn = PyNN_::group_connect(pops, pypops, conn_desc, pynn,
+				                            nest_flag, 0.1);
 				EXPECT_EQ(py::cast<int>(conn.attr("size")()), 10 * 3);
 				check_projection(conn, conn_desc);
 
 				conn_desc = ConnectionDescriptor(
 				    0, 0, 10, 1, 0, 10, Connector::random(0.15, 1, 0.5));
-				EXPECT_NO_THROW(
-				    PyNN_::group_connect(pops, pypops, conn_desc, pynn, 0.1));
-				conn = PyNN_::group_connect(pops, pypops, conn_desc, pynn, 0.1);
+				EXPECT_NO_THROW(PyNN_::group_connect(pops, pypops, conn_desc,
+				                                     pynn, nest_flag, 0.1));
+				conn = PyNN_::group_connect(pops, pypops, conn_desc, pynn,
+				                            nest_flag, 0.1);
 				check_projection(conn, conn_desc);
 
 				conn_desc = ConnectionDescriptor(
 				    0, 0, 10, 0, 0, 10, Connector::random(0.15, 1, 0.5));
-				EXPECT_NO_THROW(
-				    PyNN_::group_connect(pops, pypops, conn_desc, pynn, 0.1));
-				conn = PyNN_::group_connect(pops, pypops, conn_desc, pynn, 0.1);
+				EXPECT_NO_THROW(PyNN_::group_connect(pops, pypops, conn_desc,
+				                                     pynn, nest_flag, 0.1));
+				conn = PyNN_::group_connect(pops, pypops, conn_desc, pynn,
+				                            nest_flag, 0.1);
 				check_projection(conn, conn_desc);
 			}
 		}
@@ -1122,7 +1136,7 @@ TEST(pynn2, list_connect)
 			connection = PyNN_::list_connect7(pypops, conn, pynn);
 		}
 		else {
-			connection = PyNN_::list_connect(pypops, conn, pynn, 0.1);
+			connection = PyNN_::list_connect(pypops, conn, pynn, false, 0.1);
 		}
 		py::object exc = std::get<0>(connection);
 		py::object inh = std::get<1>(connection);
@@ -1148,7 +1162,7 @@ TEST(pynn2, list_connect)
 			connection = PyNN_::list_connect7(pypops, conn, pynn);
 		}
 		else {
-			connection = PyNN_::list_connect(pypops, conn, pynn, 0.1);
+			connection = PyNN_::list_connect(pypops, conn, pynn, false, 0.1);
 		}
 		exc = std::get<0>(connection);
 		inh = std::get<1>(connection);
@@ -1175,7 +1189,7 @@ TEST(pynn2, list_connect)
 			connection = PyNN_::list_connect7(pypops, conn, pynn);
 		}
 		else {
-			connection = PyNN_::list_connect(pypops, conn, pynn, 0.1);
+			connection = PyNN_::list_connect(pypops, conn, pynn, false, 0.1);
 		}
 		exc = std::get<0>(connection);
 		inh = std::get<1>(connection);
@@ -1422,7 +1436,7 @@ TEST(pynn2, fetch_data_nest)
 
 		ConnectionDescriptor conn_desc(0, 0, 16, 1, 0, 16,
 		                               Connector::all_to_all(0.5, 1));
-		PyNN_::group_connect(pops, pypops, conn_desc, pynn, 0.1);
+		PyNN_::group_connect(pops, pypops, conn_desc, pynn, true, 0.1);
 
 		pynn.attr("run")(100);
 		PyNN_::fetch_data_nest(pops, pypops);
@@ -1543,7 +1557,7 @@ TEST(pynn2, fetch_data_spinnaker)
 
 		ConnectionDescriptor conn_desc(0, 0, 16, 1, 0, 16,
 		                               Connector::all_to_all(0.5, 1));
-		PyNN_::group_connect(pops, pypops, conn_desc, pynn, 0.1);
+		PyNN_::group_connect(pops, pypops, conn_desc, pynn, false, 0.1);
 
 		pynn.attr("run")(100);
 		PyNN_::fetch_data_spinnaker(pops, pypops);
@@ -1668,7 +1682,7 @@ TEST(pynn2, fetch_data_neo)
 
 			ConnectionDescriptor conn_desc(0, 0, 16, 1, 0, 16,
 			                               Connector::all_to_all(0.5, 1));
-			PyNN_::group_connect(pops, pypops, conn_desc, pynn, 0.1);
+			PyNN_::group_connect(pops, pypops, conn_desc, pynn, true, 0.1);
 
 			pynn.attr("run")(100);
 			PyNN_::fetch_data_neo(pops, pypops);
@@ -1785,7 +1799,7 @@ TEST(pynn2, fetch_data_neo)
 
 			ConnectionDescriptor conn_desc(0, 0, 16, 1, 0, 16,
 			                               Connector::all_to_all(0.5, 1));
-			PyNN_::group_connect(pops, pypops, conn_desc, pynn, 0.1);
+			PyNN_::group_connect(pops, pypops, conn_desc, pynn, false, 0.1);
 
 			pynn.attr("run")(100);
 			PyNN_::fetch_data_neo(pops, pypops);
@@ -2172,6 +2186,213 @@ TEST(pynn2, pynn2)
 	}
 }
 
+TEST(pynn2, inhib_current_based)
+{
+	// Compare Issue #625 PyNN github
+	// Group Connection
+	for (auto sim : simulators) {
+		{
+			auto net = Network()
+			               .add_population<SpikeSourceConstFreq>(
+			                   "source", 2,
+			                   SpikeSourceConstFreqParameters()
+			                       .start(0.0)
+			                       .rate(1000.0)
+			                       .duration(100.0),
+			                   SpikeSourceConstFreqSignals().record_spikes())
+			               .add_population<IfCurrExp>(
+			                   "target", 5, IfCurrExpParameters().g_leak(0.04),
+			                   IfCurrExpSignals().record_spikes())
+			               .add_connection("source", "target",
+			                               Connector::all_to_all(0.15, 1));
+			PopulationView<IfCurrExp> popview(
+			    net, net.populations("target")[0].pid(), 3, 5);
+			// Inhibitory input
+			net.add_population<SpikeSourceConstFreq>(
+			    "source2", 3,
+			    SpikeSourceConstFreqParameters()
+			        .start(0.0)
+			        .rate(100.0)
+			        .duration(100.0),
+			    SpikeSourceConstFreqSignals().record_spikes());
+			// Connect Inhibitory input to only a part of the target population
+			// and run
+			net.add_connection("source2", popview,
+			                   Connector::all_to_all(-1.5, 1));
+			if (sim == "nest") {
+				net.run("pynn." + sim + "={\"timestep\" : 0.1}", 100);
+			}
+			else if (sim == "nmmc1") {
+				net.run(sim + "={\"timestep\" : 0.1}", 100);
+			}
+			auto pop = net.population<IfCurrExp>("target");
+			EXPECT_TRUE(pop[0].signals().get_spikes().size() >
+			            pop[3].signals().get_spikes().size());
+			EXPECT_TRUE(pop[1].signals().get_spikes().size() >
+			            pop[3].signals().get_spikes().size());
+			EXPECT_TRUE(pop[2].signals().get_spikes().size() >
+			            pop[3].signals().get_spikes().size());
+			EXPECT_TRUE(pop[0].signals().get_spikes().size() >
+			            pop[4].signals().get_spikes().size());
+			EXPECT_TRUE(pop[1].signals().get_spikes().size() >
+			            pop[4].signals().get_spikes().size());
+			EXPECT_TRUE(pop[2].signals().get_spikes().size() >
+			            pop[4].signals().get_spikes().size());
+		}
+		{
+			auto net = Network()
+			               .add_population<SpikeSourceConstFreq>(
+			                   "source", 2,
+			                   SpikeSourceConstFreqParameters()
+			                       .start(0.0)
+			                       .rate(1000.0)
+			                       .duration(100.0),
+			                   SpikeSourceConstFreqSignals().record_spikes())
+			               .add_population<IfCondExp>(
+			                   "target", 5, IfCondExpParameters().g_leak(0.04),
+			                   IfCondExpSignals().record_spikes())
+			               .add_connection("source", "target",
+			                               Connector::all_to_all(0.15, 1));
+			PopulationView<IfCurrExp> popview(net, net.populations("target")[0].pid(), 3, 5);
+			// Inhibitory input
+			net.add_population<SpikeSourceConstFreq>(
+			    "source2", 3,
+			    SpikeSourceConstFreqParameters()
+			        .start(0.0)
+			        .rate(100.0)
+			        .duration(100.0),
+			    SpikeSourceConstFreqSignals().record_spikes());
+			// Connect Inhibitory input to only a part of the target population
+			// and run
+			net.add_connection("source2", popview,
+			                   Connector::all_to_all(-0.5, 1));
+			if (sim == "nest") {
+				net.run("pynn." + sim + "={\"timestep\" : 0.1}", 100);
+			}
+			else if (sim == "nmmc1") {
+				net.run(sim + "={\"timestep\" : 0.1}", 100);
+			}
+			auto pop = net.population<IfCondExp>("target");
+			EXPECT_TRUE(pop[0].signals().get_spikes().size() >
+			            pop[3].signals().get_spikes().size());
+			EXPECT_TRUE(pop[1].signals().get_spikes().size() >
+			            pop[3].signals().get_spikes().size());
+			EXPECT_TRUE(pop[2].signals().get_spikes().size() >
+			            pop[3].signals().get_spikes().size());
+			EXPECT_TRUE(pop[0].signals().get_spikes().size() >
+			            pop[4].signals().get_spikes().size());
+			EXPECT_TRUE(pop[1].signals().get_spikes().size() >
+			            pop[4].signals().get_spikes().size());
+			EXPECT_TRUE(pop[2].signals().get_spikes().size() >
+			            pop[4].signals().get_spikes().size());
+		}
+	}
+
+	// List connection
+	for (auto sim : simulators) {
+		{
+			auto net = Network()
+			               .add_population<SpikeSourceConstFreq>(
+			                   "source", 2,
+			                   SpikeSourceConstFreqParameters()
+			                       .start(0.0)
+			                       .rate(1000.0)
+			                       .duration(100.0),
+			                   SpikeSourceConstFreqSignals().record_spikes())
+			               .add_population<IfCurrExp>(
+			                   "target", 5, IfCurrExpParameters().g_leak(0.04),
+			                   IfCurrExpSignals().record_spikes());
+			// Connect Inhibitory input to only a part of the target population
+			// and run
+			double weight = 1.5;
+			std::vector<LocalConnection> conn_list;
+			for (uint32_t i = 0; i < 5; i++) {
+				conn_list.push_back({0, i, weight, 1});
+				conn_list.push_back({1, i, weight, 1});
+			}
+
+			for (uint32_t i = 3; i < 5; i++) {
+				conn_list.push_back({0, i, -weight / 2.0, 1});
+				conn_list.push_back({1, i, -weight / 2.0, 1});
+			}
+
+			net.add_connection("source", "target",
+			                   Connector::from_list(conn_list));
+			if (sim == "nest") {
+				net.run("pynn." + sim + "={\"timestep\" : 0.1}", 100);
+			}
+			else if (sim == "nmmc1") {
+				net.run(sim + "={\"timestep\" : 0.1}", 100);
+			}
+			auto pop = net.population<IfCurrExp>("target");
+			std::cout << pop[0].signals().get_spikes().size() << ", "
+			          << pop[4].signals().get_spikes().size() << std::endl;
+			EXPECT_TRUE(pop[0].signals().get_spikes().size() >
+			            pop[3].signals().get_spikes().size());
+			EXPECT_TRUE(pop[1].signals().get_spikes().size() >
+			            pop[3].signals().get_spikes().size());
+			EXPECT_TRUE(pop[2].signals().get_spikes().size() >
+			            pop[3].signals().get_spikes().size());
+			EXPECT_TRUE(pop[0].signals().get_spikes().size() >
+			            pop[4].signals().get_spikes().size());
+			EXPECT_TRUE(pop[1].signals().get_spikes().size() >
+			            pop[4].signals().get_spikes().size());
+			EXPECT_TRUE(pop[2].signals().get_spikes().size() >
+			            pop[4].signals().get_spikes().size());
+		}
+
+		{
+			auto net = Network()
+			               .add_population<SpikeSourceConstFreq>(
+			                   "source", 2,
+			                   SpikeSourceConstFreqParameters()
+			                       .start(0.0)
+			                       .rate(1000.0)
+			                       .duration(100.0),
+			                   SpikeSourceConstFreqSignals().record_spikes())
+			               .add_population<IfCondExp>(
+			                   "target", 5, IfCondExpParameters().g_leak(0.04),
+			                   IfCondExpSignals().record_spikes());
+			// Connect Inhibitory input to only a part of the target population
+			// and run
+			double weight = 0.5;
+			std::vector<LocalConnection> conn_list;
+			for (uint32_t i = 0; i < 5; i++) {
+				conn_list.push_back({0, i, weight, 1});
+				conn_list.push_back({1, i, weight, 1});
+			}
+
+			for (uint32_t i = 3; i < 5; i++) {
+				conn_list.push_back({0, i, -weight / 2.0, 1});
+				conn_list.push_back({1, i, -weight / 2.0, 1});
+			}
+
+			net.add_connection("source", "target",
+			                   Connector::from_list(conn_list));
+			if (sim == "nest") {
+				net.run("pynn." + sim + "={\"timestep\" : 0.1}", 100);
+			}
+			else if (sim == "nmmc1") {
+				net.run(sim + "={\"timestep\" : 0.1}", 100);
+			}
+			auto pop = net.population<IfCondExp>("target");
+			std::cout << pop[0].signals().get_spikes().size() << ", "
+			          << pop[4].signals().get_spikes().size() << std::endl;
+			EXPECT_TRUE(pop[0].signals().get_spikes().size() >
+			            pop[3].signals().get_spikes().size());
+			EXPECT_TRUE(pop[1].signals().get_spikes().size() >
+			            pop[3].signals().get_spikes().size());
+			EXPECT_TRUE(pop[2].signals().get_spikes().size() >
+			            pop[3].signals().get_spikes().size());
+			EXPECT_TRUE(pop[0].signals().get_spikes().size() >
+			            pop[4].signals().get_spikes().size());
+			EXPECT_TRUE(pop[1].signals().get_spikes().size() >
+			            pop[4].signals().get_spikes().size());
+			EXPECT_TRUE(pop[2].signals().get_spikes().size() >
+			            pop[4].signals().get_spikes().size());
+		}
+	}
+}
 }  // namespace cypress
 
 int main(int argc, char **argv)

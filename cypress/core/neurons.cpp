@@ -167,7 +167,7 @@ IfCurrExp::IfCurrExp()
           {"nF", "ms", "ms", "ms", "ms", "mV", "mV", "mV", "nA"},
           {1.0, 20.0, 5.0, 5.0, 0.1, -65.0, -50.0, -65.0, 0.0},
           {"spikes", "v"}, {"ms", "mV"},
-          true, false)
+          false, false)
 {
 }
 

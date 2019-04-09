@@ -547,7 +547,7 @@ void PyNN_::set_inhomogeneous_parameters(const PopulationBase &pop,
 	auto idx = pop[0].type().parameter_index("v_rest");
 	const auto &params = pop[0].parameters();
 	const auto &param_names = pop.type().parameter_names;
-    
+
 	for (size_t id = 0; id < params.size(); id++) {
 		std::vector<Real> new_params;
 		for (auto neuron : pop) {
@@ -700,7 +700,8 @@ bool popview_warnign_emitted = false;
 py::object PyNN_::group_connect(const std::vector<PopulationBase> &populations,
                                 const std::vector<py::object> &pypopulations,
                                 const ConnectionDescriptor &conn,
-                                const py::module &pynn, const Real timestep)
+                                const py::module &pynn, bool nest_flag,
+                                const Real timestep)
 {
 	py::object source, target;
 	std::string conn_name =
@@ -730,16 +731,28 @@ py::object PyNN_::group_connect(const std::vector<PopulationBase> &populations,
 			    "cypress", "PopViews not supported. Using list connector");
 			popview_warnign_emitted = true;
 		}
+		// Issue related to PyNN #625
+		bool current_based = false;
+		if (!populations[conn.pid_tar()].type().conductance_based &&
+		    nest_flag) {
+			current_based = true;
+		}
 		std::tuple<py::object, py::object> ret =
-		    list_connect(pypopulations, conn, pynn, timestep);
+		    list_connect(pypopulations, conn, pynn, current_based, timestep);
 		if (params[0] >= 0) {
 			return std::get<0>(ret);
 		}
 		return std::get<1>(ret);
 	}
 
+	// Issue related to PyNN #625
+	bool current_based = false;
+	if (!populations[conn.pid_tar()].type().conductance_based && nest_flag) {
+		current_based = true;
+	}
+
 	std::string receptor = "excitatory";
-	if (params[0] < 0) {
+	if (params[0] < 0 && !current_based) {
 		receptor = "inhibitory";
 	}
 	Real delay = params[1];
@@ -747,10 +760,12 @@ py::object PyNN_::group_connect(const std::vector<PopulationBase> &populations,
 		delay = std::max(round(delay / timestep), 1.0) * timestep;
 	}
 
+	double weight = current_based ? params[0] : fabs(params[0]);
+
 	py::object synapse;
 	if (name == "StaticSynapse") {
-		synapse = pynn.attr("StaticSynapse")("weight"_a = fabs(params[0]),
-		                                     "delay"_a = delay);
+		synapse =
+		    pynn.attr("StaticSynapse")("weight"_a = weight, "delay"_a = delay);
 	}
 	else if (name == "SpikePairRuleAdditive") {
 		py::object timing_dependence = pynn.attr("SpikePairRule")(
@@ -759,7 +774,7 @@ py::object PyNN_::group_connect(const std::vector<PopulationBase> &populations,
 		py::object weight_dependence = pynn.attr("AdditiveWeightDependence")(
 		    "w_min"_a = params[6], "w_max"_a = params[7]);
 		synapse = pynn.attr("STDPMechanism")(
-		    "weight"_a = fabs(params[0]), "delay"_a = delay,
+		    "weight"_a = weight, "delay"_a = delay,
 		    "timing_dependence"_a = timing_dependence,
 		    "weight_dependence"_a = weight_dependence);
 	}
@@ -771,13 +786,13 @@ py::object PyNN_::group_connect(const std::vector<PopulationBase> &populations,
 		    pynn.attr("MultiplicativeWeightDependence")("w_min"_a = params[6],
 		                                                "w_max"_a = params[7]);
 		synapse = pynn.attr("STDPMechanism")(
-		    "weight"_a = fabs(params[0]), "delay"_a = delay,
+		    "weight"_a = weight, "delay"_a = delay,
 		    "timing_dependence"_a = timing_dependence,
 		    "weight_dependence"_a = weight_dependence);
 	}
 	else if (name == "TsodyksMarkramMechanism") {
 		synapse = pynn.attr("TsodyksMarkramSynapse")(
-		    "weight"_a = fabs(params[0]), "delay"_a = delay, "U"_a = params[2],
+		    "weight"_a = weight, "delay"_a = delay, "U"_a = params[2],
 		    "tau_rec"_a = params[3], "tau_facil"_a = params[4]);
 	}
 	else {
@@ -858,12 +873,13 @@ py::object PyNN_::group_connect7(const std::vector<PopulationBase> &,
 std::tuple<py::object, py::object> PyNN_::list_connect(
     const std::vector<py::object> &pypopulations,
     const ConnectionDescriptor conn, const py::module &pynn,
-    const Real timestep)
+    const bool current_based, const Real timestep)
 {
 	if (conn.connector().synapse_name() != "StaticSynapse") {
 		// TODO
 		throw ExecutionError(
-		    "Only static synapses are supported for this backend!");
+		    "Only static synapses are supported for this backend for list "
+		    "connections!");
 	}
 	std::tuple<py::object, py::object> ret =
 	    std::make_tuple(py::object(), py::object());
@@ -903,9 +919,13 @@ std::tuple<py::object, py::object> PyNN_::list_connect(
 		else {
 			(*conns_inh)(counter_in, 0) = i.n.src;
 			(*conns_inh)(counter_in, 1) = i.n.tar;
-			(*conns_inh)(counter_in, 2) = -i.n.SynapseParameters[0];
+			if (!current_based) {
+				(*conns_inh)(counter_in, 2) = -i.n.SynapseParameters[0];
+			}
+			else {
+				(*conns_inh)(counter_in, 2) = i.n.SynapseParameters[0];
+			}
 			if (timestep != 0) {
-				;
 				Real delay =
 				    std::max(round(i.n.SynapseParameters[1] / timestep), 1.0) *
 				    timestep;
@@ -940,13 +960,21 @@ std::tuple<py::object, py::object> PyNN_::list_connect(
 		                     (*conns_inh).data(), capsule);
 
 		py::object connector = pynn.attr("FromListConnector")(temp_array);
-
-		std::get<1>(ret) = pynn.attr("Projection")(
-		    pypopulations[conn.pid_src()], pypopulations[conn.pid_tar()],
-		    connector,
-		    "synapse_type"_a =
-		        pynn.attr("StaticSynapse")("weight"_a = 0, "delay"_a = 1),
-		    "receptor_type"_a = "inhibitory");
+		if (!current_based) {
+			std::get<1>(ret) = pynn.attr("Projection")(
+			    pypopulations[conn.pid_src()], pypopulations[conn.pid_tar()],
+			    connector,
+			    "synapse_type"_a =
+			        pynn.attr("StaticSynapse")("weight"_a = 0, "delay"_a = 1),
+			    "receptor_type"_a = "inhibitory");
+		}
+		else {
+			std::get<1>(ret) = pynn.attr("Projection")(
+			    pypopulations[conn.pid_src()], pypopulations[conn.pid_tar()],
+			    connector,
+			    "synapse_type"_a =
+			        pynn.attr("StaticSynapse")("weight"_a = 0, "delay"_a = 1));
+		}
 	}
 	return ret;
 }
@@ -1532,11 +1560,18 @@ void PyNN_::do_run(NetworkBase &source, Real duration) const
 		    conn.connector().group_connect(conn)) {
 			// Group connections
 			auto proj =
-			    group_connect(populations, pypopulations, conn, pynn, timestep);
+			    group_connect(populations, pypopulations, conn, pynn,
+			                  m_normalised_simulator == "nest", timestep);
 			group_projections.push_back(std::make_tuple(i, proj));
 		}
 		else {
-			list_connect(pypopulations, conn, pynn, timestep);
+			// Issue related to PyNN #625
+			bool current_based = false;
+			if (!populations[conn.pid_tar()].type().conductance_based &&
+			    (m_normalised_simulator == "nest")) {
+				current_based = true;
+			}
+			list_connect(pypopulations, conn, pynn, current_based, timestep);
 		}
 	}
 
@@ -1723,8 +1758,7 @@ bool inline check_full_pop(ConnectionDescriptor conn,
                            const std::vector<PopulationBase> &populations)
 {
 	return conn.nid_src0() == 0 &&
-	       conn.nid_src1() ==
-	           NeuronIndex(populations[conn.pid_src()].size()) &&
+	       conn.nid_src1() == NeuronIndex(populations[conn.pid_src()].size()) &&
 	       conn.nid_tar0() == 0 &&
 	       conn.nid_tar1() == NeuronIndex(populations[conn.pid_tar()].size());
 }

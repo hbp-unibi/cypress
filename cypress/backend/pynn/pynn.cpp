@@ -137,7 +137,7 @@ static const std::unordered_map<std::string, Json> DEFAULT_SETUPS = {
 static const std::unordered_map<std::string,
                                 std::unordered_set<const NeuronType *>>
     SUPPORTED_NEURON_TYPE_MAP = {
-        {"nmmc1", {&SpikeSourceArray::inst(), &IfCondExp::inst()}},
+        {"nmmc1", {&SpikeSourceArray::inst(), &IfCondExp::inst(), &IfCurrExp::inst()}},
         {"nmpm1",
          {&SpikeSourceArray::inst(), &IfCondExp::inst(),
           &EifCondExpIsfaIsta::inst()}},
@@ -147,7 +147,7 @@ static const std::unordered_map<std::string,
         {"spikey", {&SpikeSourceArray::inst(), &IfFacetsHardware1::inst()}},
         {"__default__",
          {&SpikeSourceArray::inst(), &IfCondExp::inst(),
-          &EifCondExpIsfaIsta::inst()}}};
+          &EifCondExpIsfaIsta::inst(), &IfCurrExp::inst()}}};
 
 /**
  * Static class used to lookup information about the PyNN simulations.

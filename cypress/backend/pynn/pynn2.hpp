@@ -80,7 +80,6 @@ private:
 	void do_run(NetworkBase &network, Real duration) const override;
 
 public:
-
 	/**
 	 * Constructor of the PyNN backend. Throws an exception if the given PyNN
 	 * backend does not exist.
@@ -234,6 +233,8 @@ public:
 	 * @param pypopulations vector of PyNN populations
 	 * @param conn Cypress connection descriptor
 	 * @param pynn Handler for PyNN module
+	 * @param nest_flag: use sign of weight and ignore receptor_type for nest
+	 * and current based neurons
 	 * @param timestep timestep of the simulator
 	 * @return Handler for the connector
 	 */
@@ -241,8 +242,13 @@ public:
 	    const std::vector<PopulationBase> &populations,
 	    const std::vector<py::object> &pypopulations,
 	    const ConnectionDescriptor &conn, const py::module &pynn,
-	    const Real timestep = 0.0);
+	    const bool nest_flag, const Real timestep = 0.0);
 
+	static py::object group_connect(
+	    const std::vector<PopulationBase> &populations,
+	    const std::vector<py::object> &pypopulations,
+	    const ConnectionDescriptor &conn, const py::module &pynn,
+	    const Real nest_flag) = delete;
 	/**
 	 * Connect based on an existing PyNN connector
 	 *
@@ -263,6 +269,7 @@ public:
 	 * @param pypopulations list of python populations
 	 * @param conn ConnectionDescriptor of the List connection
 	 * @param pynn Handler for PyNN python module
+	 * @param current_based: true if target population is current_based
 	 * @param timestep Timestep of the simulator, default 0
 	 * @return tuple of the excitatory,inhibitory connection. List is separated
 	 * for compatibility reasons
@@ -270,7 +277,12 @@ public:
 	static std::tuple<py::object, py::object> list_connect(
 	    const std::vector<py::object> &pypopulations,
 	    const ConnectionDescriptor conn, const py::module &pynn,
-	    const Real timestep = 0.0);
+	    const bool current_based, const Real timestep = 0.0);
+
+	static std::tuple<py::object, py::object> list_connect(
+	    const std::vector<py::object> &pypopulations,
+	    const ConnectionDescriptor conn, const py::module &pynn,
+	    const Real current_based) = delete;
 
 	/**
 	 * Creates a PyNN6/7 FromList Connection
