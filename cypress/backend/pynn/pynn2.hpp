@@ -109,6 +109,18 @@ public:
 	 * @return integer representing the neo version
 	 */
 	static int get_neo_version();
+    
+    /**
+	 * Returns a set of neuron types which are supported by this backend. Trying
+	 * to execute a network with other neurons than the ones specified in the
+	 * result of this function will result in an exception.
+	 *
+	 * @return a set of neuron types supported by this particular backend
+	 * instance.
+	 */
+	std::unordered_set<const NeuronType *> supported_neuron_types()
+	    const override;
+
 
 	/**
 	 * Converting a Json object to a py::dict. Make sure that the python

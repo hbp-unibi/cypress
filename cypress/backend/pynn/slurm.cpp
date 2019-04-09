@@ -152,12 +152,12 @@ void Slurm::do_run(NetworkBase &network, Real duration) const
 
 			// Temporary solution to avoid L1 locking issues when using several
 			// hicanns
-			if (m_setup.find("hicann") != m_setup.end()) {
+			/*if (m_setup.find("hicann") != m_setup.end()) {
 				if (m_setup["hicann"].is_array() &&
 				    m_setup["hicann"].size() >= 3) {
 					init_reticles = true;
 				}
-			}
+			}*/
 
 			params = std::vector<std::string>({
 			    "-p",

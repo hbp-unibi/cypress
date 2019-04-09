@@ -390,6 +390,15 @@ int PyNN_::get_neo_version()
 	return submain_n;
 }
 
+std::unordered_set<const NeuronType *> PyNN_::supported_neuron_types() const
+{
+	auto it = SUPPORTED_NEURON_TYPE_MAP.find(m_normalised_simulator);
+	if (it != SUPPORTED_NEURON_TYPE_MAP.end()) {
+		return it->second;
+	}
+	return SUPPORTED_NEURON_TYPE_MAP.find("__default__")->second;
+}
+
 py::dict PyNN_::json_to_dict(Json json)
 {
 	py::dict dict;
@@ -1444,6 +1453,9 @@ std::vector<LocalConnection> get_weights(py::object &proj)
 
 void PyNN_::do_run(NetworkBase &source, Real duration) const
 {
+	auto gc = py::module::import("gc");
+	gc.attr("collect")();
+
 	py::module sys = py::module::import("sys");
 	std::string import = get_import(m_imports, m_simulator);
 	init_logger();
