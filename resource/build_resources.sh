@@ -67,7 +67,7 @@ function build_resource {
 if [ ! -f "$OUT_DIR/nmpi/lib/nmpi_user.py" ]; then
 	echo "Downloading current version of the hbp_neuromorphic_platform package"
         mkdir -p "$OUT_DIR/nmpi/lib"
-	wget https://raw.githubusercontent.com/HumanBrainProject/hbp-neuromorphic-client/master/nmpi/nmpi_user.py -O "$OUT_DIR/nmpi/lib/nmpi_user.py"
+	curl https://raw.githubusercontent.com/HumanBrainProject/hbp-neuromorphic-client/master/nmpi/nmpi_user.py -o "$OUT_DIR/nmpi/lib/nmpi_user.py"
 	echo "Done."
 fi
 
