@@ -64,32 +64,68 @@ void energenie::read_json_config(cypress::Json &config)
 	}
 }
 
-std::string energenie::control(const std::string &cmd) const
+namespace {
+inline std::stringstream log_in(std::string addr, std::string passwd)
 {
-	// Only one thread at a time may communicate with the energenie device!
+	static std::mutex control_mutex;
+	std::lock_guard<std::mutex> lock(control_mutex);
+	std::stringstream ss_in, ss_out, ss_err;
+	if (cypress::Process::exec("curl",
+	                           {"http://" + addr + "/login.html", "-s", "-d",
+	                            "pw=" + passwd, "--connect-timeout", "1"},
+	                           ss_in, ss_out, ss_err) != 0) {
+		throw std::runtime_error(
+		    "energenie: Error while executing curl, make sure the "
+		    "program "
+		    "is installed and there is a connection to the device!");
+	}
+	return ss_out;
+}
+
+inline void log_out(std::string addr)
+{
 	static std::mutex control_mutex;
 	std::lock_guard<std::mutex> lock(control_mutex);
 
 	std::stringstream ss_in, ss_out, ss_err;
 
+	// Call curl to communicate with the
+	if (cypress::Process::exec("curl",
+	                           {"-X", "GET", "http://" + addr + "/login.html",
+	                            "--connect-timeout", "1"},
+	                           ss_in, ss_out, ss_err) != 0) {
+		throw std::runtime_error(
+		    "energenie: Error while executing curl, make sure the "
+		    "program is installed and there is a connection to the device!");
+	}
+
+	// Read the response and make sure the commands were processed correctly
+	std::string line, res;
+	while (std::getline(ss_out, line)) {
+		res = line.substr(line.find("/login.html") + 1);
+	}
+	if (res == "") {
+		std::cerr << "energenie: Error during logout!" << std::endl;
+	}
+}
+}  // namespace
+
+std::string energenie::control(const std::string &cmd) const
+{
+	std::stringstream ss_in, ss_out, ss_err;
 	// Call curl to communicate with the device
 	if (cmd == "") {
-		if (cypress::Process::exec(
-		        "curl",
-		        {"http://" + m_addr + "/login.html", "-s", "-d",
-		         "pw=" + m_passwd, "--connect-timeout", "3"},
-		        ss_in, ss_out, ss_err) != 0) {
-			throw std::runtime_error(
-			    "energenie: Error while executing curl, make sure the "
-			    "program "
-			    "is installed and there is a connection to the device!");
-		}
+		ss_out = log_in(m_addr, m_passwd);
 	}
 	else {
+		ss_out = log_in(m_addr, m_passwd);
+		// Only one thread at a time may communicate with the energenie device!
+		static std::mutex control_mutex;
+		std::lock_guard<std::mutex> lock(control_mutex);
 		if (cypress::Process::exec(
 		        "curl",
 		        {"-sd", "\'" + cmd + "\'", "http://" + m_addr,
-		         "--connect-timeout", "3"},
+		         "--connect-timeout", "1"},
 		        ss_in, ss_out, ss_err) != 0) {
 			throw std::runtime_error(
 			    "energenie: Error while executing curl, make sure the "
@@ -97,7 +133,7 @@ std::string energenie::control(const std::string &cmd) const
 			    "is installed and there is a connection to the device!");
 		}
 	}
-
+    log_out(m_addr);
 	// Read the response and make sure the commands were processed correctly
 	std::string line, res;
 	while (std::getline(ss_out, line)) {

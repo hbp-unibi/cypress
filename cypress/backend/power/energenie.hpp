@@ -67,7 +67,7 @@ public:
 	 */
 	energenie(cypress::Json &config);
 
-	~energenie() override{};
+	~energenie() override = default;
 
 	/**
 	 * Reads the energenie configuration from the given JSON file. See the
