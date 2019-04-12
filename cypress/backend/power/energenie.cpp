@@ -65,11 +65,11 @@ void energenie::read_json_config(cypress::Json &config)
 }
 
 namespace {
-inline std::stringstream log_in(std::string addr, std::string passwd)
+inline void log_in(std::string addr, std::string passwd, std::stringstream& ss_out)
 {
 	static std::mutex control_mutex;
 	std::lock_guard<std::mutex> lock(control_mutex);
-	std::stringstream ss_in, ss_out, ss_err;
+	std::stringstream ss_in, ss_err;
 	if (cypress::Process::exec("curl",
 	                           {"http://" + addr + "/login.html", "-s", "-d",
 	                            "pw=" + passwd, "--connect-timeout", "1"},
@@ -79,7 +79,6 @@ inline std::stringstream log_in(std::string addr, std::string passwd)
 		    "program "
 		    "is installed and there is a connection to the device!");
 	}
-	return ss_out;
 }
 
 inline void log_out(std::string addr)
@@ -115,10 +114,10 @@ std::string energenie::control(const std::string &cmd) const
 	std::stringstream ss_in, ss_out, ss_err;
 	// Call curl to communicate with the device
 	if (cmd == "") {
-		ss_out = log_in(m_addr, m_passwd);
+		log_in(m_addr, m_passwd, ss_out);
 	}
 	else {
-		ss_out = log_in(m_addr, m_passwd);
+		log_in(m_addr, m_passwd, ss_out);
 		// Only one thread at a time may communicate with the energenie device!
 		static std::mutex control_mutex;
 		std::lock_guard<std::mutex> lock(control_mutex);
