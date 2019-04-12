@@ -145,8 +145,11 @@ Only on the hardware:
 FAQ
 ------------
 
-Q: Executing make && make test (or during simulations) the program aborts with a seg fault.
+Q: Executing make && make test (or during simulations) the program aborts with a seg fault.  
 A: Try building without static linking (comment line 52 in CMakeLists.txt) ```SET(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static")```
+
+Q: On SpiNNaker, there is an issue:```C++ exception with description "KeyError: "Unexpected key type: <type 'unicode'>" ```  
+A: Manually patch ```lib/python2.7/site-packages/SpiNNUtilities-1!4.0.1-py2.7.egg/spinn_utilities/ranged/abstract_dict.py ```: replace ```str ``` by ```basestring ``` in line 222
 
 ## Authors
 

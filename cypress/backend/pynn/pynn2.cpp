@@ -705,13 +705,37 @@ py::object PyNN_::get_connector(const std::string &connector_name,
 
 namespace {
 bool popview_warnign_emitted = false;
+
+inline py::object fallback_connector(
+    const std::vector<PopulationBase> &populations,
+    const std::vector<py::object> &pypopulations,
+    const ConnectionDescriptor &conn, const py::module &pynn, bool &nest_flag,
+    const Real &timestep)
+{
+	// Issue related to PyNN #625
+	bool current_based = false;
+	if (!populations[conn.pid_tar()].type().conductance_based && nest_flag) {
+		current_based = true;
+	}
+	std::tuple<py::object, py::object> ret =
+	    PyNN_::list_connect(pypopulations, conn, pynn, current_based, timestep);
+	if (conn.connector().synapse()->parameters()[0] >= 0) {
+		return std::get<0>(ret);
+	}
+	return std::get<1>(ret);
 }
+
+}  // namespace
 py::object PyNN_::group_connect(const std::vector<PopulationBase> &populations,
                                 const std::vector<py::object> &pypopulations,
                                 const ConnectionDescriptor &conn,
                                 const py::module &pynn, bool nest_flag,
                                 const Real timestep)
 {
+	if (popview_warnign_emitted) {
+		return fallback_connector(populations, pypopulations, conn, pynn,
+		                          nest_flag, timestep);
+	}
 	py::object source, target;
 	std::string conn_name =
 	    SUPPORTED_CONNECTIONS.find(conn.connector().name())->second;
@@ -740,18 +764,8 @@ py::object PyNN_::group_connect(const std::vector<PopulationBase> &populations,
 			    "cypress", "PopViews not supported. Using list connector");
 			popview_warnign_emitted = true;
 		}
-		// Issue related to PyNN #625
-		bool current_based = false;
-		if (!populations[conn.pid_tar()].type().conductance_based &&
-		    nest_flag) {
-			current_based = true;
-		}
-		std::tuple<py::object, py::object> ret =
-		    list_connect(pypopulations, conn, pynn, current_based, timestep);
-		if (params[0] >= 0) {
-			return std::get<0>(ret);
-		}
-		return std::get<1>(ret);
+		return fallback_connector(populations, pypopulations, conn, pynn,
+		                          nest_flag, timestep);
 	}
 
 	// Issue related to PyNN #625
@@ -808,12 +822,23 @@ py::object PyNN_::group_connect(const std::vector<PopulationBase> &populations,
 		throw ExecutionError(conn.connector().synapse()->name() +
 		                     " is not supported for this backend!");
 	}
-
-	return pynn.attr("Projection")(
-	    source, target,
-	    get_connector(conn_name, pynn, conn.connector().additional_parameter(),
-	                  conn.connector().allow_self_connections()),
-	    "synapse_type"_a = synapse, "receptor_type"_a = receptor);
+	try {
+		return pynn.attr("Projection")(
+		    source, target,
+		    get_connector(conn_name, pynn,
+		                  conn.connector().additional_parameter(),
+		                  conn.connector().allow_self_connections()),
+		    "synapse_type"_a = synapse, "receptor_type"_a = receptor);
+	}
+	catch (...) {
+		if (!popview_warnign_emitted) {
+			global_logger().info(
+			    "cypress", "PopViews not supported. Using list connector");
+			popview_warnign_emitted = true;
+		}
+		return fallback_connector(populations, pypopulations, conn, pynn,
+		                          nest_flag, timestep);
+	}
 }
 
 py::object PyNN_::group_connect7(const std::vector<PopulationBase> &,
@@ -1042,7 +1067,7 @@ void inline assert_types()
 {
 	if (typeid(T) != typeid(T2)) {
 		throw ExecutionError("C type " + std::string(typeid(T).name()) +
-		                     "does not match python type " +
+		                     " does not match python type " +
 		                     std::string(typeid(T2).name()) + "! ");
 	}
 }
@@ -1052,7 +1077,8 @@ template <typename T>
 Matrix<T> PyNN_::matrix_from_numpy(const py::object &object, bool transposed)
 {
 	// Check the data type
-	std::string type = py::cast<std::string>(object.attr("dtype").attr("name"));
+	std::string type;
+	type = py::cast<std::string>(object.attr("dtype").attr("name"));
 	if (type == "int8") {
 		assert_types<T, int8_t>();
 	}
@@ -1367,11 +1393,22 @@ void PyNN_::fetch_data_neo(const std::vector<PopulationBase> &populations,
 						}
 					}
 					py::object py_neuron_ids;
+					bool new_spinnaker = false;
 
 					if (neo_v > 4) {
 						py_neuron_ids = analogsignals[signal_index]
 						                    .attr("channel_index")
 						                    .attr("channel_ids");
+						// SpiNNaker compatibility fix
+						if (py::len(py_neuron_ids) == 0) {
+							auto py_neuron_ids2 =
+							    analogsignals[signal_index].attr(
+							        "annotations")["source_ids"];
+							py::module np = py::module::import("numpy");
+							py_neuron_ids = np.attr("array")(
+							    py_neuron_ids2, "dtype"_a = np.attr("int64"));
+							new_spinnaker = true;
+						}
 					}
 					else {
 						py_neuron_ids =
@@ -1379,10 +1416,15 @@ void PyNN_::fetch_data_neo(const std::vector<PopulationBase> &populations,
 					}
 					Matrix<int64_t> neuron_ids =
 					    matrix_from_numpy<int64_t>(py_neuron_ids);
+					if (new_spinnaker) {
+						for (size_t i = 0; i < neuron_ids.size(); i++) {
+							neuron_ids[i] = neuron_ids[i] - 1;
+						}
+					}
 					py::object py_times =
 					    analogsignals[signal_index].attr("times");
 					Matrix<double> time = matrix_from_numpy<double>(py_times);
-					if (neo_v > 4) {
+					if (neo_v > 4&& !new_spinnaker) {
 						py::object py_pydata =
 						    analogsignals[signal_index].attr("as_array")();
 						Matrix<double> pydata =
@@ -1404,9 +1446,10 @@ void PyNN_::fetch_data_neo(const std::vector<PopulationBase> &populations,
 					}
 					else {
 						for (size_t k = 0; k < neuron_ids.size(); k++) {
+                            py::list transposed = py::list(
+							        analogsignals[signal_index].attr("T"));
 							Matrix<double> pydata =
-							    matrix_from_numpy<double>(py::list(
-							        analogsignals[signal_index].attr("T"))[k]);
+							    matrix_from_numpy<double>(transposed[k]);
 							auto data = std::make_shared<Matrix<Real>>(
 							    pydata.size(), 2);
 							for (size_t l = 0; l < pydata.size(); l++) {
