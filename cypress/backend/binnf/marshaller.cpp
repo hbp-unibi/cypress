@@ -25,6 +25,7 @@
 
 #include <cypress/backend/binnf/binnf.hpp>
 #include <cypress/backend/binnf/marshaller.hpp>
+#include <cypress/core/connector.hpp>
 #include <cypress/core/network_base.hpp>
 #include <cypress/core/network_base_objects.hpp>
 #include <cypress/core/neurons.hpp>
@@ -216,7 +217,7 @@ custom_conn_descr convert_non_list_connection(const ConnectionDescriptor &conn)
  * @param conns List of local connections
  */
 void write_local_connections_to_file(std::string filename,
-                                     const std::vector<LocalConnection> &conns)
+                                     const std::vector<__local_connection> &conns)
 {
 	std::ofstream file;
 	file.open(filename);
@@ -229,24 +230,14 @@ void write_local_connections_to_file(std::string filename,
 	// current used value missing
 	if (filename.find("nest") != std::string::npos) {
 	    for (auto i : conns) {
-		    if (i.SynapseParameters.size() > 2) {
-		    	//TODO
-			    throw ExecutionError(
-				    "Only static synapses are supported for this backend!");
-		    }
-	        file << i.src << " " << i.tar << " " << i.SynapseParameters[0] << " "
-	             << std::max(i.SynapseParameters[1], 0.1) << std::endl;
+	        file << i.src << " " << i.tar << " " << i.weight << " "
+	             << std::max(i.delay, 0.1) << std::endl;
 	    }
 	}
 	else {
 	    for (auto i : conns){
-		    if (i.SynapseParameters.size() > 2) {
-		    	// TODO
-			    throw ExecutionError(
-				    "Only static synapses are supported for this backend!");
-		    }
-	        file << i.src << " " << i.tar << " " << i.SynapseParameters[0] << " "
-	             << i.SynapseParameters[1] << std::endl;
+	        file << i.src << " " << i.tar << " " << i.weight << " "
+	             << i.delay << std::endl;
 	    }
 	}
 	file.close();
@@ -277,15 +268,15 @@ static void write_list_connections(
 			throw ExecutionError(
 				"Only static synapses are supported for this backend!");
 		}
-		std::vector<LocalConnection> conns_exc, conns_inh;
+		std::vector<__local_connection> conns_exc, conns_inh;
 		std::vector<Connection> conns_full;
 		des.connect(conns_full);
 		for (auto i : conns_full) {
 			if (i.inhibitory()) {
-				conns_inh.emplace_back(i.n.absolute_connection());
+				conns_inh.emplace_back(i.n.__old_absolute_connection());
 			}
 			else {
-				conns_exc.emplace_back(i.n);
+				conns_exc.emplace_back(i.n.__old_absolute_connection());
 			}
 		}
 
