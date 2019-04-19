@@ -351,7 +351,7 @@ static std::string join(const std::vector<std::string> &elems, char delim)
 void NetworkBase::update_connection(std::unique_ptr<Connector> connector,
                                     const char *name)
 {
-    auto connections = m_impl->connections();
+    std::vector<ConnectionDescriptor>& connections = m_impl->connections();
     int index = -1;
 	for (size_t i = 0; i <connections.size(); i++) {
         if(connections[i].name()==name){
@@ -364,7 +364,7 @@ void NetworkBase::update_connection(std::unique_ptr<Connector> connector,
     if(index<0){
         throw std::invalid_argument("The name of the connection doesn't exist");
     }
-    connections[index].update_connector(std::move(connector));
+     m_impl->connections()[index].update_connector(std::move(connector));
 }
 
 std::unique_ptr<Backend> NetworkBase::make_backend(std::string backend_id,
