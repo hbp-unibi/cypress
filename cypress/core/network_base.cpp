@@ -164,7 +164,7 @@ public:
 	 * Returns the list of connections. Makes sure the returned connections are
 	 * sorted.
 	 */
-	const std::vector<ConnectionDescriptor> &connections() const
+	std::vector<ConnectionDescriptor> &connections()
 	{
 		if (!m_connections_sorted) {
 			std::sort(m_connections.begin(), m_connections.end());
@@ -173,7 +173,7 @@ public:
 		return m_connections;
 	}
 };
-}
+}  // namespace internal
 
 /*
  * Class NetworkBase
@@ -199,11 +199,12 @@ NetworkBase NetworkBase::clone() const
 void NetworkBase::connect(PopulationIndex pid_src, NeuronIndex nid_src0,
                           NeuronIndex nid_src1, PopulationIndex pid_tar,
                           NeuronIndex nid_tar0, NeuronIndex nid_tar1,
-                          std::unique_ptr<Connector> connector)
+                          std::unique_ptr<Connector> connector,
+                          const char *name)
 {
 	m_impl->connect(ConnectionDescriptor(pid_src, nid_src0, nid_src1, pid_tar,
 	                                     nid_tar0, nid_tar1,
-	                                     std::move(connector)));
+	                                     std::move(connector), name));
 }
 
 PopulationIndex NetworkBase::create_population_index(
@@ -347,6 +348,25 @@ static std::string join(const std::vector<std::string> &elems, char delim)
 	return ss.str();
 }
 
+void NetworkBase::update_connection(std::unique_ptr<Connector> connector,
+                                    const char *name)
+{
+    auto connections = m_impl->connections();
+    int index = -1;
+	for (size_t i = 0; i <connections.size(); i++) {
+        if(connections[i].name()==name){
+            if(index>-1){
+                throw std::invalid_argument("The name of the connection is ambiguous");
+            }
+            index = i;
+        }
+    }
+    if(index<0){
+        throw std::invalid_argument("The name of the connection doesn't exist");
+    }
+    connections[index].update_connector(std::move(connector));
+}
+
 std::unique_ptr<Backend> NetworkBase::make_backend(std::string backend_id,
                                                    int argc, const char *argv[],
                                                    Json setup)
@@ -386,15 +406,18 @@ std::unique_ptr<Backend> NetworkBase::make_backend(std::string backend_id,
 		}
 		auto backend = make_backend(join(elems, '.'), argc, argv, setup);
 		if (dynamic_cast<PyNN_ *>(backend.get()) == nullptr) {
-            if( dynamic_cast<PyNN *>(backend.get()) == nullptr){
-                throw std::invalid_argument(
-                    "NMPI backend only works in conjunction with PyNN backends!");
-            }
-            std::unique_ptr<PyNN> pynn_backend(dynamic_cast<PyNN *>(backend.get()));
-            backend.release();
-            return std::make_unique<NMPI>(std::move(pynn_backend), argc, argv);
+			if (dynamic_cast<PyNN *>(backend.get()) == nullptr) {
+				throw std::invalid_argument(
+				    "NMPI backend only works in conjunction with PyNN "
+				    "backends!");
+			}
+			std::unique_ptr<PyNN> pynn_backend(
+			    dynamic_cast<PyNN *>(backend.get()));
+			backend.release();
+			return std::make_unique<NMPI>(std::move(pynn_backend), argc, argv);
 		}
-		std::unique_ptr<PyNN_> pynn_backend(dynamic_cast<PyNN_ *>(backend.get()));
+		std::unique_ptr<PyNN_> pynn_backend(
+		    dynamic_cast<PyNN_ *>(backend.get()));
 		backend.release();
 		return std::make_unique<NMPI>(std::move(pynn_backend), argc, argv);
 	}
@@ -414,9 +437,9 @@ std::unique_ptr<Backend> NetworkBase::make_backend(std::string backend_id,
 		}
 		return std::make_unique<Slurm>(join(elems, '.'), setup);
 	}
-	else if( elems[0] == "nmpm1"){
-        return std::make_unique<PyNN>(join(elems, '.'), setup);
-    }
+	else if (elems[0] == "nmpm1") {
+		return std::make_unique<PyNN>(join(elems, '.'), setup);
+	}
 	else if (elems[0] == "nest") {
 		return std::make_unique<NEST>(setup);
 	}
@@ -498,4 +521,4 @@ void NetworkBase::runtime(const NetworkRuntime &runtime)
 {
 	m_impl->m_runtime = runtime;
 }
-}
+}  // namespace cypress

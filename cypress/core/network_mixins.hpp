@@ -141,10 +141,10 @@ public:
 	 */
 	template <typename TargetIterator>
 	Impl &connect_to(TargetIterator tar_begin, TargetIterator tar_end,
-	                 std::unique_ptr<Connector> connector)
+	                 std::unique_ptr<Connector> connector, const char *name = "")
 	{
 		network().connect(pid(), i0(), i1(), tar_begin->pid(), tar_begin->nid(),
-		                  tar_end->nid(), std::move(connector));
+		                  tar_end->nid(), std::move(connector), name);
 		return impl();
 	}
 
@@ -158,9 +158,9 @@ public:
 	 * @return a reference at this object for function chaining.
 	 */
 	template <typename Target>
-	Impl &connect_to(const Target &tar, std::unique_ptr<Connector> connector)
+	Impl &connect_to(const Target &tar, std::unique_ptr<Connector> connector, const char *name = "")
 	{
-		return connect_to(tar.begin(), tar.end(), std::move(connector));
+		return connect_to(tar.begin(), tar.end(), std::move(connector), name);
 	}
 };
 

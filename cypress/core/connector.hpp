@@ -95,14 +95,14 @@ struct __local_connection {
 	 */
 	NeuronIndex tar;
 
-    /**
-     * Connection weight
-     */
+	/**
+	 * Connection weight
+	 */
 	Real weight;
-    
-    /**
-     * Connection delay
-     */
+
+	/**
+	 * Connection delay
+	 */
 	Real delay;
 
 	__local_connection(NeuronIndex src, NeuronIndex tar, Real weight,
@@ -177,7 +177,8 @@ struct LocalConnection {
 
 	__local_connection __old_absolute_connection()
 	{
-		return __local_connection(src, tar, SynapseParameters[0], SynapseParameters[1]);
+		return __local_connection(src, tar, SynapseParameters[0],
+		                          SynapseParameters[1]);
 	}
 };
 
@@ -782,6 +783,7 @@ private:
 	NeuronIndex m_nid_tar0;
 	NeuronIndex m_nid_tar1;
 	std::shared_ptr<Connector> m_connector;
+	std::string m_name;
 
 public:
 	/**
@@ -789,14 +791,16 @@ public:
 	 */
 	ConnectionDescriptor(uint32_t pid_src, uint32_t nid_src0, uint32_t nid_src1,
 	                     uint32_t pid_tar, uint32_t nid_tar0, uint32_t nid_tar1,
-	                     std::shared_ptr<Connector> connector = nullptr)
+	                     std::shared_ptr<Connector> connector = nullptr,
+	                     const char *name = "")
 	    : m_pid_src(pid_src),
 	      m_nid_src0(nid_src0),
 	      m_nid_src1(nid_src1),
 	      m_pid_tar(pid_tar),
 	      m_nid_tar0(nid_tar0),
 	      m_nid_tar1(nid_tar1),
-	      m_connector(std::move(connector))
+	      m_connector(std::move(connector)),
+	      m_name(std::string(name))
 	{
 	}
 
@@ -839,6 +843,14 @@ public:
 	 * class which actually fills the connection table.
 	 */
 	Connector &connector() const { return *m_connector; }
+
+	/**
+	 * Change the underlying connector
+	 */
+	void update_connector(std::shared_ptr<Connector> connector)
+	{
+		m_connector = std::move(connector);
+	}
 
 	/**
 	 * Tells the Connector to actually create the neuron-to-neuron connections
@@ -895,6 +907,8 @@ public:
 		return connector().size(m_nid_src1 - m_nid_src0,
 		                        m_nid_tar1 - m_nid_tar0);
 	}
+
+	const std::string &name() const { return m_name; }
 };
 
 /**
