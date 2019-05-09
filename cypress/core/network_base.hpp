@@ -141,7 +141,7 @@ protected:
 	void connect(PopulationIndex pid_src, NeuronIndex nid_src0,
 	             NeuronIndex nid_src1, PopulationIndex pid_tar,
 	             NeuronIndex nid_tar0, NeuronIndex nid_tar1,
-	             std::unique_ptr<Connector> connector);
+	             std::unique_ptr<Connector> connector, const char *name = "");
 
 	/**
 	 * Internally used to add a new population. Use the templated public
@@ -326,6 +326,15 @@ public:
 	 * network instance.
 	 */
 	const std::vector<ConnectionDescriptor> &connections() const;
+    
+    
+    /**
+     * Change the connector from an existing connection. 
+     * 
+     * @param connector The new connector
+     * @param name Name tag of the target connection
+     */
+    void update_connection(std::unique_ptr<Connector> connector, const char *name);
 
 	/**
 	 * Returns the backend instance for the given backend string. The backend

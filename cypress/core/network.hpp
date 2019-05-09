@@ -481,11 +481,11 @@ public:
 
 	template <typename Source, typename Target>
 	Network &add_connection(const Source &source, const Target &target,
-	                        std::unique_ptr<Connector> connector)
+	                        std::unique_ptr<Connector> connector, const char *name = "")
 	{
 		internal::resolve_population(*this, source)
 		    .connect_to(internal::resolve_population(*this, target),
-		                std::move(connector));
+		                std::move(connector), name);
 		return *this;
 	}
 
