@@ -30,15 +30,19 @@ In order to run network simulations you also need to install NEST or PyNN with a
 
 Once the above requirements are fulfilled, simply run
 ```bash
-git clone https://github.com/hbp-sanncs/cypress
+git clone https://github.com/hbp-unibi/cypress
 mkdir cypress/build && cd cypress/build
 cmake ..
 make && make test
-sudo make install
 ```
 
 Example
 -------
+
+The recommended way to use cypress is to use CMakes ExternalProject_Add. An example project how to use that can be found at [github](https://github.com/hbp-unibi/cypress_example). This repository should be the starting point for your networks.
+
+However, if you want to use cypress more directly, here is an example how to do that:
+
 
 ```c++
 #include <cypress/cypress.hpp>
@@ -148,14 +152,14 @@ FAQ
 Q: Executing make && make test (or during simulations) the program aborts with a seg fault.  
 A: Try building without static linking (comment line 52 in CMakeLists.txt) ```SET(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static")```
 
-Q: On SpiNNaker, there is an issue:```C++ exception with description "KeyError: "Unexpected key type: <type 'unicode'>" ```  
+Q: On SpiNNaker, there is an issue: ```C++ exception with description "KeyError: "Unexpected key type: <type 'unicode'>" ```  
 A: Manually patch ```lib/python2.7/site-packages/SpiNNUtilities-1!4.0.1-py2.7.egg/spinn_utilities/ranged/abstract_dict.py ```: replace ```str ``` by ```basestring ``` in line 222
 
 ## Authors
 
 This project has been initiated by Andreas Stöckel in 2016 while working
 at Bielefeld University in the [Cognitronics and Sensor Systems Group](http://www.ks.cit-ec.uni-bielefeld.de/) which is
-part of the [Human Brain Project, SP 9](https://www.humanbrainproject.eu/neuromorphic-computing-platform) and has been continued by Christoph Jenzen.
+part of the [Human Brain Project, SP 9](https://www.humanbrainproject.eu/neuromorphic-computing-platform) and has been continued by Christoph Ostrau, formerly Jenzen.
 
 ## License
 
