@@ -57,13 +57,19 @@ set(STATIC_LINKING TRUE CACHE BOOL "True for static linking")
 
 # Link statically
 if(STATIC_LINKING)
-	SET(CMAKE_FIND_LIBRARY_SUFFIXES ".a")
-	SET(BUILD_SHARED_LIBRARIES OFF)
-	if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
-        SET(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libstdc++ -static-libgcc  -Wl,--no-export-dynamic")
+    execute_process(
+    COMMAND ${CMAKE_SOURCE_DIR}/scripts/glibc_helper.sh ${CMAKE_CXX_COMPILER_ID}
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/include/
+    )
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -include ${CMAKE_BINARY_DIR}/include/glibc.h")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -include ${CMAKE_BINARY_DIR}/include/glibc.h")
+    SET(CMAKE_FIND_LIBRARY_SUFFIXES ".a")
+    SET(BUILD_SHARED_LIBRARIES OFF)
+    if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+        SET(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libstdc++  -Wl,--no-export-dynamic")
         SET(CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE} -s -Wl,--no-export-dynamic")
     else()
-        SET(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libstdc++ -static-libgcc ")
+        SET(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libstdc++")
         SET(CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE} -s")
     endif()
 endif()
@@ -157,11 +163,12 @@ if(STATIC_LINKING)
 	set_target_properties(cypress PROPERTIES POSITION_INDEPENDENT_CODE TRUE)
 	target_link_libraries(cypress
             pybind11::embed
+            dl
             -pthread
             #-Wl,--whole-archive -lpthread -Wl,--no-whole-archive
             )
 else()
-	target_link_libraries(cypress pthread pybind11::embed)
+	target_link_libraries(cypress pthread pybind11::embed dl)
 endif()
 
 # Installation configuration
