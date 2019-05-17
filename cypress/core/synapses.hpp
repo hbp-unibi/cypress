@@ -183,6 +183,8 @@ public:
 	 * @return Shared pointer to a copy of synapse
 	 */
 	static std::shared_ptr<SynapseBase> make_shared(SynapseBase &synapse);
+
+	virtual ~SynapseBase() = default;
 };
 
 namespace {
