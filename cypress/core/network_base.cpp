@@ -30,15 +30,18 @@
 #include <cypress/core/network_base_objects.hpp>
 #include <cypress/core/transformation.hpp>
 
+#include <cypress/backend/brainscales/brainscales_lib.hpp>
 #include <cypress/backend/nest/nest.hpp>
 #include <cypress/backend/nmpi/nmpi.hpp>
-#include <cypress/backend/pynn/pynn.hpp>
+#include <cypress/backend/pynn/pynn2.hpp>
 #include <cypress/backend/pynn/slurm.hpp>
 
 #include <cypress/transformations/registry.hpp>
 
 #include <cypress/util/json.hpp>
 #include <cypress/util/logger.hpp>
+
+#include <dlfcn.h>
 
 namespace cypress {
 namespace internal {
@@ -351,20 +354,21 @@ static std::string join(const std::vector<std::string> &elems, char delim)
 void NetworkBase::update_connection(std::unique_ptr<Connector> connector,
                                     const char *name)
 {
-    std::vector<ConnectionDescriptor>& connections = m_impl->connections();
-    int index = -1;
-	for (size_t i = 0; i <connections.size(); i++) {
-        if(connections[i].name()==name){
-            if(index>-1){
-                throw std::invalid_argument("The name of the connection is ambiguous");
-            }
-            index = i;
-        }
-    }
-    if(index<0){
-        throw std::invalid_argument("The name of the connection doesn't exist");
-    }
-     m_impl->connections()[index].update_connector(std::move(connector));
+	std::vector<ConnectionDescriptor> &connections = m_impl->connections();
+	int index = -1;
+	for (size_t i = 0; i < connections.size(); i++) {
+		if (connections[i].name() == name) {
+			if (index > -1) {
+				throw std::invalid_argument(
+				    "The name of the connection is ambiguous");
+			}
+			index = i;
+		}
+	}
+	if (index < 0) {
+		throw std::invalid_argument("The name of the connection doesn't exist");
+	}
+	m_impl->connections()[index].update_connector(std::move(connector));
 }
 
 std::unique_ptr<Backend> NetworkBase::make_backend(std::string backend_id,
@@ -438,7 +442,8 @@ std::unique_ptr<Backend> NetworkBase::make_backend(std::string backend_id,
 		return std::make_unique<Slurm>(join(elems, '.'), setup);
 	}
 	else if (elems[0] == "nmpm1") {
-		return std::make_unique<PyNN>(join(elems, '.'), setup);
+		return std::unique_ptr<Backend>(
+		    BS_Lib::instance().create_bs_backend(setup));
 	}
 	else if (elems[0] == "nest") {
 		return std::make_unique<NEST>(setup);
