@@ -21,6 +21,7 @@
 
 #include <unistd.h>
 #include <iostream>
+#include <sstream>
 
 #include <cypress/backend/brainscales/brainscales_lib.hpp>
 #include <cypress/backend/nmpi/nmpi.hpp>

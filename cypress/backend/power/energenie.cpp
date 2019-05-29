@@ -33,7 +33,7 @@ energenie::energenie(const std::string &config_filename)
 	std::ifstream is(config_filename);
 	if (is.good()) {
 		Json obj;
-		obj << is;
+        is >> obj;
 		read_json_config(obj);
 	}
 }
