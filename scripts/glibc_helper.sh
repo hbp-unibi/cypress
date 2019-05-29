@@ -14,7 +14,7 @@ fi
 echo "-- Generatring compatibilty header for libc using compiler "${compiler}
 
 
-lib_paths=$(${compiler} -m64  -Xlinker --verbose  2>/dev/null | grep SEARCH | sed 's/SEARCH_DIR("=\?\([^"]\+\)"); */\1\n/g'  | grep -vE '^$' | grep lib64 )
+lib_paths=$(${compiler} -m64  -Xlinker --verbose  2>/dev/null | grep SEARCH | sed 's/SEARCH_DIR("=\?\([^"]\+\)"); */\1\n/g'  | grep -vE '^$' )
 declare -a lib_paths_arr
 lib_paths_arr=($lib_paths)
 
