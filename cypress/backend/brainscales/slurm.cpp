@@ -15,6 +15,10 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+#include <cypress/backend/pynn/pynn.hpp>
+
+
+#include <cypress/backend/brainscales/slurm.hpp>
 
 #include <cstdio>
 
@@ -22,13 +26,12 @@
 #include <thread>
 #include <vector>
 
-#include <cypress/backend/pynn/slurm.hpp>
 #include <cypress/backend/resources.hpp>
-#include <cypress/core/network_base.hpp>
 #include <cypress/json.hpp>
 #include <cypress/util/filesystem.hpp>
 #include <cypress/util/logger.hpp>
 #include <cypress/util/process.hpp>
+#include <cypress/core/network_base.hpp>
 
 namespace cypress {
 
@@ -100,7 +103,7 @@ void Slurm::do_run(NetworkBase &network, Real duration) const
 {
 	if (m_write_binnf) {
 		// TODO Check whether file exists
-		write_binnf(network, m_filename);
+		//write_binnf(network, m_filename);
 	}
 
 	if (m_exec_python) {
@@ -211,7 +214,7 @@ void Slurm::do_run(NetworkBase &network, Real duration) const
 			script.append("run_nmpm_software ");
 		}
 
-		script.append(
+		/*script.append(
 		    "python " +
 		    Resources::PYNN_INTERFACE.open_local(m_filename + ".py") + " run " +
 		    "--simulator " + m_normalised_simulator + " --library " + import +
@@ -219,7 +222,7 @@ void Slurm::do_run(NetworkBase &network, Real duration) const
 		    std::to_string(duration) + " --in " + current_dir + m_filename +
 		    "_stdin" + " --out " + current_dir + m_filename + "_res" +
 		    " --logs " + current_dir + m_filename + "_log; ls >/dev/null;wait");
-
+*/
 		// Synchronize files on servers (Heidelberg setup...)
 		system("ls > /dev/null");
 
@@ -277,7 +280,7 @@ void Slurm::do_run(NetworkBase &network, Real duration) const
 	}
 
 	if (m_read_results) {
-		read_back_binnf(network, m_filename);
+		//read_back_binnf(network, m_filename);
 		unlink((m_filename + "_stdin").c_str());
 		unlink((m_filename + "_res").c_str());
 		unlink((m_filename + "_log").c_str());

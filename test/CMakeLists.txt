@@ -78,28 +78,16 @@ add_test(test_cypress_util test_cypress_util)
 # Backend tests
 #
 
-add_executable(test_cypress_backend
-	backend/binnf/test_binnf
+add_executable(test_pynn_backend
 	backend/pynn/test_pynn
 )
-add_dependencies(test_cypress_backend googletest)
-target_link_libraries(test_cypress_backend
-	cypress
-	${GTEST_LIBRARIES}
-)
-add_test(test_cypress_backend test_cypress_backend)
-
-
-add_executable(test_pynn2_backend
-	backend/pynn/test_pynn2
-)
-add_dependencies(test_pynn2_backend googletest)
+add_dependencies(test_pynn_backend googletest)
 # Only link gtest to define own main function
-target_link_libraries(test_pynn2_backend
+target_link_libraries(test_pynn_backend
 	cypress
 	${BINARY_DIR}/googlemock/gtest/libgtest.a
 )
-add_test(test_pynn2_backend test_pynn2_backend)
+add_test(test_pynn_backend test_pynn_backend)
 
 #
 # Integration tests

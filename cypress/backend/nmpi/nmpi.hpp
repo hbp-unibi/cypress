@@ -26,8 +26,8 @@
 #include <string>
 #include <vector>
 
-#include <cypress/core/backend.hpp>
 #include <cypress/backend/pynn/pynn.hpp>
+#include <cypress/core/backend.hpp>
 
 namespace cypress {
 
@@ -43,7 +43,7 @@ private:
 	/**
 	 * Pointer at the actual PyNN backend instance.
 	 */
-	std::unique_ptr<PyNN> m_pynn;
+	std::unique_ptr<Backend> m_pynn;
 
 	/**
 	 * This method just forwards the given data to the PyNN instance -- it is
@@ -51,6 +51,17 @@ private:
 	 * program flow.
 	 */
 	void do_run(NetworkBase &network, Real duration) const override;
+
+	void init(
+	    std::unique_ptr<Backend> pynn, int &argc, const char *argv[],
+	    const std::vector<std::string> &files = std::vector<std::string>(),
+	    bool scan_args = true);
+
+	void init_bs(
+	    const std::string &bs_backend, int &argc, const char *argv[],
+	    Json setup,
+	    const std::vector<std::string> &files = std::vector<std::string>(),
+	    bool scan_args = true);
 
 public:
 	/**
@@ -84,7 +95,7 @@ public:
 	 * @param scan_args if true, automagically scans the command line arguments
 	 * for for filenames and uploads these files too.
 	 */
-	NMPI(std::unique_ptr<PyNN> pynn, int &argc, const char *argv[],
+	NMPI(std::unique_ptr<Backend> pynn, int &argc, const char *argv[],
 	     const std::vector<std::string> &files = std::vector<std::string>(),
 	     bool scan_args = true);
 
@@ -127,6 +138,6 @@ public:
 	 */
 	static bool check_args(int argc, const char *argv[]);
 };
-}
+}  // namespace cypress
 
 #endif /* CYPRESS_BACKEND_NMPI_HPP */

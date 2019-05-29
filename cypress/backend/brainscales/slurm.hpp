@@ -21,10 +21,12 @@
 #ifndef CYPRESS_BACKEND_SLURM_HPP
 #define CYPRESS_BACKEND_SLURM_HPP
 
+#include <cypress/backend/pynn/pynn.hpp>
+
 #include <string>
 #include <vector>
 
-#include <cypress/backend/pynn/pynn.hpp>
+
 #include <cypress/core/backend.hpp>
 #include <cypress/util/json.hpp>
 

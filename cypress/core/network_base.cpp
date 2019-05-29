@@ -17,7 +17,8 @@
  */
 
 // Include first to avoid "_POSIX_C_SOURCE redefined" warning
-#include <cypress/backend/pynn/pynn2.hpp>
+#include <cypress/backend/pynn/pynn.hpp>
+#include <cypress/core/network_base.hpp>
 
 #include <algorithm>
 #include <memory>
@@ -26,15 +27,13 @@
 #include <cypress/core/backend.hpp>
 #include <cypress/core/data.hpp>
 #include <cypress/core/exceptions.hpp>
-#include <cypress/core/network_base.hpp>
 #include <cypress/core/network_base_objects.hpp>
 #include <cypress/core/transformation.hpp>
 
 #include <cypress/backend/brainscales/brainscales_lib.hpp>
+#include <cypress/backend/brainscales/slurm.hpp>
 #include <cypress/backend/nest/nest.hpp>
 #include <cypress/backend/nmpi/nmpi.hpp>
-#include <cypress/backend/pynn/pynn2.hpp>
-#include <cypress/backend/pynn/slurm.hpp>
 
 #include <cypress/transformations/registry.hpp>
 
@@ -408,20 +407,26 @@ std::unique_ptr<Backend> NetworkBase::make_backend(std::string backend_id,
 			throw std::invalid_argument(
 			    "Expected another backend name following \"nmpi\"!");
 		}
-		auto backend = make_backend(join(elems, '.'), argc, argv, setup);
-		if (dynamic_cast<PyNN_ *>(backend.get()) == nullptr) {
-			if (dynamic_cast<PyNN *>(backend.get()) == nullptr) {
-				throw std::invalid_argument(
-				    "NMPI backend only works in conjunction with PyNN "
-				    "backends!");
+		if (elems[0] == "nmpm1" || elems[0] == "BrainScaleS" ||
+		    elems[0] == "brainscales") {
+
+			if (!setup.is_null()) {
+				elems[0] = "nmpm1=" + setup.dump();
 			}
-			std::unique_ptr<PyNN> pynn_backend(
-			    dynamic_cast<PyNN *>(backend.get()));
-			backend.release();
-			return std::make_unique<NMPI>(std::move(pynn_backend), argc, argv);
+			else {
+				elems[0] = "nmpm1";
+			}
+			return std::make_unique<NMPI>(join(elems, '.') + "=" + setup.dump(),
+			                              argc, argv);
 		}
-		std::unique_ptr<PyNN_> pynn_backend(
-		    dynamic_cast<PyNN_ *>(backend.get()));
+
+		auto backend = make_backend(join(elems, '.'), argc, argv, setup);
+		if (dynamic_cast<PyNN *>(backend.get()) == nullptr) {
+			throw std::invalid_argument(
+			    "NMPI backend only works in conjunction with PyNN "
+			    "or BrainScaleS backends!");
+		}
+		std::unique_ptr<PyNN> pynn_backend(dynamic_cast<PyNN *>(backend.get()));
 		backend.release();
 		return std::make_unique<NMPI>(std::move(pynn_backend), argc, argv);
 	}
@@ -431,7 +436,7 @@ std::unique_ptr<Backend> NetworkBase::make_backend(std::string backend_id,
 			throw std::invalid_argument(
 			    "Expected another backend name following \"pynn\"!");
 		}
-		return std::make_unique<PyNN_>(join(elems, '.'), setup);
+		return std::make_unique<PyNN>(join(elems, '.'), setup);
 	}
 	else if (elems[0] == "slurm") {
 		elems.erase(elems.begin());  // Remove the first element
@@ -449,7 +454,7 @@ std::unique_ptr<Backend> NetworkBase::make_backend(std::string backend_id,
 		return std::make_unique<NEST>(setup);
 	}
 	else {
-		return std::make_unique<PyNN_>(join(elems, '.'), setup);
+		return std::make_unique<PyNN>(join(elems, '.'), setup);
 	}
 	return nullptr;
 }

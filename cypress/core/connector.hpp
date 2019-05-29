@@ -816,7 +816,7 @@ public:
 	NeuronIndex nid_src0() const { return m_nid_src0; }
 
 	/**
-	 * Index of the first neuron in the target population involved in the
+	 * Index of the last-plus-one neuron in the target population involved in the
 	 * connection.
 	 */
 	NeuronIndex nid_src1() const { return m_nid_src1; }

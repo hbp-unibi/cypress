@@ -91,30 +91,20 @@ configure_file(cypress/config.h.in include/cypress/config.h)
 # Compile the Python code into a C++ header
 add_custom_command(
 	OUTPUT
-		"${CMAKE_BINARY_DIR}/include/resource/backend/pynn/pynn_interface.hpp"
-		"${CMAKE_BINARY_DIR}/include/resource/backend/pynn/pynn_binnf_loopback.hpp"
 		"${CMAKE_BINARY_DIR}/include/resource/backend/nmpi/nmpi_broker.hpp"
 	COMMAND
 		"${CMAKE_SOURCE_DIR}/resource/build_resources.sh" "${CMAKE_BINARY_DIR}/include/resource/backend"
 	DEPENDS
 		"${CMAKE_SOURCE_DIR}/resource/build_resources.sh"
-		"${CMAKE_SOURCE_DIR}/resource/backend/pynn/binnf.py"
-		"${CMAKE_SOURCE_DIR}/resource/backend/pynn/cli.py"
-		"${CMAKE_SOURCE_DIR}/resource/backend/pynn/constants.py"
-		"${CMAKE_SOURCE_DIR}/resource/backend/pynn/cypress.py"
-		"${CMAKE_SOURCE_DIR}/resource/backend/pynn/loopback.py"
 		"${CMAKE_SOURCE_DIR}/resource/backend/nmpi/broker.py"
 )
 
 # Compile the library itself
 add_library(cypress
-	"${CMAKE_BINARY_DIR}/include/resource/backend/pynn/pynn_interface.hpp"
-	"${CMAKE_BINARY_DIR}/include/resource/backend/pynn/pynn_binnf_loopback.hpp"
 	"${CMAKE_BINARY_DIR}/include/resource/backend/nmpi/nmpi_broker.hpp"
 	cypress/backend/resources
-	cypress/backend/binnf/binnf
-	cypress/backend/binnf/marshaller
 	cypress/backend/brainscales/brainscales_lib
+	cypress/backend/brainscales/slurm
 	cypress/backend/nest/nest
 	cypress/backend/nest/sli
 	cypress/backend/nmpi/nmpi
@@ -122,8 +112,6 @@ add_library(cypress
 	cypress/backend/power/netio4
 	cypress/backend/power/power
 	cypress/backend/pynn/pynn
-	cypress/backend/pynn/pynn2
-	cypress/backend/pynn/slurm
 	cypress/core/backend
 	cypress/core/connector
 	cypress/core/data
@@ -158,7 +146,11 @@ add_library(cypress
 	cypress/util/spiking_utils
 	cypress/util/terminal
 )
-
+message(STATUS "Downloading BrainScaleS library")
+file(DOWNLOAD https://github.com/hbp-unibi/BS2Cypress/raw/master/bin/libBS2CYPRESS.so
+	${CMAKE_BINARY_DIR}/libBS2CYPRESS.so
+)
+target_compile_definitions(cypress PRIVATE BS_LIBRARY_PATH="${CMAKE_BINARY_DIR}/libBS2CYPRESS.so")
 
 if(STATIC_LINKING)
 	set_target_properties(cypress PROPERTIES POSITION_INDEPENDENT_CODE TRUE)

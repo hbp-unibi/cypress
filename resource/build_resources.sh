@@ -71,18 +71,6 @@ if [ ! -f "$OUT_DIR/nmpi/lib/nmpi_user.py" ]; then
 	echo "Done."
 fi
 
-# Build the PyNN script Python code into a resource
-build_resource PYNN_INTERFACE "$OUT_DIR/pynn/pynn_interface.hpp" \
-	"$DIR/backend/pynn/constants.py" \
-	"$DIR/backend/pynn/binnf.py" \
-	"$DIR/backend/pynn/cypress.py" \
-	"$DIR/backend/pynn/cli.py"
-
-# Build the PyNN script Python code into a resource
-build_resource PYNN_BINNF_LOOPBACK "$OUT_DIR/pynn/pynn_binnf_loopback.hpp" \
-	"$DIR/backend/pynn/binnf.py" \
-	"$DIR/backend/pynn/loopback.py"
-
 # Build the NMPI Python code into a resource
 build_resource NMPI_BROKER "$OUT_DIR/nmpi/nmpi_broker.hpp" \
 	"$OUT_DIR/nmpi/lib/nmpi_user.py" \
