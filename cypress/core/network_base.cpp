@@ -34,6 +34,7 @@
 #include <cypress/backend/brainscales/slurm.hpp>
 #include <cypress/backend/nest/nest.hpp>
 #include <cypress/backend/nmpi/nmpi.hpp>
+#include <cypress/backend/serialize/to_json.hpp>
 
 #include <cypress/transformations/registry.hpp>
 
@@ -453,6 +454,10 @@ std::unique_ptr<Backend> NetworkBase::make_backend(std::string backend_id,
 	else if (elems[0] == "nest") {
 		return std::make_unique<NEST>(setup);
 	}
+	else if (elems[0] == "json"){
+		elems.erase(elems.begin());  
+		return std::make_unique<ToJson>(join(elems, '.'), setup);
+    }
 	else {
 		return std::make_unique<PyNN>(join(elems, '.'), setup);
 	}

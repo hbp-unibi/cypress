@@ -32,6 +32,7 @@
 // Include first to avoid "_POSIX_C_SOURCE redefined" warning
 #include <cypress/backend/pynn/pynn.hpp>
 
+#include <cypress/backend/serialize/to_json.hpp>
 #include <cypress/backend/nest/nest.hpp>
 #include <cypress/backend/nmpi/nmpi.hpp>
 #include <cypress/backend/resources.hpp>

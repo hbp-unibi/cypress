@@ -89,6 +89,17 @@ target_link_libraries(test_pynn_backend
 )
 add_test(test_pynn_backend test_pynn_backend)
 
+add_executable(test_json_backend
+	backend/test_toJson.cpp
+)
+add_dependencies(test_json_backend googletest)
+# Only link gtest to define own main function
+target_link_libraries(test_json_backend
+	cypress
+	${GTEST_LIBRARIES}
+)
+add_test(test_json_backend test_json_backend)
+
 #
 # Integration tests
 #
