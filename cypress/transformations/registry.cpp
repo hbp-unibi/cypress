@@ -18,6 +18,7 @@
 
 #include <cypress/transformations/spike_sources.hpp>
 #include <cypress/transformations/spikey_if_cond_exp.hpp>
+#include <cypress/core/backend.hpp>
 
 namespace cypress {
 namespace transformations {
@@ -40,8 +41,9 @@ struct Registry {
 		// Transformation responsible for fixing Spikey units
 		Transformations::register_general_transformation(
 		    [] { return std::make_unique<IFFH1UnitScale>(); },
-		    [](const Backend &, const NetworkBase &net) {
-			    return net.population_count<IfFacetsHardware1>() > 0;
+		    [](const Backend &b, const NetworkBase &net) {
+			    return (net.population_count<IfFacetsHardware1>() > 0 )
+			    && (b.name() == "spikey");
 			});
 
 		// Transformation responsible for losslessly converting between constant
