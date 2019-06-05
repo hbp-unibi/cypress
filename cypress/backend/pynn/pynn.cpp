@@ -238,8 +238,7 @@ public:
 		std::lock_guard<std::mutex> lock(util_mutex);
         PythonInstance::instance();
 		std::vector<bool> res;
-		for (auto i : imports) {
-            std::cout << i <<std::endl;
+		for (auto& i : imports) {
 			bool temp = check_python_import(i);
 			res.push_back(temp);
 		}
@@ -493,7 +492,7 @@ py::dict PyNN::json_to_dict(Json json)
 		}
 		else if (value.is_array()) {  // structured
 			py::list list;
-			for (auto entry : value) {
+			for (auto& entry : value) {
 				if (entry.is_number_float()) {
 					list.append(double(entry));
 				}
@@ -654,7 +653,7 @@ void PyNN::set_inhomogeneous_parameters(const PopulationBase &pop,
 
 void PyNN::set_homogeneous_rec(const PopulationBase &pop, py::object &pypop)
 {
-	std::vector<std::string> signals = pop.type().signal_names;
+	const std::vector<std::string>& signals = pop.type().signal_names;
 	for (size_t j = 0; j < signals.size(); j++) {
 		if (pop.signals().is_recording(j)) {
 			pypop.attr("record")(signals[j].c_str());
@@ -665,7 +664,7 @@ void PyNN::set_homogeneous_rec(const PopulationBase &pop, py::object &pypop)
 void PyNN::set_inhomogenous_rec(const PopulationBase &pop, py::object &pypop,
                                  py::module &pynn)
 {
-	std::vector<std::string> signals = pop.type().signal_names;
+	const std::vector<std::string>& signals = pop.type().signal_names;
 	for (size_t j = 0; j < signals.size(); j++) {
 		std::vector<uint64_t> neuron_ids;
 		for (uint64_t k = 0; k < pop.size(); k++) {
@@ -818,7 +817,7 @@ py::object PyNN::group_connect(const std::vector<PopulationBase> &populations,
 	py::object source, target;
 	std::string conn_name =
 	    SUPPORTED_CONNECTIONS.find(conn.connector().name())->second;
-	auto params = conn.connector().synapse()->parameters();
+	const auto& params = conn.connector().synapse()->parameters();
 	std::string name = conn.connector().synapse()->name();
 	try {
 		source = get_pop_view(pynn, pypopulations[conn.pid_src()],
@@ -927,7 +926,7 @@ py::object PyNN::group_connect7(const std::vector<PopulationBase> &,
 {
 	std::string conn_name =
 	    SUPPORTED_CONNECTIONS.find(conn.connector().name())->second;
-	auto params = conn.connector().synapse()->parameters();
+	const auto& params = conn.connector().synapse()->parameters();
 	std::string name = conn.connector().synapse()->name();
 
 	py::object source = pypopulations[conn.pid_src()];
@@ -999,7 +998,7 @@ std::tuple<py::object, py::object> PyNN::list_connect(
 	std::vector<Connection> conns_full;
 	size_t num_inh = 0;
 	conn.connect(conns_full);
-	for (auto i : conns_full) {
+	for (auto& i : conns_full) {
 		if (i.n.inhibitory()) {
 			num_inh++;
 		}
@@ -1013,7 +1012,7 @@ std::tuple<py::object, py::object> PyNN::list_connect(
 	}
 
 	size_t counter_ex = 0, counter_in = 0;
-	for (auto i : conns_full) {
+	for (auto& i : conns_full) {
 		if (i.n.SynapseParameters[0] >= 0) {
 			(*conns_exc)(counter_ex, 0) = i.n.src;
 			(*conns_exc)(counter_ex, 1) = i.n.tar;
@@ -1687,7 +1686,7 @@ void PyNN::do_run(NetworkBase &source, Real duration) const
 
 	std::vector<std::tuple<size_t, py::object>> group_projections;
 	for (size_t i = 0; i < source.connections().size(); i++) {
-		auto conn = source.connections()[i];
+		const auto& conn = source.connections()[i];
 		auto it = SUPPORTED_CONNECTIONS.find(conn.connector().name());
 
 		if (it != SUPPORTED_CONNECTIONS.end() &&
@@ -2103,7 +2102,7 @@ void PyNN::spikey_run(NetworkBase &source, Real duration, py::module &pynn,
 	std::vector<std::tuple<size_t, py::object>> group_projections;
 
 	for (size_t i = 0; i < source.connections().size(); i++) {
-		auto conn = source.connections()[i];
+		const auto& conn = source.connections()[i];
 		auto it = SUPPORTED_CONNECTIONS.find(conn.connector().name());
 
 		if (it != SUPPORTED_CONNECTIONS.end() &&
