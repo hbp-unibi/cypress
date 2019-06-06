@@ -130,19 +130,20 @@ void ToJson::do_run(NetworkBase &network, Real duration) const
 
 	std::string path = "experiment_XXXXX";
 	filesystem::tmpfile(path);
-	auto file = std::ofstream(path + ".cbor", std::ios::binary);
+	std::ofstream file;
+	file.open(path + ".cbor", std::ios::binary);
 	Json::to_cbor(json_out, file);
 	file.close();
 
-	file = std::ofstream(path + ".bson", std::ios::binary);
+	file.open(path + ".bson", std::ios::binary);
 	Json::to_bson(json_out, file);
 	file.close();
 
-	file = std::ofstream(path + ".msgpack", std::ios::binary);
+	file.open(path + ".msgpack", std::ios::binary);
 	Json::to_msgpack(json_out, file);
 	file.close();
 
-	file = std::ofstream(path + ".json", std::ios::binary);
+	file.open(path + ".json", std::ios::binary);
 	file << json_out;
 	file.close();
 	json_out = {};
@@ -167,9 +168,11 @@ void ToJson::do_run(NetworkBase &network, Real duration) const
 		                std::to_string(-res)));
 	}
 
-	auto file_in = std::ifstream(path + "_res.cbor", std::ios::binary);
+	std::ifstream file_in;
+	file_in.open(path + "_res.cbor", std::ios::binary);
 
 	Json result = Json::from_cbor(file_in);
+	file_in.close();
 
 	const auto &recs = result["recordings"];
 	for (size_t i = 0; i < recs.size(); i++) {
@@ -361,8 +364,10 @@ void ToJson::create_conn_from_json(const Json &con_json, Network &netw)
 
 NetworkBase ToJson::network_from_json(std::string path)
 {
-	std::ifstream ifs(std::ifstream(path, std::ios::binary));
+	std::ifstream ifs;
+	ifs.open(path, std::ios::binary);
 	Json json = Json::from_bson(ifs);
+	ifs.close();
 
 	Network netw;
 	const auto &pops = json["populations"];

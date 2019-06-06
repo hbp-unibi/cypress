@@ -31,8 +31,8 @@ int main(int argc, const char *argv[])
 		return 1;
 	}
 
-	auto file_in =
-	    std::ifstream(std::string(argv[1]) + ".cbor", std::ios::binary);
+	std::ifstream file_in;
+	file_in.open(std::string(argv[1]) + ".cbor", std::ios::binary);
 	Json json = Json::from_cbor(file_in);
 	file_in.close();
 
@@ -41,8 +41,8 @@ int main(int argc, const char *argv[])
 	                                 argv, json["setup"]);
 	netw.run(*backend, json["duration"].get<Real>());
 
-	auto file_out =
-	    std::ofstream(std::string(argv[1]) + "_res.cbor", std::ios::binary);
+	std::ofstream file_out;
+	file_out.open(std::string(argv[1]) + "_res.cbor", std::ios::binary);
 	Json::to_cbor(Json(netw), file_out);
 	file_out.close();
 	return 0;
