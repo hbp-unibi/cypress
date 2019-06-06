@@ -18,7 +18,6 @@
 
 #pragma once
 
-#include <cypress/backend/pynn/pynn.hpp>
 #include <cypress/core/backend.hpp>
 #include <cypress/core/network.hpp>
 #include <cypress/core/network_base_objects.hpp>

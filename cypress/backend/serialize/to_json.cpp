@@ -193,101 +193,105 @@ std::string ToJson::name() const { return "json"; }
 
 void ToJson::create_pop_from_json(const Json &pop_json, Network &netw)
 {
-	std::shared_ptr<PopulationBase> pop;
+	PopulationIndex pop_ind;
 	std::string name = pop_json["type"].get<std::string>();
 	if (name == "SpikeSourceArray") {
-		pop = std::make_shared<PopulationBase>(
-		    netw.create_population<SpikeSourceArray>(
-		        pop_json["size"],
-		        SpikeSourceArrayParameters(
-		            pop_json["parameters"].get<std::vector<Real>>()),
-		        SpikeSourceArraySignals()));
+		pop_ind = netw.create_population<SpikeSourceArray>(
+		                  pop_json["size"],
+		                  SpikeSourceArrayParameters(
+		                      pop_json["parameters"].get<std::vector<Real>>()),
+		                  SpikeSourceArraySignals())
+		              .pid();
 	}
 	else if (name == "IfCondExp") {
-		pop =
-		    std::make_shared<PopulationBase>(netw.create_population<IfCondExp>(
-		        pop_json["size"],
-		        IfCondExpParameters(
-		            pop_json["parameters"].get<std::vector<Real>>()),
-		        IfCondExpSignals()));
+		pop_ind = netw.create_population<IfCondExp>(
+		                  pop_json["size"],
+		                  IfCondExpParameters(
+		                      pop_json["parameters"].get<std::vector<Real>>()),
+		                  IfCondExpSignals())
+		              .pid();
 	}
 	else if (name == "IfFacetsHardware1") {
-		pop = std::make_shared<PopulationBase>(
-		    netw.create_population<IfFacetsHardware1>(
-		        pop_json["size"],
-		        IfFacetsHardware1Parameters(
-		            pop_json["parameters"].get<std::vector<Real>>())));
+		pop_ind = netw.create_population<IfFacetsHardware1>(
+		                  pop_json["size"],
+		                  IfFacetsHardware1Parameters(
+		                      pop_json["parameters"].get<std::vector<Real>>()))
+		              .pid();
 	}
 	else if (name == "EifCondExpIsfaIsta") {
-		pop = std::make_shared<PopulationBase>(
-		    netw.create_population<EifCondExpIsfaIsta>(
-		        pop_json["size"],
-		        EifCondExpIsfaIstaParameters(
-		            pop_json["parameters"].get<std::vector<Real>>())));
+		pop_ind = netw.create_population<EifCondExpIsfaIsta>(
+		                  pop_json["size"],
+		                  EifCondExpIsfaIstaParameters(
+		                      pop_json["parameters"].get<std::vector<Real>>()))
+		              .pid();
 	}
 	else if (name == "IfCurrExp") {
-		pop =
-		    std::make_shared<PopulationBase>(netw.create_population<IfCurrExp>(
-		        pop_json["size"],
-		        IfCurrExpParameters(
-		            pop_json["parameters"].get<std::vector<Real>>())));
+		pop_ind = netw.create_population<IfCurrExp>(
+		                  pop_json["size"],
+		                  IfCurrExpParameters(
+		                      pop_json["parameters"].get<std::vector<Real>>()))
+		              .pid();
 	}
 
 	else if (name == "SpikeSourcePoisson") {
-		pop = std::make_shared<PopulationBase>(
-		    netw.create_population<SpikeSourcePoisson>(
-		        pop_json["size"],
-		        SpikeSourcePoissonParameters(
-		            pop_json["parameters"].get<std::vector<Real>>())));
+		pop_ind = netw.create_population<SpikeSourcePoisson>(
+		                  pop_json["size"],
+		                  SpikeSourcePoissonParameters(
+		                      pop_json["parameters"].get<std::vector<Real>>()))
+		              .pid();
 	}
 	else if (name == "SpikeSourceConstFreq") {
-		pop = std::make_shared<PopulationBase>(
-		    netw.create_population<SpikeSourceConstFreq>(
-		        pop_json["size"],
-		        SpikeSourceConstFreqParameters(
-		            pop_json["parameters"].get<std::vector<Real>>())));
+		pop_ind = netw.create_population<SpikeSourceConstFreq>(
+		                  pop_json["size"],
+		                  SpikeSourceConstFreqParameters(
+		                      pop_json["parameters"].get<std::vector<Real>>()))
+		              .pid();
 	}
 	else if (name == "SpikeSourceConstInterval") {
-		pop = std::make_shared<PopulationBase>(
-		    netw.create_population<SpikeSourceConstInterval>(
-		        pop_json["size"],
-		        SpikeSourceConstIntervalParameters(
-		            pop_json["parameters"].get<std::vector<Real>>())));
+		pop_ind = netw.create_population<SpikeSourceConstInterval>(
+		                  pop_json["size"],
+		                  SpikeSourceConstIntervalParameters(
+		                      pop_json["parameters"].get<std::vector<Real>>()))
+		              .pid();
 	}
 	else {
 		throw CypressException("Unknown pop type " + name + "!");
 	}
 
+	PopulationBase pop = netw.population(pop_ind);
 	// TODO inhomog params
+	if (pop_json["records"] == Json()) {
+		return;
+	}
 	if (pop_json["records"].is_object()) {
 		for (auto &signal : pop_json["records"].items()) {
-			auto index = pop->type().signal_index(signal.key());
+			auto index = pop.type().signal_index(signal.key());
 			if (!index.valid()) {
 				throw CypressException("Unknown signal type " + signal.key() +
-				                       " for neuron type " + pop->type().name);
+				                       " for neuron type " + pop.type().name);
 			}
 			auto flags = signal.value().get<std::vector<bool>>();
-			for (size_t i = 0; i < pop->size(); i++) {
+			for (size_t i = 0; i < pop.size(); i++) {
 				if (flags[i]) {
-					(*pop)[i].signals().record(index.value());
+					pop[i].signals().record(index.value());
 				}
 			}
 		}
 	}
 	else {
 		for (auto &i : pop_json["records"]) {
-			auto index = pop->type().signal_index(i.get<std::string>());
+			auto index = pop.type().signal_index(i.get<std::string>());
 			if (!index.valid()) {
 				throw CypressException("Unknown signal type " +
 				                       i.get<std::string>() +
-				                       " for neuron type " + pop->type().name);
+				                       " for neuron type " + pop.type().name);
 			}
-			pop->signals().record(index.value());
+			pop.signals().record(index.value());
 		}
 	}
 }
 
-inline std::shared_ptr<SynapseBase> ToJson::get_synapse(
+std::shared_ptr<SynapseBase> ToJson::get_synapse(
     const std::string &name, const std::vector<Real> &parameters)
 {
 	if (name == "StaticSynapse") {
@@ -399,6 +403,7 @@ Json ToJson::pop_to_json(const PopulationBase &pop)
 
 void ToJson::hom_rec_to_json(const PopulationBase &pop, Json &json)
 {
+	json["records"] = Json();
 	const std::vector<std::string> &signals = pop.type().signal_names;
 	for (size_t i = 0; i < signals.size(); i++) {
 		if (pop.signals().is_recording(i)) {

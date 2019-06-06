@@ -513,7 +513,7 @@ TEST(ToJson, roundtrip_pops)
 	json = Json({{"type", "IfCondExp"},
 	             {"size", 10},
 	             {"parameters", IfCondExpParameters().parameters()},
-	             {"records", {}}});
+	             {"records", Json()}});
 	netw = Network();
 	ToJson::create_pop_from_json(json, netw);
 	json2 = ToJson::pop_vec_to_json(netw.populations());
