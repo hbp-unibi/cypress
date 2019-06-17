@@ -82,36 +82,6 @@ struct Synapse {
 	bool valid() const { return (weight != 0.0) && (delay >= 0.0); }
 };
 
-#pragma pack(push, 1)
-
-struct __local_connection {
-	/**
-	 * Source neuron index within the specified source population.
-	 */
-	NeuronIndex src;
-
-	/**
-	 * Target neuron index within the specified target population.
-	 */
-	NeuronIndex tar;
-
-	/**
-	 * Connection weight
-	 */
-	Real weight;
-
-	/**
-	 * Connection delay
-	 */
-	Real delay;
-
-	__local_connection(NeuronIndex src, NeuronIndex tar, Real weight,
-	                   Real delay)
-	    : src(src), tar(tar), weight(weight), delay(delay)
-	{
-	}
-};
-#pragma pack(pop)
 /**
  * The LocalConnection class is a stripped-down version of the Connection class
  * which only contains the neuron indices and not the source and target
@@ -173,12 +143,6 @@ struct LocalConnection {
 		LocalConnection temp = *this;
 		temp.SynapseParameters[0] = std::abs(SynapseParameters[0]);
 		return temp;
-	}
-
-	__local_connection __old_absolute_connection()
-	{
-		return __local_connection(src, tar, SynapseParameters[0],
-		                          SynapseParameters[1]);
 	}
 };
 
