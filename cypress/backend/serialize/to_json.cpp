@@ -195,63 +195,63 @@ void ToJson::create_pop_from_json(const Json &pop_json, Network &netw)
 {
 	PopulationIndex pop_ind;
 	std::string name = pop_json["type"].get<std::string>();
+	std::vector<Real> parameters;
+	bool inhomogeneous = false;
+	if (pop_json["parameters"][0].size() > 1) {
+		// inhomogeneous parameters
+		parameters = pop_json["parameters"][0].get<std::vector<Real>>();
+		inhomogeneous = true;
+	}
+	else {
+		parameters = pop_json["parameters"].get<std::vector<Real>>();
+	}
 	if (name == "SpikeSourceArray") {
-		pop_ind = netw.create_population<SpikeSourceArray>(
-		                  pop_json["size"],
-		                  SpikeSourceArrayParameters(
-		                      pop_json["parameters"].get<std::vector<Real>>()),
-		                  SpikeSourceArraySignals())
-		              .pid();
+		pop_ind =
+		    netw.create_population<SpikeSourceArray>(
+		            pop_json["size"], SpikeSourceArrayParameters(parameters),
+		            SpikeSourceArraySignals())
+		        .pid();
 	}
 	else if (name == "IfCondExp") {
 		pop_ind = netw.create_population<IfCondExp>(
-		                  pop_json["size"],
-		                  IfCondExpParameters(
-		                      pop_json["parameters"].get<std::vector<Real>>()),
+		                  pop_json["size"], IfCondExpParameters(parameters),
 		                  IfCondExpSignals())
 		              .pid();
 	}
 	else if (name == "IfFacetsHardware1") {
-		pop_ind = netw.create_population<IfFacetsHardware1>(
-		                  pop_json["size"],
-		                  IfFacetsHardware1Parameters(
-		                      pop_json["parameters"].get<std::vector<Real>>()))
-		              .pid();
+		pop_ind =
+		    netw.create_population<IfFacetsHardware1>(
+		            pop_json["size"], IfFacetsHardware1Parameters(parameters))
+		        .pid();
 	}
 	else if (name == "EifCondExpIsfaIsta") {
-		pop_ind = netw.create_population<EifCondExpIsfaIsta>(
-		                  pop_json["size"],
-		                  EifCondExpIsfaIstaParameters(
-		                      pop_json["parameters"].get<std::vector<Real>>()))
-		              .pid();
+		pop_ind =
+		    netw.create_population<EifCondExpIsfaIsta>(
+		            pop_json["size"], EifCondExpIsfaIstaParameters(parameters))
+		        .pid();
 	}
 	else if (name == "IfCurrExp") {
 		pop_ind = netw.create_population<IfCurrExp>(
-		                  pop_json["size"],
-		                  IfCurrExpParameters(
-		                      pop_json["parameters"].get<std::vector<Real>>()))
+		                  pop_json["size"], IfCurrExpParameters(parameters))
 		              .pid();
 	}
 
 	else if (name == "SpikeSourcePoisson") {
-		pop_ind = netw.create_population<SpikeSourcePoisson>(
-		                  pop_json["size"],
-		                  SpikeSourcePoissonParameters(
-		                      pop_json["parameters"].get<std::vector<Real>>()))
-		              .pid();
+		pop_ind =
+		    netw.create_population<SpikeSourcePoisson>(
+		            pop_json["size"], SpikeSourcePoissonParameters(parameters))
+		        .pid();
 	}
 	else if (name == "SpikeSourceConstFreq") {
 		pop_ind = netw.create_population<SpikeSourceConstFreq>(
 		                  pop_json["size"],
-		                  SpikeSourceConstFreqParameters(
-		                      pop_json["parameters"].get<std::vector<Real>>()))
+		                  SpikeSourceConstFreqParameters(parameters))
 		              .pid();
 	}
 	else if (name == "SpikeSourceConstInterval") {
 		pop_ind = netw.create_population<SpikeSourceConstInterval>(
 		                  pop_json["size"],
-		                  SpikeSourceConstIntervalParameters(
-		                      pop_json["parameters"].get<std::vector<Real>>()))
+		                  SpikeSourceConstIntervalParameters(parameters))
 		              .pid();
 	}
 	else {
@@ -259,7 +259,12 @@ void ToJson::create_pop_from_json(const Json &pop_json, Network &netw)
 	}
 
 	PopulationBase pop = netw.population(pop_ind);
-	// TODO inhomog params
+	if (inhomogeneous) {
+		for (size_t i = 0; i < pop.size(); i++) {
+			pop[i].parameters().parameters(
+			    pop_json["parameters"][i].get<std::vector<Real>>());
+		}
+	}
 	if (pop_json["records"] == Json()) {
 		return;
 	}
@@ -395,8 +400,10 @@ Json ToJson::pop_to_json(const PopulationBase &pop)
 		res["parameters"] = pop.parameters().parameters();
 	}
 	else {
-		std::cerr << "TODO inhom. params" << std::endl;
-		throw;  // TODO
+		res["parameters"] = {};
+		for (auto neuron : pop) {
+			res["parameters"].push_back(neuron.parameters().parameters());
+		}
 	}
 	return res;
 }
