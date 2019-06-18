@@ -400,7 +400,7 @@ public:
 	 *
 	 * @param weights matrix of new weights
 	 */
-	void _store_learned_weights(std::vector<LocalConnection> weights)
+	void _store_learned_weights(std::vector<LocalConnection>&& weights)
 	{
 		m_weights = std::move(weights);
 	}
