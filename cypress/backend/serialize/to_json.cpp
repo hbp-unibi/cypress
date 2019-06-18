@@ -145,10 +145,13 @@ Json ToJson::connector_to_json(const ConnectionDescriptor &conn)
 		std::vector<Connection> tar;
 		connector.connect(conn, tar);
 		for (auto i : tar) {
-			Json temp = {{"src", i.n.src},
-			             {"tar", i.n.tar},
-			             {"par", i.n.SynapseParameters}};
-			res["connections"].emplace_back(temp);
+			Json json = {};
+			json.emplace_back(i.n.src);
+			json.emplace_back(i.n.tar);
+			for (auto j : i.n.SynapseParameters) {
+				json.emplace_back(j);
+			}
+			res["connections"].emplace_back(json);
 		}
 	}
 	return res;
@@ -380,10 +383,13 @@ void ToJson::create_conn_from_json(const Json &con_json, Network &netw)
 		const Json &jconn = con_json["connections"];
 		std::vector<LocalConnection> conns(jconn.size());
 		for (size_t i = 0; i < conns.size(); i++) {
-			syn->parameters(jconn[i]["par"].get<std::vector<Real>>());
-			conns[i] =
-			    LocalConnection(jconn[i]["src"].get<NeuronIndex>(),
-			                    jconn[i]["tar"].get<NeuronIndex>(), *syn);
+			std::vector<Real> tmp(jconn[i].size() - 2);
+			for (size_t j = 2; j < jconn[i].size(); j++) {
+				tmp[j - 2] = jconn[i][j].get<Real>();
+			}
+			syn->parameters(tmp);
+			conns[i] = LocalConnection(jconn[i][0].get<NeuronIndex>(),
+			                           jconn[i][1].get<NeuronIndex>(), *syn);
 		}
 		connector = Connector::from_list(conns);
 	}
@@ -526,10 +532,13 @@ void ToJson::learned_weights_from_json(const Json &json, NetworkBase netw)
 			auto &temp = json["learned_weights"]["conns"][ind];
 			std::vector<LocalConnection> conns(temp.size());
 			for (size_t conn = 0; conn < conns.size(); conn++) {
-				conns[conn].src = temp[conn]["src"].get<NeuronIndex>();
-				conns[conn].tar = temp[conn]["tar"].get<NeuronIndex>();
-				conns[conn].SynapseParameters =
-				    temp[conn]["params"].get<std::vector<Real>>();
+				conns[conn].src = temp[conn][0].get<NeuronIndex>();
+				conns[conn].tar = temp[conn][1].get<NeuronIndex>();
+				std::vector<Real> tmp(temp[conn].size() - 2);
+				for (size_t i = 2; i < temp[conn].size(); i++) {
+					tmp[i - 2] = temp[conn][i].get<Real>();
+				}
+				conns[conn].SynapseParameters = tmp;
 			}
 			connector.connector()._store_learned_weights(std::move(conns));
 		}
@@ -566,10 +575,12 @@ void to_json(Json &result, const Network &network)
 			result["learned_weights"]["id"].emplace_back(i);
 			Json tmp;
 			for (auto conn : conns) {
-				Json json;
-				json["src"] = conn.src;
-				json["tar"] = conn.tar;
-				json["params"] = conn.SynapseParameters;
+				Json json = {};
+				json.emplace_back(conn.src);
+				json.emplace_back(conn.tar);
+				for (auto i : conn.SynapseParameters) {
+					json.emplace_back(i);
+				}
 				tmp.emplace_back(json);
 			}
 			result["learned_weights"]["conns"].emplace_back(tmp);

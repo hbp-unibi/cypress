@@ -441,16 +441,9 @@ TEST(ToJson, create_conn_from_json)
 	json["nid_tar0"] = 200;
 	json["nid_tar1"] = 210;
 	test_conn(json);
-	json["connections"] = Json({{{"src", 0},
-	                             {"tar", 1},
-	                             {"par", {0.1, 1.0}},
-	                             {"src", 1},
-	                             {"tar", 400},
-	                             {"par", {0.1, 1.1}},
-	                             {"src", 2},
-	                             {"tar", 201},
-	                             {"par", {0.1, 1.2}},
-	                             {"label", "test"}}});
+	json["connections"] = Json({{0,1,0.1,1.0},
+                               {1,400,0.1,1.1},
+                                {2,201,0.1,1.1}});
 	json["syn_name"] = "StaticSynapse";
 	Network netw = Network();
 	auto pop = netw.create_population<IfCondExp>(
