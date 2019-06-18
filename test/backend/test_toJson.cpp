@@ -160,7 +160,18 @@ void check_pop(PopulationBase &pop, Json &json)
 {
 	EXPECT_EQ(json["type"], pop.type().name);
 	EXPECT_EQ(json["size"], pop.size());
-	EXPECT_EQ(json["parameters"], pop.parameters().parameters());
+	EXPECT_EQ(json["label"], pop.name());
+	if (json["parameters"][0].size() > 1) {
+		EXPECT_FALSE(pop.homogeneous_parameters());
+		EXPECT_EQ(json["parameters"].size(), pop.size());
+		for (size_t i = 0; i < pop.size(); i++) {
+			EXPECT_EQ(json["parameters"][i], pop[i].parameters().parameters());
+		}
+	}
+	else {
+		EXPECT_TRUE(pop.homogeneous_parameters());
+		EXPECT_EQ(json["parameters"], pop.parameters().parameters());
+	}
 }
 
 TEST(ToJson, pop_to_json)
@@ -172,16 +183,17 @@ TEST(ToJson, pop_to_json)
 	check_pop(pop, json);
 
 	auto pop2 = netw.create_population<SpikeSourceArray>(
-	    20, SpikeSourceArrayParameters().spike_times({3, 4, 5, 6}));
+	    20, SpikeSourceArrayParameters().spike_times({3, 4, 5, 6}), "test");
 	json = ToJson::pop_to_json(pop2);
 	check_pop(pop2, json);
 
 	auto pop3 = netw.create_population<EifCondExpIsfaIsta>(
-	    1, EifCondExpIsfaIstaParameters());
+	    1, EifCondExpIsfaIstaParameters(), "test2");
 	json = ToJson::pop_to_json(pop3);
 	check_pop(pop3, json);
 
-	auto pop4 = netw.create_population<IfCurrExp>(0, IfCurrExpParameters());
+	auto pop4 = netw.create_population<IfCurrExp>(0, IfCurrExpParameters(),
+	                                              "testasdasdf");
 	json = ToJson::pop_to_json(pop4);
 	check_pop(pop4, json);
 
@@ -190,7 +202,15 @@ TEST(ToJson, pop_to_json)
 	json = ToJson::pop_to_json(pop5);
 	check_pop(pop5, json);
 
-	// TODO inhom parameters
+	float counter = 0.0;
+	for (auto neuron : pop) {
+		for (size_t i = 0; i < neuron.parameters().size(); i++) {
+			neuron.parameters().set(i, i * counter);
+			counter += 0.5;
+		}
+	}
+	json = ToJson::pop_to_json(pop);
+	check_pop(pop, json);
 }
 TEST(ToJson, hom_rec_to_json)
 {
@@ -282,6 +302,7 @@ TEST(ToJson, create_pop_from_json)
 	Json json({{"type", "SpikeSourceArray"},
 	           {"size", 10},
 	           {"parameters", test},
+	           {"label", "test"},
 	           {"records", {"spikes"}}});
 	Network netw;
 	ToJson::create_pop_from_json(json, netw);
@@ -291,11 +312,13 @@ TEST(ToJson, create_pop_from_json)
 	EXPECT_EQ(pop.parameters().parameters(), std::vector<Real>(test));
 	EXPECT_TRUE(pop.homogeneous_record());
 	EXPECT_TRUE(pop.signals().is_recording(0));
+	EXPECT_EQ(pop.name(), json["label"]);
 
 	netw = Network();
 	json = Json(
 	    {{"type", "IfCondExp"},
 	     {"size", 5},
+	     {"label", "test2"},
 	     {"parameters", IfCondExpParameters().parameters()},
 	     {"records", Json({{"spikes", std::vector<bool>{0, 0, 0, 0, 1}}})}});
 
@@ -306,6 +329,7 @@ TEST(ToJson, create_pop_from_json)
 	EXPECT_EQ(pop.parameters().parameters(),
 	          IfCondExpParameters().parameters());
 	EXPECT_FALSE(pop.homogeneous_record());
+	EXPECT_EQ(pop.name(), json["label"]);
 
 	for (size_t i = 0; i < pop.size(); i++) {
 		if (i == 4) {
@@ -321,6 +345,7 @@ TEST(ToJson, create_pop_from_json)
 
 	json = Json({{"type", "IfCondExp"},
 	             {"size", 10},
+	             {"label", "test3"},
 	             {"parameters", IfCondExpParameters().parameters()},
 	             {"records", {}}});
 	netw = Network();
@@ -330,6 +355,7 @@ TEST(ToJson, create_pop_from_json)
 	EXPECT_FALSE(pop.signals().is_recording(1));
 	EXPECT_FALSE(pop.signals().is_recording(2));
 	EXPECT_FALSE(pop.signals().is_recording(3));
+	EXPECT_EQ(pop.name(), json["label"]);
 }
 
 TEST(ToJson, get_synapse)
@@ -372,6 +398,7 @@ void test_conn(Json &json)
 		EXPECT_EQ(test.pid_tar(), json["pid_tar"].get<PopulationIndex>());
 		EXPECT_EQ(test.nid_tar0(), json["nid_tar0"].get<NeuronIndex>());
 		EXPECT_EQ(test.nid_tar1(), json["nid_tar1"].get<NeuronIndex>());
+		EXPECT_EQ(test.label(), json["label"].get<std::string>());
 
 		auto &test_conn = test.connector();
 		EXPECT_EQ(test_conn.name(), i);
@@ -402,7 +429,8 @@ TEST(ToJson, create_conn_from_json)
 	           {"nid_src1", 8},
 	           {"pid_tar", 1},
 	           {"nid_tar0", 495},
-	           {"nid_tar1", 500}});
+	           {"nid_tar1", 500},
+	           {"label", "test"}});
 	test_conn(json);
 	json["allow_self_connections"] = false;
 	test_conn(json);
@@ -421,7 +449,8 @@ TEST(ToJson, create_conn_from_json)
 	                             {"par", {0.1, 1.1}},
 	                             {"src", 2},
 	                             {"tar", 201},
-	                             {"par", {0.1, 1.2}}}});
+	                             {"par", {0.1, 1.2}},
+	                             {"label", "test"}}});
 	json["syn_name"] = "StaticSynapse";
 	Network netw = Network();
 	auto pop = netw.create_population<IfCondExp>(
@@ -437,6 +466,7 @@ TEST(ToJson, create_conn_from_json)
 	EXPECT_EQ(test.pid_tar(), json["pid_tar"].get<PopulationIndex>());
 	EXPECT_EQ(test.nid_tar0(), json["nid_tar0"].get<NeuronIndex>());
 	EXPECT_EQ(test.nid_tar1(), json["nid_tar1"].get<NeuronIndex>());
+	EXPECT_EQ(test.label(), json["label"].get<std::string>());
 	EXPECT_EQ(test.connector().synapse_name(),
 	          json["syn_name"].get<std::string>());
 }
@@ -445,13 +475,14 @@ void compare_netws(Network &netw, Network &test_net)
 {
 	EXPECT_EQ(test_net.populations(), netw.populations());
 	for (size_t i = 0; i < netw.populations().size(); i++) {
-		auto pop = netw.population()[i];
-		auto test_pop = test_net.population()[i];
+		auto pop = netw.populations()[i];
+		auto test_pop = test_net.populations()[i];
 
 		EXPECT_EQ(test_pop.size(), pop.size());
 		EXPECT_EQ(&test_pop.type(), &pop.type());
 		EXPECT_EQ(test_pop.parameters().parameters(),
 		          pop.parameters().parameters());
+		EXPECT_EQ(test_pop.name(), pop.name());
 		for (size_t j = 0; j < pop.signals().size(); j++) {
 			EXPECT_EQ(test_pop.signals().is_recording(j),
 			          pop.signals().is_recording(j));
@@ -468,18 +499,22 @@ void compare_netws(Network &netw, Network &test_net)
 		}
 	}
 	EXPECT_EQ(netw.connections(), test_net.connections());
+	for (size_t i = 0; i < netw.connections().size(); i++) {
+		EXPECT_EQ(test_net.connections()[i].label(),
+		          netw.connections()[i].label());
+	}
 }
 
 TEST(ToJson, roundtrip_pops)
 {
 	Network netw = Network();
 	auto pop = netw.create_population<IfCondExp>(
-	    10, IfCondExpParameters(), IfCondExpSignals().record_spikes());
+	    10, IfCondExpParameters(), IfCondExpSignals().record_spikes(), "test");
 	auto pop2 = netw.create_population<IfCurrExp>(
 	    500, IfCurrExpParameters(), IfCurrExpSignals().record_v());
 	auto pop3 = netw.create_population<IfFacetsHardware1>(
 	    500, IfFacetsHardware1Parameters(),
-	    IfFacetsHardware1Signals().record_spikes());
+	    IfFacetsHardware1Signals().record_spikes(), "bla");
 	auto pop4 = netw.create_population<SpikeSourceArray>(
 	    20, SpikeSourceArrayParameters().spike_times({3, 4, 5, 6}));
 
@@ -494,6 +529,7 @@ TEST(ToJson, roundtrip_pops)
 	json = Json({{"type", "SpikeSourceArray"},
 	             {"size", 10},
 	             {"parameters", test},
+	             {"label", "möp"},
 	             {"records", {"spikes"}}});
 	netw = Network();
 	ToJson::create_pop_from_json(json, netw);
@@ -504,6 +540,7 @@ TEST(ToJson, roundtrip_pops)
 	json = Json(
 	    {{"type", "IfCondExp"},
 	     {"size", 5},
+	     {"label", "möp2"},
 	     {"parameters", IfCondExpParameters().parameters()},
 	     {"records", Json({{"spikes", std::vector<bool>{0, 0, 0, 0, 1}}})}});
 	ToJson::create_pop_from_json(json, netw);
@@ -512,6 +549,7 @@ TEST(ToJson, roundtrip_pops)
 
 	json = Json({{"type", "IfCondExp"},
 	             {"size", 10},
+	             {"label", "möp3"},
 	             {"parameters", IfCondExpParameters().parameters()},
 	             {"records", Json()}});
 	netw = Network();
@@ -643,13 +681,17 @@ Network create_net_simple_inhib()
 	    SpikeSourceConstFreqParameters().start(100.0).rate(100.0).duration(
 	        1000.0),
 	    SpikeSourceConstFreqSignals().record_spikes());
-	net.add_connection("source2", popview, Connector::all_to_all(-0.015, 1));
+	net.add_connection("source2", popview, Connector::all_to_all(-0.015, 1),
+	                   "test_conn");
 	return net;
 }
 
 TEST(ToJson, roundtrip_network)
 {
 	auto net = create_net_simple();
+	SpikePairRuleAdditive plastic_synapse = SpikePairRuleAdditive();
+	net.add_connection("source", "target",
+	                   Connector::all_to_all(plastic_synapse), "conn");
 
 	Json json(net);
 	auto net_test = json.get<Network>();
@@ -658,7 +700,7 @@ TEST(ToJson, roundtrip_network)
 
 	bool nest_avail = false;
 	try {
-		net.run("nest", 100);
+		net.run("pynn.nest", 100);
 		nest_avail = true;
 	}
 	catch (...) {
@@ -672,6 +714,10 @@ TEST(ToJson, roundtrip_network)
 		net_test = json.get<Network>();
 		compare_netws(net, net_test);
 		EXPECT_EQ(json, Json(net_test));
+		auto weights =
+		    net_test.connections().back().connector().learned_weights();
+		EXPECT_EQ(weights.size(), net.population("source").size() *
+		                              net.population("target").size());
 	}
 
 	net = create_net_simple_inhib();
@@ -811,4 +857,26 @@ TEST(Matrix2Json, roundtrip)
 	test_roundtrip<uint64_t>(3, 4);
 }
 
+TEST(Runtime2Json, runtime2json)
+{
+	NetworkRuntime runtime{1, 2, 3, 4};
+	Json json(runtime);
+	NetworkRuntime runtime2 = json.get<NetworkRuntime>();
+	Json json2(runtime2);
+
+	EXPECT_FLOAT_EQ(runtime.total, json["total"]);
+	EXPECT_FLOAT_EQ(runtime.sim, json["sim"]);
+	EXPECT_FLOAT_EQ(runtime.finalize, json["finalize"]);
+	EXPECT_FLOAT_EQ(runtime.initialize, json["initialize"]);
+	EXPECT_FLOAT_EQ(runtime2.total, json2["total"]);
+	EXPECT_FLOAT_EQ(runtime2.sim, json2["sim"]);
+	EXPECT_FLOAT_EQ(runtime2.finalize, json2["finalize"]);
+	EXPECT_FLOAT_EQ(runtime2.initialize, json2["initialize"]);
+
+	EXPECT_FLOAT_EQ(runtime2.total, runtime.total);
+	EXPECT_FLOAT_EQ(runtime2.sim, runtime.sim);
+	EXPECT_FLOAT_EQ(runtime2.finalize, runtime.finalize);
+	EXPECT_FLOAT_EQ(runtime2.initialize, runtime.initialize);
+	EXPECT_EQ(json, json2);
+}
 }  // namespace cypress
