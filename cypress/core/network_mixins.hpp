@@ -71,7 +71,7 @@ public:
 	 */
 	Impl &name(const std::string &name)
 	{
-		data()->name(name);
+		data()->name() = name;
 		return impl();
 	}
 
