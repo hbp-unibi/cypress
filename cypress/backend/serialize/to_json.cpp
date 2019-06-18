@@ -29,6 +29,7 @@
 #include <thread>
 
 #include <cstdlib>
+#include <system_error>
 
 namespace cypress {
 namespace {
