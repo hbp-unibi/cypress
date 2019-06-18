@@ -26,33 +26,38 @@ using namespace cypress;
 
 int main(int argc, const char *argv[])
 {
-	if (argc != 2 && !NMPI::check_args(argc, argv)) {
-		std::cout << "Usage: " << argv[0] << " <file>" << std::endl;
+	if (argc != 2 && argc != 3 && !NMPI::check_args(argc, argv)) {
+		std::cout << "Usage: " << argv[0] << " <file> [bin]" << std::endl
+		          << "Set [bin] to read a .cbor" << std::endl;
 		return 0;
 	}
 
 	std::ifstream file_in;
-	file_in.open(std::string(argv[1]) + ".cbor", std::ios::binary);
-	Json json = Json::from_cbor(file_in);
+	Json json;
+	if (argc == 3) {
+		file_in.open(std::string(argv[1]) + ".cbor", std::ios::binary);
+		json = Json::from_cbor(file_in);
+	}
+	else {
+		file_in.open(std::string(argv[1]) + ".json", std::ios::binary);
+		json = Json::parse(file_in);
+	}
 	file_in.close();
-
+	global_logger().min_level(LogSeverity(json["log_level"].get<int32_t>()));
 	Network netw = json["network"].get<Network>();
 	auto backend = netw.make_backend(json["simulator"].get<std::string>(), argc,
 	                                 argv, json["setup"]);
 	netw.run(*backend, json["duration"].get<Real>());
 
 	std::ofstream file_out;
-	file_out.open(std::string(argv[1]) + "_res.json", std::ios::binary);
-	//Json::to_cbor(Json(netw), file_out);
-    file_out << Json(netw).dump();
-	file_out.close();
-    
-    file_out.open(std::string(argv[1]) + "_res.cbor", std::ios::binary);
-	Json::to_cbor(Json(netw), file_out);
-	file_out.close();
-    
-    file_out.open(std::string(argv[1]) + "_res.msgpack", std::ios::binary);
-	Json::to_msgpack(Json(netw), file_out);
+	if (argc == 3) {
+		file_out.open(std::string(argv[1]) + "_res.cbor", std::ios::binary);
+		Json::to_cbor(Json(netw), file_out);
+	}
+	else {
+		file_out.open(std::string(argv[1]) + "_res.json", std::ios::binary);
+		file_out << Json(netw);
+	}
 	file_out.close();
 	return 0;
 }

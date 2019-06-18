@@ -33,11 +33,13 @@ class ToJson : public Backend {
 protected:
 	std::string m_simulator;
 	Json m_setup;
+	bool m_save_json = false;
 	void do_run(NetworkBase &network, Real duration) const override;
 
 public:
 	/**
-	 * Constructor of the ToJson backend.
+	 * Constructor of the ToJson backend. If setup sets "save_json" : true, all
+	 * simulation related data will be written to HDD
 	 *
 	 * @param simulator is the name of the simulator backend to be used
 	 * @param setup contains additional setup information that should be passed
@@ -167,8 +169,8 @@ public:
 	 * @return cypress::NetworkBase the newly constructed network
 	 */
 	static NetworkBase network_from_json(std::string path);
-    
-    static void learned_weights_from_json(const Json &json, NetworkBase netw);
+
+	static void learned_weights_from_json(const Json &json, NetworkBase netw);
 };
 
 /**
@@ -192,19 +194,19 @@ void from_json(const Json &j, Network &netw);
 
 /**
  * @brief Read in NetworkRuntime from json: json["sim"] == runtime.sim;
- * 
+ *
  * @param json source json
  * @param runtime target runtime.
  */
-void from_json(const Json &json, NetworkRuntime& runtime);
+void from_json(const Json &json, NetworkRuntime &runtime);
 
 /**
  * @brief NetworkRuntime to json conversion: json["sim"] == runtime.sim;
- * 
+ *
  * @param json target json object
  * @param runtime source NetworkRuntime object
  */
-void to_json(Json &json, const NetworkRuntime& runtime);
+void to_json(Json &json, const NetworkRuntime &runtime);
 
 template <typename T>
 /**

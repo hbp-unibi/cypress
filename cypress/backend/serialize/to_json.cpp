@@ -79,6 +79,10 @@ public:
 ToJson::ToJson(const std::string &simulator, const Json &setup)
     : m_simulator(simulator), m_setup(setup)
 {
+	if (m_setup.find("save_json") != m_setup.end()) {
+		m_save_json = m_setup["save_json"].get<bool>();
+		m_setup.erase(m_setup.find("save_json"));
+	}
 }
 
 ToJson::~ToJson() = default;
@@ -170,6 +174,41 @@ void ToJson::read_recordings_from_json(const Json &pop_data, NetworkBase &netw)
 	}
 }
 
+namespace {
+/**
+ * Helper function to open a fifo for reading (the writing process has to open
+ * the fifo first. Otherwise @res will be directly closed again
+ * @param file_name name of the fifo to open
+ * @param res reference to a filebuffer which will point to fifo
+ */
+void open_fifo_to_read(std::string file_name, std::filebuf &res)
+{
+	while (true) {
+		if (res.open(file_name, std::ios::in)) {
+			break;
+		}
+		usleep(3000);
+	}
+}
+
+/**
+ * Helper function to write network description into a file
+ */
+void pipe_write_helper(std::string file, Json &source)
+{
+	std::filebuf fb_in;
+	fb_in.open(file, std::ios::out);
+	std::ostream data_in(&fb_in);
+	if (!data_in.good()) {
+		throw ExecutionError("Error in pipe to json_exec");
+	}
+	// Send the network description to the simulator
+	data_in << source;
+	fb_in.close();
+	source = {};
+}
+}  // namespace
+
 void ToJson::do_run(NetworkBase &network, Real duration) const
 {
 	Json json_out;
@@ -177,26 +216,20 @@ void ToJson::do_run(NetworkBase &network, Real duration) const
 	json_out["setup"] = m_setup;
 	json_out["duration"] = duration;
 	json_out["network"] = network;
+	json_out["log_level"] = global_logger().min_level();
 
-	std::string path = "test";  // TODO
-	// filesystem::tmpfile(path);
-	std::ofstream file;
-	file.open(path + ".cbor", std::ios::binary);
-	Json::to_cbor(json_out, file);
-	file.close();
+	std::string path = "experiment_XXXXX";
+	filesystem::tmpfile(path);
 
-	file.open(path + ".bson", std::ios::binary);
-	Json::to_bson(json_out, file);
-	file.close();
-
-	file.open(path + ".msgpack", std::ios::binary);
-	Json::to_msgpack(json_out, file);
-	file.close();
-
-	file.open(path + ".json", std::ios::binary);
-	file << json_out;
-	file.close();
-	json_out = {};
+	std::thread data_in(pipe_write_helper, path + ".json", std::ref(json_out));
+	if (!m_save_json) {
+		if (mkfifo((path + ".json").c_str(), 0666) != 0) {
+			throw std::system_error(errno, std::system_category());
+		}
+		if (mkfifo((path + "_res.json").c_str(), 0666) != 0) {
+			throw std::system_error(errno, std::system_category());
+		}
+	}
 
 	Process proc(exec_json_path::instance().path(), {path});
 
@@ -207,23 +240,32 @@ void ToJson::do_run(NetworkBase &network, Real duration) const
 	// Continiously track stderr of child
 	std::thread err_thread(Process::generic_pipe, std::ref(proc.child_stderr()),
 	                       std::ref(std::cerr));
-
-	int res = proc.wait();
-
+	Json result;
+	if (!m_save_json) {
+		std::filebuf fb_res;
+		open_fifo_to_read(path + "_res.json", fb_res);
+		std::istream res_fifo(&fb_res);
+		result = Json::parse(res_fifo);
+		fb_res.close();
+	}
+	data_in.join();
 	err_thread.join();
 	log_thread_beg.join();
+	int res = proc.wait();
 	if (res < 0) {
 		throw ExecutionError(
 		    std::string("Simulator child process killed by signal " +
 		                std::to_string(-res)));
 	}
-
-	std::ifstream file_in;
-	file_in.open(path + "_res.json", std::ios::binary);
-
-	// Json result = Json::from_cbor(file_in);
-	Json result = Json::parse(file_in);
-	file_in.close();
+	if (!m_save_json) {
+		remove((path + "_res.json").c_str());
+		remove((path + ".json").c_str());
+	}
+	else {
+		std::ifstream file_in;
+		file_in.open(path + "_res.json", std::ios::binary);
+		result = Json::parse(file_in);
+	}
 
 	const auto &recs = result["recordings"];
 	for (size_t i = 0; i < recs.size(); i++) {
@@ -232,6 +274,7 @@ void ToJson::do_run(NetworkBase &network, Real duration) const
 		}
 	}
 	learned_weights_from_json(result, network);
+	network.runtime(result["runtime"].get<NetworkRuntime>());
 }
 std::unordered_set<const NeuronType *> ToJson::supported_neuron_types() const
 {
