@@ -400,7 +400,7 @@ public:
 	 *
 	 * @param weights matrix of new weights
 	 */
-	void _store_learned_weights(std::vector<LocalConnection>&& weights)
+	void _store_learned_weights(std::vector<LocalConnection> &&weights)
 	{
 		m_weights = std::move(weights);
 	}
@@ -747,7 +747,7 @@ private:
 	NeuronIndex m_nid_tar0;
 	NeuronIndex m_nid_tar1;
 	std::shared_ptr<Connector> m_connector;
-	std::string m_name;
+	std::string m_label;
 
 public:
 	/**
@@ -756,7 +756,7 @@ public:
 	ConnectionDescriptor(uint32_t pid_src, uint32_t nid_src0, uint32_t nid_src1,
 	                     uint32_t pid_tar, uint32_t nid_tar0, uint32_t nid_tar1,
 	                     std::shared_ptr<Connector> connector = nullptr,
-	                     const char *name = "")
+	                     const char *label = "")
 	    : m_pid_src(pid_src),
 	      m_nid_src0(nid_src0),
 	      m_nid_src1(nid_src1),
@@ -764,7 +764,7 @@ public:
 	      m_nid_tar0(nid_tar0),
 	      m_nid_tar1(nid_tar1),
 	      m_connector(std::move(connector)),
-	      m_name(std::string(name))
+	      m_label(std::string(label))
 	{
 	}
 
@@ -780,8 +780,8 @@ public:
 	NeuronIndex nid_src0() const { return m_nid_src0; }
 
 	/**
-	 * Index of the last-plus-one neuron in the target population involved in the
-	 * connection.
+	 * Index of the last-plus-one neuron in the target population involved in
+	 * the connection.
 	 */
 	NeuronIndex nid_src1() const { return m_nid_src1; }
 
@@ -872,7 +872,12 @@ public:
 		                        m_nid_tar1 - m_nid_tar0);
 	}
 
-	const std::string &name() const { return m_name; }
+	/**
+	 * Return custom connection label
+	 *
+	 * @return label of the connection
+	 */
+	const std::string &label() const { return m_label; }
 };
 
 /**

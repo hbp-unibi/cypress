@@ -175,6 +175,20 @@ public:
 		}
 		return m_connections;
 	}
+
+	/**
+	 * Returns the first connection with name
+	 */
+	ConnectionDescriptor &connections(std::string name)
+	{
+		for (size_t i = 0; i < m_connections.size(); i++) {
+			if (m_connections[i].label() == name) {
+				return m_connections[i];
+			}
+		}
+		throw NoSuchPopulationException(std::string("Connection with name \"") +
+		                                name + "\" does not exist");
+	}
 };
 }  // namespace internal
 
@@ -326,6 +340,11 @@ const std::vector<ConnectionDescriptor> &NetworkBase::connections() const
 	return m_impl->connections();
 }
 
+const ConnectionDescriptor &NetworkBase::connection(std::string name) const
+{
+	return m_impl->connections(name);
+}
+
 static std::vector<std::string> split(const std::string &s, char delim)
 {
 	std::vector<std::string> elems;
@@ -357,7 +376,7 @@ void NetworkBase::update_connection(std::unique_ptr<Connector> connector,
 	std::vector<ConnectionDescriptor> &connections = m_impl->connections();
 	int index = -1;
 	for (size_t i = 0; i < connections.size(); i++) {
-		if (connections[i].name() == name) {
+		if (connections[i].label() == name) {
 			if (index > -1) {
 				throw std::invalid_argument(
 				    "The name of the connection is ambiguous");
@@ -454,10 +473,10 @@ std::unique_ptr<Backend> NetworkBase::make_backend(std::string backend_id,
 	else if (elems[0] == "nest") {
 		return std::make_unique<NEST>(setup);
 	}
-	else if (elems[0] == "json"){
-		elems.erase(elems.begin());  
+	else if (elems[0] == "json") {
+		elems.erase(elems.begin());
 		return std::make_unique<ToJson>(join(elems, '.'), setup);
-    }
+	}
 	else {
 		return std::make_unique<PyNN>(join(elems, '.'), setup);
 	}
