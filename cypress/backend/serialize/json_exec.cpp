@@ -28,7 +28,7 @@ int main(int argc, const char *argv[])
 {
 	if (argc != 2 && !NMPI::check_args(argc, argv)) {
 		std::cout << "Usage: " << argv[0] << " <file>" << std::endl;
-		return 1;
+		return 0;
 	}
 
 	std::ifstream file_in;
@@ -42,8 +42,17 @@ int main(int argc, const char *argv[])
 	netw.run(*backend, json["duration"].get<Real>());
 
 	std::ofstream file_out;
-	file_out.open(std::string(argv[1]) + "_res.cbor", std::ios::binary);
+	file_out.open(std::string(argv[1]) + "_res.json", std::ios::binary);
+	//Json::to_cbor(Json(netw), file_out);
+    file_out << Json(netw).dump();
+	file_out.close();
+    
+    file_out.open(std::string(argv[1]) + "_res.cbor", std::ios::binary);
 	Json::to_cbor(Json(netw), file_out);
+	file_out.close();
+    
+    file_out.open(std::string(argv[1]) + "_res.msgpack", std::ios::binary);
+	Json::to_msgpack(Json(netw), file_out);
 	file_out.close();
 	return 0;
 }

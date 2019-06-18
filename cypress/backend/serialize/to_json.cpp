@@ -28,7 +28,53 @@
 #include <cypress/util/process.hpp>
 #include <thread>
 
+#include <cstdlib>
+
 namespace cypress {
+namespace {
+class exec_json_path {
+private:
+	std::string m_path;
+	exec_json_path()
+	{
+		m_path = "./json_exec";  // local
+		auto ret = std::system((m_path + " &>/dev/null").c_str());
+		if (ret) {
+			global_logger().debug(
+			    "cypress",
+			    "Installed json executable will be used before "
+			    "subproject executable");
+			m_path = "json_exec";  // install
+			ret = std::system((m_path + " &>/dev/null").c_str());
+			if (ret) {
+				m_path = JSON_EXEC_PATH;  // subproject
+				ret = std::system((m_path + " &>/dev/null").c_str());
+				if (ret) {
+					throw std::runtime_error(
+					    "Could not open json executable. Make sure that the "
+					    "binary "
+					    "is either in local path or installed in PATH "
+					    "directory");
+				}
+			}
+		}
+		global_logger().debug("cypress", "Use json exec path " + m_path);
+	};
+
+	~exec_json_path() = default;
+
+public:
+	exec_json_path(exec_json_path const &) = delete;
+	void operator=(exec_json_path const &) = delete;
+	static exec_json_path &instance()
+	{
+		static exec_json_path instance;
+		return instance;
+	}
+
+	std::string path() const { return m_path; }
+};
+}  // namespace
 
 ToJson::ToJson(const std::string &simulator, const Json &setup)
     : m_simulator(simulator), m_setup(setup)
@@ -80,6 +126,7 @@ Json ToJson::connector_to_json(const ConnectionDescriptor &conn)
 	res["pid_tar"] = conn.pid_tar();
 	res["nid_tar0"] = conn.nid_tar0();
 	res["nid_tar1"] = conn.nid_tar1();
+	res["label"] = conn.label();
 
 	const Connector &connector = conn.connector();
 	res["conn_name"] = connector.name();
@@ -128,8 +175,8 @@ void ToJson::do_run(NetworkBase &network, Real duration) const
 	json_out["duration"] = duration;
 	json_out["network"] = network;
 
-	std::string path = "experiment_XXXXX";
-	filesystem::tmpfile(path);
+	std::string path = "test";  // TODO
+	// filesystem::tmpfile(path);
 	std::ofstream file;
 	file.open(path + ".cbor", std::ios::binary);
 	Json::to_cbor(json_out, file);
@@ -148,7 +195,7 @@ void ToJson::do_run(NetworkBase &network, Real duration) const
 	file.close();
 	json_out = {};
 
-	Process proc("examples/json_exec", {path});
+	Process proc(exec_json_path::instance().path(), {path});
 
 	std::thread log_thread_beg(Process::generic_pipe,
 	                           std::ref(proc.child_stdout()),
@@ -169,9 +216,10 @@ void ToJson::do_run(NetworkBase &network, Real duration) const
 	}
 
 	std::ifstream file_in;
-	file_in.open(path + "_res.cbor", std::ios::binary);
+	file_in.open(path + "_res.json", std::ios::binary);
 
-	Json result = Json::from_cbor(file_in);
+	// Json result = Json::from_cbor(file_in);
+	Json result = Json::parse(file_in);
 	file_in.close();
 
 	const auto &recs = result["recordings"];
@@ -180,6 +228,7 @@ void ToJson::do_run(NetworkBase &network, Real duration) const
 			ToJson::read_recordings_from_json(recs[i][j], network);
 		}
 	}
+	learned_weights_from_json(result, network);
 }
 std::unordered_set<const NeuronType *> ToJson::supported_neuron_types() const
 {
@@ -259,12 +308,14 @@ void ToJson::create_pop_from_json(const Json &pop_json, Network &netw)
 	}
 
 	PopulationBase pop = netw.population(pop_ind);
+	pop.name(pop_json["label"].get<std::string>());
 	if (inhomogeneous) {
 		for (size_t i = 0; i < pop.size(); i++) {
 			pop[i].parameters().parameters(
 			    pop_json["parameters"][i].get<std::vector<Real>>());
 		}
 	}
+
 	if (pop_json["records"] == Json()) {
 		return;
 	}
@@ -368,7 +419,8 @@ void ToJson::create_conn_from_json(const Json &con_json, Network &netw)
 	auto tar = pops[con_json["pid_tar"].get<PopulationIndex>()].range(
 	    con_json["nid_tar0"].get<NeuronIndex>(),
 	    con_json["nid_tar1"].get<NeuronIndex>());
-	netw.add_connection(src, tar, std::move(connector));
+	netw.add_connection(src, tar, std::move(connector),
+	                    con_json["label"].get<std::string>().c_str());
 }
 
 NetworkBase ToJson::network_from_json(std::string path)
@@ -395,6 +447,7 @@ Json ToJson::pop_to_json(const PopulationBase &pop)
 {
 	Json res({{"type", NeuronTypesMap.find(&pop.type())->second},
 	          {"size", pop.size()},
+	          {"label", pop.name()},
 	          {"records", {}}});
 	if (pop.homogeneous_parameters()) {
 		res["parameters"] = pop.parameters().parameters();
@@ -459,6 +512,46 @@ Json ToJson::recs_to_json(const PopulationBase &pop)
 	return res;
 }
 
+void ToJson::learned_weights_from_json(const Json &json, NetworkBase netw)
+{
+	if (json.find("learned_weights") != json.end()) {
+		for (size_t ind = 0; ind < json["learned_weights"]["id"].size();
+		     ind++) {
+			auto &connector =
+			    netw.connections()[json["learned_weights"]["id"][ind]];
+			if (json["learned_weights"].find("conns") ==
+			    json["learned_weights"].end()) {
+				continue;
+			}
+			auto &temp = json["learned_weights"]["conns"][ind];
+			std::vector<LocalConnection> conns(temp.size());
+			for (size_t conn = 0; conn < conns.size(); conn++) {
+				conns[conn].src = temp[conn]["src"].get<NeuronIndex>();
+				conns[conn].tar = temp[conn]["tar"].get<NeuronIndex>();
+				conns[conn].SynapseParameters =
+				    temp[conn]["params"].get<std::vector<Real>>();
+			}
+			connector.connector()._store_learned_weights(std::move(conns));
+		}
+	}
+}
+
+void from_json(const Json &json, NetworkRuntime &runtime)
+{
+	runtime.total = json["total"].get<Real>();
+	runtime.sim = json["sim"].get<Real>();
+	runtime.finalize = json["finalize"].get<Real>();
+	runtime.initialize = json["initialize"].get<Real>();
+}
+
+void to_json(Json &json, const NetworkRuntime &runtime)
+{
+	json["total"] = runtime.total;
+	json["sim"] = runtime.sim;
+	json["finalize"] = runtime.finalize;
+	json["initialize"] = runtime.initialize;
+}
+
 void to_json(Json &result, const Network &network)
 {
 	const std::vector<PopulationBase> &populations = network.populations();
@@ -467,6 +560,20 @@ void to_json(Json &result, const Network &network)
 	for (size_t i = 0; i < network.connections().size(); i++) {
 		result["connections"].emplace_back(
 		    ToJson::connector_to_json(network.connections()[i]));
+		if (network.connections()[i].connector().synapse()->learning()) {
+			auto &conns =
+			    network.connections()[i].connector().learned_weights();
+			result["learned_weights"]["id"].emplace_back(i);
+			Json tmp;
+			for (auto conn : conns) {
+				Json json;
+				json["src"] = conn.src;
+				json["tar"] = conn.tar;
+				json["params"] = conn.SynapseParameters;
+				tmp.emplace_back(json);
+			}
+			result["learned_weights"]["conns"].emplace_back(tmp);
+		}
 	}
 	for (size_t i = 0; i < populations.size(); i++) {
 		if (populations[i].size() == 0) {
@@ -475,9 +582,7 @@ void to_json(Json &result, const Network &network)
 		result["recordings"].emplace_back(ToJson::recs_to_json(populations[i]));
 	}
 
-	// Runtime TODO
-
-	// Learned Weights TODO
+	result["runtime"] = network.runtime();
 }
 
 void from_json(const Json &json, Network &netw)
@@ -498,7 +603,8 @@ void from_json(const Json &json, Network &netw)
 		}
 	}
 
-	// Runtime //TODO
+	netw.runtime(json["runtime"].get<NetworkRuntime>());
+	ToJson::learned_weights_from_json(json, netw);
 }
 
 }  // namespace cypress

@@ -48,9 +48,6 @@ target_link_libraries(time_consumption_connectors cypress)
 add_executable(plastic_synapses STDP)
 target_link_libraries(plastic_synapses cypress)
 
-add_executable(json_exec run_json)
-target_link_libraries(json_exec cypress)
-
 execute_process(COMMAND cmake -E create_symlink
     ${CMAKE_BINARY_DIR}/libBS2CYPRESS.so
     ${CMAKE_CURRENT_BINARY_DIR}/libBS2CYPRESS.so

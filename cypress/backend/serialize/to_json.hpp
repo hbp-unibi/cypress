@@ -167,6 +167,8 @@ public:
 	 * @return cypress::NetworkBase the newly constructed network
 	 */
 	static NetworkBase network_from_json(std::string path);
+    
+    static void learned_weights_from_json(const Json &json, NetworkBase netw);
 };
 
 /**
@@ -187,6 +189,22 @@ void to_json(Json &j, const Network &netw);
  * network will not be deleted!
  */
 void from_json(const Json &j, Network &netw);
+
+/**
+ * @brief Read in NetworkRuntime from json: json["sim"] == runtime.sim;
+ * 
+ * @param json source json
+ * @param runtime target runtime.
+ */
+void from_json(const Json &json, NetworkRuntime& runtime);
+
+/**
+ * @brief NetworkRuntime to json conversion: json["sim"] == runtime.sim;
+ * 
+ * @param json target json object
+ * @param runtime source NetworkRuntime object
+ */
+void to_json(Json &json, const NetworkRuntime& runtime);
 
 template <typename T>
 /**
