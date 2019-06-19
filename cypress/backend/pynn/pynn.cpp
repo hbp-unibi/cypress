@@ -108,11 +108,11 @@ static const std::vector<std::string> SUPPORTED_SIMULATORS = {
  * includes but the names that "feel more correct".
  */
 static const std::unordered_map<std::string, std::string>
-    NORMALISED_SIMULATOR_NAMES = {
-        {"spinnaker", "nmmc1"},
-        {"hardware.spikey", "spikey"},
-        {"spikey", "spikey"}, {"nest", "nest"},
-        {"nm-mc1", "nmmc1"}};
+    NORMALISED_SIMULATOR_NAMES = {{"spinnaker", "nmmc1"},
+                                  {"hardware.spikey", "spikey"},
+                                  {"spikey", "spikey"},
+                                  {"nest", "nest"},
+                                  {"nm-mc1", "nmmc1"}};
 
 /**
  * Maps certain simulator names to the correct PyNN module names. If multiple
@@ -123,15 +123,13 @@ static const std::unordered_map<std::string, std::string> SIMULATOR_IMPORT_MAP =
      {"nmmc1", "pyNN.spiNNaker"},
      {"spikey", "pyNN.hardware.spikey"}};
 
-
-
 /**
  * Map between the canonical system names and the
  */
 static const std::unordered_map<std::string, SystemProperties>
     SIMULATOR_PROPERTIES = {{"nest", {false, false, false}},
                             {"nmmc1", {false, true, false}},
-                            {"spikey", {true, true, false}}}; //TODO WHAT FOR?
+                            {"spikey", {true, true, false}}};  // TODO WHAT FOR?
 
 /**
  * Map containing some default setup for the simulators.
@@ -236,9 +234,9 @@ public:
 	std::vector<bool> has_imports(const std::vector<std::string> &imports)
 	{
 		std::lock_guard<std::mutex> lock(util_mutex);
-        PythonInstance::instance();
+		PythonInstance::instance();
 		std::vector<bool> res;
-		for (auto& i : imports) {
+		for (auto &i : imports) {
 			bool temp = check_python_import(i);
 			res.push_back(temp);
 		}
@@ -325,7 +323,7 @@ PyNN::PyNN(const std::string &simulator, const Json &setup)
     : m_simulator(simulator), m_setup(setup)
 {
 	PythonInstance::instance();
-    // Lookup the canonical simulator name and the
+	// Lookup the canonical simulator name and the
 	auto res = PYNN_UTIL.lookup_simulator(simulator);
 
 	m_normalised_simulator = res.first;
@@ -349,7 +347,7 @@ PyNN::PyNN(const std::string &simulator, const Json &setup)
 	// Delete config option for SLURM
 	m_setup.erase("slurm_mode");
 	m_setup.erase("slurm_filename");
-    m_setup.erase("station");
+	m_setup.erase("station");
 }
 
 PyNN::~PyNN() = default;
@@ -437,7 +435,6 @@ std::vector<std::string> PyNN::simulators()
 	return res;
 }
 
-
 int PyNN::get_neo_version()
 {
 	int pynn_v = get_pynn_version();
@@ -492,7 +489,7 @@ py::dict PyNN::json_to_dict(Json json)
 		}
 		else if (value.is_array()) {  // structured
 			py::list list;
-			for (auto& entry : value) {
+			for (auto &entry : value) {
 				if (entry.is_number_float()) {
 					list.append(double(entry));
 				}
@@ -577,7 +574,7 @@ void PyNN::init_logger()
 }
 
 py::object PyNN::create_source_population(const PopulationBase &pop,
-                                           py::module &pynn)
+                                          py::module &pynn)
 {
 	// Create Spike Source
 	py::dict neuron_params;
@@ -596,7 +593,7 @@ py::object PyNN::create_source_population(const PopulationBase &pop,
 }
 
 py::object PyNN::create_homogeneous_pop(const PopulationBase &pop,
-                                         py::module &pynn, bool &init_available)
+                                        py::module &pynn, bool &init_available)
 {
 	py::dict neuron_params;
 	const auto &params = pop[0].parameters();
@@ -629,7 +626,7 @@ py::object PyNN::create_homogeneous_pop(const PopulationBase &pop,
 }
 
 void PyNN::set_inhomogeneous_parameters(const PopulationBase &pop,
-                                         py::object &pypop, bool init_available)
+                                        py::object &pypop, bool init_available)
 {
 	auto idx = pop[0].type().parameter_index("v_rest");
 	const auto &params = pop[0].parameters();
@@ -653,7 +650,7 @@ void PyNN::set_inhomogeneous_parameters(const PopulationBase &pop,
 
 void PyNN::set_homogeneous_rec(const PopulationBase &pop, py::object &pypop)
 {
-	const std::vector<std::string>& signals = pop.type().signal_names;
+	const std::vector<std::string> &signals = pop.type().signal_names;
 	for (size_t j = 0; j < signals.size(); j++) {
 		if (pop.signals().is_recording(j)) {
 			pypop.attr("record")(signals[j].c_str());
@@ -662,9 +659,9 @@ void PyNN::set_homogeneous_rec(const PopulationBase &pop, py::object &pypop)
 }
 
 void PyNN::set_inhomogenous_rec(const PopulationBase &pop, py::object &pypop,
-                                 py::module &pynn)
+                                py::module &pynn)
 {
-	const std::vector<std::string>& signals = pop.type().signal_names;
+	const std::vector<std::string> &signals = pop.type().signal_names;
 	for (size_t j = 0; j < signals.size(); j++) {
 		std::vector<uint64_t> neuron_ids;
 		for (uint64_t k = 0; k < pop.size(); k++) {
@@ -684,8 +681,8 @@ void PyNN::set_inhomogenous_rec(const PopulationBase &pop, py::object &pypop,
 }
 
 py::object PyNN::get_pop_view(const py::module &pynn, const py::object &py_pop,
-                               const PopulationBase &c_pop, const size_t &start,
-                               const size_t &end)
+                              const PopulationBase &c_pop, const size_t &start,
+                              const size_t &end)
 {
 	if (start == 0 && end == c_pop.size()) {
 		return py_pop;
@@ -703,7 +700,7 @@ py::object PyNN::get_pop_view(const py::module &pynn, const py::object &py_pop,
 }
 
 py::object PyNN::get_connector7(const ConnectionDescriptor &conn,
-                                 const py::module &pynn)
+                                const py::module &pynn)
 {
 	auto params = conn.connector().synapse()->parameters();
 	std::string name = conn.connector().synapse()->name();
@@ -749,9 +746,9 @@ py::object PyNN::get_connector7(const ConnectionDescriptor &conn,
 }
 
 py::object PyNN::get_connector(const std::string &connector_name,
-                                const py::module &pynn,
-                                const Real &additional_parameter,
-                                const bool allow_self_connections)
+                               const py::module &pynn,
+                               const Real &additional_parameter,
+                               const bool allow_self_connections)
 {
 	if (connector_name == "AllToAllConnector") {
 		return pynn.attr(connector_name.c_str())(
@@ -803,12 +800,56 @@ inline py::object fallback_connector(
 	return std::get<1>(ret);
 }
 
+inline py::object get_synapse(const std::string &name,
+                              const std::vector<Real> &params,
+                              const py::module &pynn, const Real &weight,
+                              const Real &delay)
+{
+	py::object synapse;
+	if (name == "StaticSynapse") {
+		synapse =
+		    pynn.attr("StaticSynapse")("weight"_a = weight, "delay"_a = delay);
+	}
+	else if (name == "SpikePairRuleAdditive") {
+		py::object timing_dependence = pynn.attr("SpikePairRule")(
+		    "tau_plus"_a = params[2], "tau_minus"_a = params[3],
+		    "A_plus"_a = params[4], "A_minus"_a = params[5]);
+		py::object weight_dependence = pynn.attr("AdditiveWeightDependence")(
+		    "w_min"_a = params[6], "w_max"_a = params[7]);
+		synapse = pynn.attr("STDPMechanism")(
+		    "weight"_a = weight, "delay"_a = delay,
+		    "timing_dependence"_a = timing_dependence,
+		    "weight_dependence"_a = weight_dependence);
+	}
+	else if (name == "SpikePairRuleMultiplicative") {
+		py::object timing_dependence = pynn.attr("SpikePairRule")(
+		    "tau_plus"_a = params[2], "tau_minus"_a = params[3],
+		    "A_plus"_a = params[4], "A_minus"_a = params[5]);
+		py::object weight_dependence =
+		    pynn.attr("MultiplicativeWeightDependence")("w_min"_a = params[6],
+		                                                "w_max"_a = params[7]);
+		synapse = pynn.attr("STDPMechanism")(
+		    "weight"_a = weight, "delay"_a = delay,
+		    "timing_dependence"_a = timing_dependence,
+		    "weight_dependence"_a = weight_dependence);
+	}
+	else if (name == "TsodyksMarkramMechanism") {
+		synapse = pynn.attr("TsodyksMarkramSynapse")(
+		    "weight"_a = weight, "delay"_a = delay, "U"_a = params[2],
+		    "tau_rec"_a = params[3], "tau_facil"_a = params[4]);
+	}
+	else {
+		throw ExecutionError(name + " is not supported for this backend!");
+	}
+	return synapse;
+}
+
 }  // namespace
 py::object PyNN::group_connect(const std::vector<PopulationBase> &populations,
-                                const std::vector<py::object> &pypopulations,
-                                const ConnectionDescriptor &conn,
-                                const py::module &pynn, bool nest_flag,
-                                const Real timestep)
+                               const std::vector<py::object> &pypopulations,
+                               const ConnectionDescriptor &conn,
+                               const py::module &pynn, bool nest_flag,
+                               const Real timestep)
 {
 	if (popview_warnign_emitted) {
 		return fallback_connector(populations, pypopulations, conn, pynn,
@@ -817,7 +858,7 @@ py::object PyNN::group_connect(const std::vector<PopulationBase> &populations,
 	py::object source, target;
 	std::string conn_name =
 	    SUPPORTED_CONNECTIONS.find(conn.connector().name())->second;
-	const auto& params = conn.connector().synapse()->parameters();
+	const auto &params = conn.connector().synapse()->parameters();
 	std::string name = conn.connector().synapse()->name();
 	try {
 		source = get_pop_view(pynn, pypopulations[conn.pid_src()],
@@ -863,43 +904,7 @@ py::object PyNN::group_connect(const std::vector<PopulationBase> &populations,
 
 	double weight = current_based ? params[0] : fabs(params[0]);
 
-	py::object synapse;
-	if (name == "StaticSynapse") {
-		synapse =
-		    pynn.attr("StaticSynapse")("weight"_a = weight, "delay"_a = delay);
-	}
-	else if (name == "SpikePairRuleAdditive") {
-		py::object timing_dependence = pynn.attr("SpikePairRule")(
-		    "tau_plus"_a = params[2], "tau_minus"_a = params[3],
-		    "A_plus"_a = params[4], "A_minus"_a = params[5]);
-		py::object weight_dependence = pynn.attr("AdditiveWeightDependence")(
-		    "w_min"_a = params[6], "w_max"_a = params[7]);
-		synapse = pynn.attr("STDPMechanism")(
-		    "weight"_a = weight, "delay"_a = delay,
-		    "timing_dependence"_a = timing_dependence,
-		    "weight_dependence"_a = weight_dependence);
-	}
-	else if (name == "SpikePairRuleMultiplicative") {
-		py::object timing_dependence = pynn.attr("SpikePairRule")(
-		    "tau_plus"_a = params[2], "tau_minus"_a = params[3],
-		    "A_plus"_a = params[4], "A_minus"_a = params[5]);
-		py::object weight_dependence =
-		    pynn.attr("MultiplicativeWeightDependence")("w_min"_a = params[6],
-		                                                "w_max"_a = params[7]);
-		synapse = pynn.attr("STDPMechanism")(
-		    "weight"_a = weight, "delay"_a = delay,
-		    "timing_dependence"_a = timing_dependence,
-		    "weight_dependence"_a = weight_dependence);
-	}
-	else if (name == "TsodyksMarkramMechanism") {
-		synapse = pynn.attr("TsodyksMarkramSynapse")(
-		    "weight"_a = weight, "delay"_a = delay, "U"_a = params[2],
-		    "tau_rec"_a = params[3], "tau_facil"_a = params[4]);
-	}
-	else {
-		throw ExecutionError(conn.connector().synapse()->name() +
-		                     " is not supported for this backend!");
-	}
+	py::object synapse = get_synapse(name, params, pynn, weight, delay);
 	try {
 		return pynn.attr("Projection")(
 		    source, target,
@@ -920,13 +925,13 @@ py::object PyNN::group_connect(const std::vector<PopulationBase> &populations,
 }
 
 py::object PyNN::group_connect7(const std::vector<PopulationBase> &,
-                                 const std::vector<py::object> &pypopulations,
-                                 const ConnectionDescriptor &conn,
-                                 const py::module &pynn)
+                                const std::vector<py::object> &pypopulations,
+                                const ConnectionDescriptor &conn,
+                                const py::module &pynn)
 {
 	std::string conn_name =
 	    SUPPORTED_CONNECTIONS.find(conn.connector().name())->second;
-	const auto& params = conn.connector().synapse()->parameters();
+	const auto &params = conn.connector().synapse()->parameters();
 	std::string name = conn.connector().synapse()->name();
 
 	py::object source = pypopulations[conn.pid_src()];
@@ -987,32 +992,28 @@ std::tuple<py::object, py::object> PyNN::list_connect(
     const ConnectionDescriptor conn, const py::module &pynn,
     const bool current_based, const Real timestep)
 {
-	if (conn.connector().synapse_name() != "StaticSynapse") {
-		// TODO
-		throw ExecutionError(
-		    "Only static synapses are supported for this backend for list "
-		    "connections!");
-	}
 	std::tuple<py::object, py::object> ret =
 	    std::make_tuple(py::object(), py::object());
 	std::vector<LocalConnection> conns_full;
 	size_t num_inh = 0;
 	conn.connect(conns_full);
-	for (auto& i : conns_full) {
+	for (auto &i : conns_full) {
 		if (i.inhibitory()) {
 			num_inh++;
 		}
 	}
+	size_t num_syn_params = conns_full[0].SynapseParameters.size();
 	Matrix<Real> *conns_exc = nullptr, *conns_inh = nullptr;
 	if (conns_full.size() - num_inh > 0) {
-		conns_exc = new Matrix<Real>(conns_full.size() - num_inh, 4);
+		conns_exc =
+		    new Matrix<Real>(conns_full.size() - num_inh, 2 + num_syn_params);
 	}
 	if (num_inh > 0) {
-		conns_inh = new Matrix<Real>(num_inh, 4);
+		conns_inh = new Matrix<Real>(num_inh, 2 + num_syn_params);
 	}
 
 	size_t counter_ex = 0, counter_in = 0;
-	for (auto& i : conns_full) {
+	for (auto &i : conns_full) {
 		if (i.SynapseParameters[0] >= 0) {
 			(*conns_exc)(counter_ex, 0) = i.src;
 			(*conns_exc)(counter_ex, 1) = i.tar;
@@ -1025,6 +1026,9 @@ std::tuple<py::object, py::object> PyNN::list_connect(
 			}
 			else {
 				(*conns_exc)(counter_ex, 3) = i.SynapseParameters[1];
+			}
+			for (size_t j = 2; j < i.SynapseParameters.size(); j++) {
+				(*conns_exc)(counter_ex, 2 + j) = i.SynapseParameters[j];
 			}
 			counter_ex++;
 		}
@@ -1046,9 +1050,18 @@ std::tuple<py::object, py::object> PyNN::list_connect(
 			else {
 				(*conns_inh)(counter_in, 3) = i.SynapseParameters[1];
 			}
+			for (size_t j = 2; j < i.SynapseParameters.size(); j++) {
+				(*conns_exc)(counter_ex, 2 + j) = i.SynapseParameters[j];
+			}
 			counter_in++;
 		}
 	}
+	auto synapse_type =
+	    get_synapse(conn.connector().synapse_name(),
+	                conn.connector().synapse()->parameters(), pynn, 0.0, 1.0);
+	const std::vector<std::string> &syn_param_names =
+	    conn.connector().synapse()->parameter_names();
+	py::list py_names = py::cast(syn_param_names);
 
 	if (conns_full.size() - num_inh > 0) {
 		auto capsule = py::capsule(conns_exc, [](void *v) {
@@ -1056,12 +1069,11 @@ std::tuple<py::object, py::object> PyNN::list_connect(
 		});
 		py::array temp_array({(*conns_exc).rows(), (*conns_exc).cols()},
 		                     (*conns_exc).data(), capsule);
-		py::object connector = pynn.attr("FromListConnector")(temp_array);
+		py::object connector = pynn.attr("FromListConnector")(
+		    temp_array, "column_names"_a = py_names);
 		std::get<0>(ret) = pynn.attr("Projection")(
 		    pypopulations[conn.pid_src()], pypopulations[conn.pid_tar()],
-		    connector,
-		    "synapse_type"_a =
-		        pynn.attr("StaticSynapse")("weight"_a = 0, "delay"_a = 1),
+		    connector, "synapse_type"_a = synapse_type,
 		    "receptor_type"_a = "excitatory");
 	}
 	if (num_inh > 0) {
@@ -1071,21 +1083,18 @@ std::tuple<py::object, py::object> PyNN::list_connect(
 		py::array temp_array({(*conns_inh).rows(), (*conns_inh).cols()},
 		                     (*conns_inh).data(), capsule);
 
-		py::object connector = pynn.attr("FromListConnector")(temp_array);
+		py::object connector = pynn.attr("FromListConnector")(
+		    temp_array, "column_names"_a = py_names);
 		if (!current_based) {
 			std::get<1>(ret) = pynn.attr("Projection")(
 			    pypopulations[conn.pid_src()], pypopulations[conn.pid_tar()],
-			    connector,
-			    "synapse_type"_a =
-			        pynn.attr("StaticSynapse")("weight"_a = 0, "delay"_a = 1),
+			    connector, "synapse_type"_a = synapse_type,
 			    "receptor_type"_a = "inhibitory");
 		}
 		else {
 			std::get<1>(ret) = pynn.attr("Projection")(
 			    pypopulations[conn.pid_src()], pypopulations[conn.pid_tar()],
-			    connector,
-			    "synapse_type"_a =
-			        pynn.attr("StaticSynapse")("weight"_a = 0, "delay"_a = 1));
+			    connector, "synapse_type"_a = synapse_type);
 		}
 	}
 	return ret;
@@ -1106,7 +1115,7 @@ std::tuple<py::object, py::object> PyNN::list_connect7(
 	std::tuple<py::object, py::object> ret =
 	    std::make_tuple(py::object(), py::object());
 
-	for (const auto& conn : conns_full) {
+	for (const auto &conn : conns_full) {
 		py::list local_conn;
 		local_conn.append(conn.src);
 		local_conn.append(conn.tar);
@@ -1216,7 +1225,7 @@ Matrix<T> PyNN::matrix_from_numpy(const py::object &object, bool transposed)
 }
 
 void PyNN::fetch_data_nest(const std::vector<PopulationBase> &populations,
-                            const std::vector<py::object> &pypopulations)
+                           const std::vector<py::object> &pypopulations)
 {
 	for (size_t i = 0; i < populations.size(); i++) {
 		if (populations[i].size() == 0) {
@@ -1327,7 +1336,7 @@ void PyNN::fetch_data_nest(const std::vector<PopulationBase> &populations,
 }
 
 void PyNN::fetch_data_spinnaker(const std::vector<PopulationBase> &populations,
-                                 const std::vector<py::object> &pypopulations)
+                                const std::vector<py::object> &pypopulations)
 {
 	for (size_t i = 0; i < populations.size(); i++) {
 		if (populations[i].size() == 0) {
@@ -1407,7 +1416,7 @@ void PyNN::fetch_data_spinnaker(const std::vector<PopulationBase> &populations,
 }
 
 void PyNN::fetch_data_neo(const std::vector<PopulationBase> &populations,
-                           const std::vector<py::object> &pypopulations)
+                          const std::vector<py::object> &pypopulations)
 {
 	int neo_v = get_neo_version();
 	for (size_t i = 0; i < populations.size(); i++) {
@@ -1501,7 +1510,7 @@ void PyNN::fetch_data_neo(const std::vector<PopulationBase> &populations,
 					py::object py_times =
 					    analogsignals[signal_index].attr("times");
 					Matrix<double> time = matrix_from_numpy<double>(py_times);
-					if (neo_v > 4&& !new_spinnaker) {
+					if (neo_v > 4 && !new_spinnaker) {
 						py::object py_pydata =
 						    analogsignals[signal_index].attr("as_array")();
 						Matrix<double> pydata =
@@ -1523,8 +1532,8 @@ void PyNN::fetch_data_neo(const std::vector<PopulationBase> &populations,
 					}
 					else {
 						for (size_t k = 0; k < neuron_ids.size(); k++) {
-                            py::list transposed = py::list(
-							        analogsignals[signal_index].attr("T"));
+							py::list transposed =
+							    py::list(analogsignals[signal_index].attr("T"));
 							Matrix<double> pydata =
 							    matrix_from_numpy<double>(transposed[k]);
 							auto data = std::make_shared<Matrix<Real>>(
@@ -1685,7 +1694,7 @@ void PyNN::do_run(NetworkBase &source, Real duration) const
 
 	std::vector<std::tuple<size_t, py::object>> group_projections;
 	for (size_t i = 0; i < source.connections().size(); i++) {
-		const auto& conn = source.connections()[i];
+		const auto &conn = source.connections()[i];
 		auto it = SUPPORTED_CONNECTIONS.find(conn.connector().name());
 
 		if (it != SUPPORTED_CONNECTIONS.end() &&
@@ -1766,7 +1775,7 @@ void PyNN::do_run(NetworkBase &source, Real duration) const
 }
 
 py::object PyNN::spikey_create_source_population(const PopulationBase &pop,
-                                                  py::module &pynn)
+                                                 py::module &pynn)
 {
 	// This covers all spike sources!
 
@@ -1790,7 +1799,7 @@ py::object PyNN::spikey_create_source_population(const PopulationBase &pop,
 }
 
 py::object PyNN::spikey_create_homogeneous_pop(const PopulationBase &pop,
-                                                py::module &pynn)
+                                               py::module &pynn)
 {
 	py::dict neuron_params;
 	const auto &params = pop[0].parameters();
@@ -1811,7 +1820,7 @@ py::object PyNN::spikey_create_homogeneous_pop(const PopulationBase &pop,
 	return pypop;
 }
 void PyNN::spikey_set_homogeneous_rec(const PopulationBase &pop,
-                                       py::object &pypop, py::module &pynn)
+                                      py::object &pypop, py::module &pynn)
 {
 	std::vector<std::string> signals = pop.type().signal_names;
 	for (size_t j = 0; j < signals.size(); j++) {
@@ -1833,7 +1842,7 @@ void PyNN::spikey_set_homogeneous_rec(const PopulationBase &pop,
 }
 
 void PyNN::spikey_set_inhomogeneous_rec(const PopulationBase &pop,
-                                         py::object &pypop, py::module pynn)
+                                        py::object &pypop, py::module pynn)
 {
 	std::vector<std::string> signals = pop.type().signal_names;
 	py::list pypop_list = py::list(pypop);
@@ -1871,7 +1880,7 @@ void PyNN::spikey_set_inhomogeneous_rec(const PopulationBase &pop,
 }
 
 void PyNN::spikey_set_inhomogeneous_parameters(const PopulationBase &pop,
-                                                py::object &pypop)
+                                               py::object &pypop)
 {
 	const auto &params = pop[0].parameters();
 	const auto &param_names = pop.type().parameter_names;
@@ -2032,7 +2041,7 @@ std::vector<LocalConnection> spikey_get_weights(py::object &proj,
 }  // namespace
 
 void PyNN::spikey_run(NetworkBase &source, Real duration, py::module &pynn,
-                       py::dict dict)
+                      py::dict dict)
 {
 	auto start = std::chrono::system_clock::now();
 	py::module pylogging = py::module::import("pylogging");
@@ -2101,7 +2110,7 @@ void PyNN::spikey_run(NetworkBase &source, Real duration, py::module &pynn,
 	std::vector<std::tuple<size_t, py::object>> group_projections;
 
 	for (size_t i = 0; i < source.connections().size(); i++) {
-		const auto& conn = source.connections()[i];
+		const auto &conn = source.connections()[i];
 		auto it = SUPPORTED_CONNECTIONS.find(conn.connector().name());
 
 		if (it != SUPPORTED_CONNECTIONS.end() &&

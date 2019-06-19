@@ -426,6 +426,29 @@ public:
 	 * Create a list connector which creates connections according to the given
 	 * list.
 	 *
+	 * @param connections is a list of connections that should be created.
+	 * @param synapse prototype synapse for non-standard synapses
+	 * @return Unique pointer to the connector
+	 */
+	static std::unique_ptr<FromListConnector> from_list(
+	    const std::vector<LocalConnection> &connections, SynapseBase &synapse);
+
+	/**
+	 * Create a list connector which creates connections according to the given
+	 * list.
+	 *
+	 * @param connections is a list of connections that should be created.
+	 * @param synapse prototype synapse for non-standard synapses
+	 * @return Unique pointer to the connector
+	 */
+	static std::unique_ptr<FromListConnector> from_list(
+	    std::initializer_list<LocalConnection> connections,
+	    SynapseBase &synapse);
+
+	/**
+	 * Create a list connector which creates connections according to the given
+	 * list.
+	 *
 	 * @param cback is a function which is called for each neuron-pair in the
 	 * two populations and which is supposed to return a synapse description. If
 	 * the returned synapse is invalid, no connection is created.
@@ -932,16 +955,41 @@ public:
 class FromListConnector : public Connector {
 private:
 	std::vector<LocalConnection> m_connections;
+	void check_synapse()
+	{
+		if (m_synapse->parameter_names().size() !=
+		    m_connections[0].SynapseParameters.size()) {
+			throw CypressException(
+			    "Please provide an instance of the synapse type in the from "
+			    "list connector!");
+		}
+	}
 
 public:
+	explicit FromListConnector(std::vector<LocalConnection> connections,
+	                           SynapseBase &synapse)
+	    : Connector(synapse, true), m_connections(std::move(connections))
+	{
+		check_synapse();
+	}
+
+	FromListConnector(std::initializer_list<LocalConnection> connections,
+	                  SynapseBase &synapse)
+	    : Connector(synapse, true), m_connections(connections)
+	{
+		check_synapse();
+	}
+
 	explicit FromListConnector(std::vector<LocalConnection> connections)
 	    : Connector(0.0, 0.0, true), m_connections(std::move(connections))
 	{
+		check_synapse();
 	}
 
 	FromListConnector(std::initializer_list<LocalConnection> connections)
 	    : Connector(0.0, 0.0, true), m_connections(connections)
 	{
+		check_synapse();
 	}
 
 	~FromListConnector() override = default;
@@ -1425,6 +1473,18 @@ inline std::unique_ptr<OneToOneConnector> Connector::one_to_one(
     SynapseBase &synapse)
 {
 	return std::make_unique<OneToOneConnector>(synapse);
+}
+
+inline std::unique_ptr<FromListConnector> Connector::from_list(
+    const std::vector<LocalConnection> &connections, SynapseBase &synapse)
+{
+	return std::make_unique<FromListConnector>(connections, synapse);
+}
+
+inline std::unique_ptr<FromListConnector> Connector::from_list(
+    std::initializer_list<LocalConnection> connections, SynapseBase &synapse)
+{
+	return std::make_unique<FromListConnector>(connections, synapse);
 }
 
 inline std::unique_ptr<FromListConnector> Connector::from_list(
