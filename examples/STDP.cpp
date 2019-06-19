@@ -76,7 +76,8 @@ int main(int argc, const char *argv[])
 	                                             .w_min(0.0);
 	// This is optional, weight and delay can be directly passed to connector
 	StaticSynapse trigger_synapse({0.015, 1});
-	net.add_connection(source, target, Connector::one_to_one(plasctic_synapse));
+	net.add_connection(source, target, Connector::one_to_one(plasctic_synapse),
+	                   "plastic");
 	net.add_connection(trigger, target, Connector::all_to_all(trigger_synapse));
 
 	// Run the simulation
@@ -89,7 +90,8 @@ int main(int argc, const char *argv[])
 	}
 
 	// Fetch learned weights
-	const auto &weights = net.connections()[0].connector().learned_weights();
+	const auto &weights =
+	    net.connection("plastic").connector().learned_weights();
 
 	// Plot weight - time dependence
 	// Calculate x: first_post_spike - pre_spike
