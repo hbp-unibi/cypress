@@ -134,8 +134,7 @@ void write_parameters(std::ostream &os, const IfCondExpParameters &params)
 void write_parameters(std::ostream &os, const IfCurrExpParameters &params)
 {
 	os << "<< " << kv("C_m", params.cm() * 1e3)  // nF -> pF
-	   << kv("tau_m", params.tau_m())
-	   << kv("tau_syn_ex", params.tau_syn_E())
+	   << kv("tau_m", params.tau_m()) << kv("tau_syn_ex", params.tau_syn_E())
 	   << kv("tau_syn_in", params.tau_syn_I())
 	   << kv("t_ref", params.tau_refrac()) << kv("V_reset", params.v_reset())
 	   << kv("V_th", params.v_thresh()) << kv("E_L", params.v_rest())
@@ -195,7 +194,7 @@ RecordInfo record_info(const Neuron<IfCondExp> &n)
 RecordInfo record_info(const Neuron<IfCurrExp> &n)
 {
 	return {n.signals().is_recording_spikes(), n.signals().is_recording_v(),
-            false, false};
+	        false, false};
 }
 
 RecordInfo record_info(const Neuron<EifCondExpIsfaIsta> &n)
@@ -312,19 +311,21 @@ void write_connections(std::ostream &os,
 	}
 
 	// Vector containing all connection objects
-	std::vector<Connection> connections = instantiate_connections(descrs);
-	for (const auto &connection : connections) {
-		const auto it_src = pop_gid_map.find(connection.psrc);
-		const auto it_tar = pop_gid_map.find(connection.ptar);
+	auto connections = instantiate_connections(descrs);
+	for (size_t i = 0; i < descrs.size(); i++) {
+		const auto it_src = pop_gid_map.find(descrs[i].pid_src());
+		const auto it_tar = pop_gid_map.find(descrs[i].pid_tar());
 		if (it_src == pop_gid_map.end() || it_tar == pop_gid_map.end()) {
 			continue;
 		}
-		os << (it_src->second + connection.n.src) << " "
-		   << (it_tar->second + connection.n.tar) << " " << std::showpoint
-		   << connection.n.SynapseParameters[0] * 1e3 << " "
-		   << std::showpoint  // uS -> nS
-		   << std::max(params.timestep, connection.n.SynapseParameters[1])
-		   << " Connect\n";
+		for (const auto &connection : connections[i]) {
+			os << (it_src->second + connection.src) << " "
+			   << (it_tar->second + connection.tar) << " " << std::showpoint
+			   << connection.SynapseParameters[0] * 1e3 << " "
+			   << std::showpoint  // uS -> nS
+			   << std::max(params.timestep, connection.SynapseParameters[1])
+			   << " Connect\n";
+		}
 	}
 }
 

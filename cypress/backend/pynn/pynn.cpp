@@ -995,11 +995,11 @@ std::tuple<py::object, py::object> PyNN::list_connect(
 	}
 	std::tuple<py::object, py::object> ret =
 	    std::make_tuple(py::object(), py::object());
-	std::vector<Connection> conns_full;
+	std::vector<LocalConnection> conns_full;
 	size_t num_inh = 0;
 	conn.connect(conns_full);
 	for (auto& i : conns_full) {
-		if (i.n.inhibitory()) {
+		if (i.inhibitory()) {
 			num_inh++;
 		}
 	}
@@ -1013,38 +1013,38 @@ std::tuple<py::object, py::object> PyNN::list_connect(
 
 	size_t counter_ex = 0, counter_in = 0;
 	for (auto& i : conns_full) {
-		if (i.n.SynapseParameters[0] >= 0) {
-			(*conns_exc)(counter_ex, 0) = i.n.src;
-			(*conns_exc)(counter_ex, 1) = i.n.tar;
-			(*conns_exc)(counter_ex, 2) = i.n.SynapseParameters[0];
+		if (i.SynapseParameters[0] >= 0) {
+			(*conns_exc)(counter_ex, 0) = i.src;
+			(*conns_exc)(counter_ex, 1) = i.tar;
+			(*conns_exc)(counter_ex, 2) = i.SynapseParameters[0];
 			if (timestep != 0) {
 				Real delay =
-				    std::max(round(i.n.SynapseParameters[1] / timestep), 1.0) *
+				    std::max(round(i.SynapseParameters[1] / timestep), 1.0) *
 				    timestep;
 				(*conns_exc)(counter_ex, 3) = delay;
 			}
 			else {
-				(*conns_exc)(counter_ex, 3) = i.n.SynapseParameters[1];
+				(*conns_exc)(counter_ex, 3) = i.SynapseParameters[1];
 			}
 			counter_ex++;
 		}
 		else {
-			(*conns_inh)(counter_in, 0) = i.n.src;
-			(*conns_inh)(counter_in, 1) = i.n.tar;
+			(*conns_inh)(counter_in, 0) = i.src;
+			(*conns_inh)(counter_in, 1) = i.tar;
 			if (!current_based) {
-				(*conns_inh)(counter_in, 2) = -i.n.SynapseParameters[0];
+				(*conns_inh)(counter_in, 2) = -i.SynapseParameters[0];
 			}
 			else {
-				(*conns_inh)(counter_in, 2) = i.n.SynapseParameters[0];
+				(*conns_inh)(counter_in, 2) = i.SynapseParameters[0];
 			}
 			if (timestep != 0) {
 				Real delay =
-				    std::max(round(i.n.SynapseParameters[1] / timestep), 1.0) *
+				    std::max(round(i.SynapseParameters[1] / timestep), 1.0) *
 				    timestep;
 				(*conns_inh)(counter_in, 3) = delay;
 			}
 			else {
-				(*conns_inh)(counter_in, 3) = i.n.SynapseParameters[1];
+				(*conns_inh)(counter_in, 3) = i.SynapseParameters[1];
 			}
 			counter_in++;
 		}
@@ -1100,14 +1100,13 @@ std::tuple<py::object, py::object> PyNN::list_connect7(
 		throw ExecutionError(
 		    "Only static synapses are supported for this backend!");
 	}
-	std::vector<Connection> conns_full;
+	std::vector<LocalConnection> conns_full;
 	conn.connect(conns_full);
 	py::list conn_exc, conn_inh;
 	std::tuple<py::object, py::object> ret =
 	    std::make_tuple(py::object(), py::object());
 
-	for (size_t i = 0; i < conns_full.size(); i++) {
-		LocalConnection conn = conns_full[i].n;
+	for (const auto& conn : conns_full) {
 		py::list local_conn;
 		local_conn.append(conn.src);
 		local_conn.append(conn.tar);

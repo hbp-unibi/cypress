@@ -147,13 +147,13 @@ Json ToJson::connector_to_json(const ConnectionDescriptor &conn)
 	    connector.name() == "FixedProbabilityConnector"
 
 	) {
-		std::vector<Connection> tar;
+		std::vector<LocalConnection> tar;
 		connector.connect(conn, tar);
 		for (auto i : tar) {
 			Json json = {};
-			json.emplace_back(i.n.src);
-			json.emplace_back(i.n.tar);
-			for (auto j : i.n.SynapseParameters) {
+			json.emplace_back(i.src);
+			json.emplace_back(i.tar);
+			for (auto j : i.SynapseParameters) {
 				json.emplace_back(j);
 			}
 			res["connections"].emplace_back(json);
