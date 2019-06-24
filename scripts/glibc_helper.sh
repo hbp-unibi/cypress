@@ -6,22 +6,9 @@ maxver=2.23
 headerf=glibc.h
 set -e
 
-# Parse whether we are using clang or gcc (default)
-compiler="gcc" 
-if [ "${1}" = "Clang" ] ; then
-compiler="clang"
-fi
-echo "-- Generatring compatibilty header for libc using compiler "${compiler}
+libc="${1}"
+path=${libc%*libc.so.6}
 
-
-lib_paths=$(${compiler} -m64  -Xlinker --verbose  2>/dev/null | grep SEARCH | sed 's/SEARCH_DIR("=\?\([^"]\+\)"); */\1\n/g'  | grep -vE '^$' )
-declare -a lib_paths_arr
-lib_paths_arr=($lib_paths)
-
-for path in "${lib_paths_arr[@]}"; do
-if ! test -f  "${path}/libc.so.6" ; then
-continue
-fi
 for lib in libc.so.6 libm.so.6 libpthread.so.0 libdl.so.2 libresolv.so.2 librt.so.1; do
 objdump -T ${path}/${lib}
 done | awk -v maxver=${maxver} -vheaderf=${headerf} -vredeff=${headerf}.redef -f <(cat <<'EOF'
@@ -55,6 +42,7 @@ EOF
 if test -f  "${headerf}"; then
 break
 fi
-done
+
+
 sort ${headerf} -o ${headerf}
 rm ${headerf}.redef

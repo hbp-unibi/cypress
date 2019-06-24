@@ -57,8 +57,12 @@ set(STATIC_LINKING TRUE CACHE BOOL "True for static linking")
 
 # Link statically
 if(STATIC_LINKING)
+    execute_process (
+                COMMAND ${CMAKE_C_COMPILER} -print-file-name=libc.so.6
+                OUTPUT_VARIABLE GLIBC
+                OUTPUT_STRIP_TRAILING_WHITESPACE)
     execute_process(
-    COMMAND ${CMAKE_SOURCE_DIR}/scripts/glibc_helper.sh ${CMAKE_CXX_COMPILER_ID}
+    COMMAND ${CMAKE_SOURCE_DIR}/scripts/glibc_helper.sh ${GLIBC}
     WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/include/
     )
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -include ${CMAKE_BINARY_DIR}/include/glibc.h")
