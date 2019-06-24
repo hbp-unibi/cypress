@@ -435,7 +435,12 @@ void ToJson::create_conn_from_json(const Json &con_json, Network &netw)
 			conns[i] = LocalConnection(jconn[i][0].get<NeuronIndex>(),
 			                           jconn[i][1].get<NeuronIndex>(), *syn);
 		}
-		connector = Connector::from_list(conns);
+		if (syn->learning()) {
+			connector = Connector::from_list(conns, *syn);
+		}
+		else {
+			connector = Connector::from_list(conns);
+		}
 	}
 	else if (con_json["conn_name"] == "AllToAllConnector") {
 		connector = Connector::all_to_all(
