@@ -1004,6 +1004,13 @@ public:
 	size_t size(size_t, size_t) const override { return m_connections.size(); }
 
 	std::string name() const override { return "FromListConnector"; }
+
+	/**
+	 * @brief Update the weights of all connections from the last simulation, if
+	 * learning synapses have been used
+	 *
+	 */
+	void update_learned_weights();
 };
 
 class FunctorConnectorBase : public Connector {

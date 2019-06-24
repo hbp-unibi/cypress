@@ -115,4 +115,30 @@ bool FromListConnector::group_connect(const ConnectionDescriptor &) const
 {
 	return false;
 }
+
+void FromListConnector::update_learned_weights()
+{
+	if (!m_synapse->learning()) {
+		throw CypressException(
+		    "Requested learned weights, although Synapse is static");
+	}
+
+	if (m_weights.size() == 0) {
+		throw CypressException(
+		    "Update of learned weights only possible after simulation!");
+	}
+	if (m_weights.size() != m_connections.size()) {
+		throw CypressException(
+		    "Size of learned weights is not equal to the connection list "
+		    "stored in the connector!");
+	}
+	for (const auto& conn_learned : m_weights) {
+		for (auto& conn : m_connections) {
+			if ((conn_learned.src == conn.src) &&
+			    (conn_learned.tar == conn.tar)) {
+				conn.SynapseParameters[0] = conn_learned.SynapseParameters[0];
+			}
+		}
+	}
+}
 }  // namespace cypress
