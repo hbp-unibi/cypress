@@ -36,15 +36,18 @@ protected:
 	std::string m_simulator;
 	Json m_setup;
 	bool m_save_json = false;
+	bool m_no_output = false;
 	void do_run(NetworkBase &network, Real duration) const override;
-    std::string m_path, m_json_path;
+	std::string m_path, m_json_path;
 
-    Json output_json(NetworkBase &network, Real duration) const;
-	void read_json(Json& result, NetworkBase &network) const;
+	Json output_json(NetworkBase &network, Real duration) const;
+	void read_json(Json &result, NetworkBase &network) const;
+
 public:
 	/**
 	 * Constructor of the ToJson backend. If setup sets "save_json" : true, all
-	 * simulation related data will be written to HDD
+	 * simulation related data will be written to HDD. "m_no_output" : true
+	 * discards all output from the simulator
 	 *
 	 * @param simulator is the name of the simulator backend to be used
 	 * @param setup contains additional setup information that should be passed

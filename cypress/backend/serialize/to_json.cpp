@@ -84,10 +84,14 @@ ToJson::ToJson(const std::string &simulator, const Json &setup)
 		m_save_json = m_setup["save_json"].get<bool>();
 		m_setup.erase(m_setup.find("save_json"));
 	}
+	if (m_setup.find("no_output") != m_setup.end()) {
+		m_no_output = m_setup["no_output"].get<bool>();
+		m_setup.erase(m_setup.find("no_output"));
+	}
 	m_path = "experiment_XXXXX";
 	filesystem::tmpfile(m_path);
-    
-    m_json_path = exec_json_path::instance().path();
+
+	m_json_path = exec_json_path::instance().path();
 }
 
 ToJson::~ToJson() = default;
@@ -253,14 +257,23 @@ void ToJson::do_run(NetworkBase &network, Real duration) const
 	}
 
 	Process proc(exec_json_path::instance().path(), {m_path});
-
-	std::thread log_thread_beg(Process::generic_pipe,
-	                           std::ref(proc.child_stdout()),
-	                           std::ref(std::cout));
-
-	// Continiously track stderr of child
-	std::thread err_thread(Process::generic_pipe, std::ref(proc.child_stderr()),
-	                       std::ref(std::cerr));
+	std::thread log_thread_beg, err_thread;
+	std::ofstream null;
+	if (m_no_output) {
+		log_thread_beg =
+		    std::thread(Process::generic_pipe, std::ref(proc.child_stdout()),
+		                std::ref(null));
+		err_thread = std::thread(Process::generic_pipe,
+		                         std::ref(proc.child_stderr()), std::ref(null));
+	}
+	else {
+		log_thread_beg =
+		    std::thread(Process::generic_pipe, std::ref(proc.child_stdout()),
+		                std::ref(std::cout));
+		err_thread =
+		    std::thread(Process::generic_pipe, std::ref(proc.child_stderr()),
+		                std::ref(std::cerr));
+	}
 	Json result;
 	if (!m_save_json) {
 		std::filebuf fb_res;
