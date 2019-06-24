@@ -1564,6 +1564,9 @@ namespace {
  */
 std::vector<LocalConnection> get_weights(py::object &proj)
 {
+	if (!proj) {
+		return {};
+	}
 	py::list arguments;
 	arguments.append("weight");
 	arguments.append("delay");
@@ -1693,6 +1696,8 @@ void PyNN::do_run(NetworkBase &source, Real duration) const
 	}
 
 	std::vector<std::tuple<size_t, py::object>> group_projections;
+	std::vector<std::tuple<size_t, std::tuple<py::object, py::object>>>
+	    list_projections;
 	for (size_t i = 0; i < source.connections().size(); i++) {
 		const auto &conn = source.connections()[i];
 		auto it = SUPPORTED_CONNECTIONS.find(conn.connector().name());
@@ -1712,7 +1717,9 @@ void PyNN::do_run(NetworkBase &source, Real duration) const
 			    (m_normalised_simulator == "nest")) {
 				current_based = true;
 			}
-			list_connect(pypopulations, conn, pynn, current_based, timestep);
+			list_projections.emplace_back(
+			    std::make_tuple(i, list_connect(pypopulations, conn, pynn,
+			                                    current_based, timestep)));
 		}
 	}
 
@@ -1756,6 +1763,20 @@ void PyNN::do_run(NetworkBase &source, Real duration) const
 			auto weights = get_weights(std::get<1>(group_projections[i]));
 			source.connections()[index].connector()._store_learned_weights(
 			    std::move(weights));
+		}
+	}
+
+	for (size_t i = 0; i < list_projections.size(); i++) {
+		size_t index = std::get<0>(list_projections[i]);
+		if (source.connections()[index].connector().synapse()->learning()) {
+			auto weights_exc =
+			    get_weights(std::get<0>(std::get<1>(list_projections[i])));
+			auto weights_inh =
+			    get_weights(std::get<1>(std::get<1>(list_projections[i])));
+			weights_exc.insert(weights_exc.end(), weights_inh.begin(),
+			                   weights_inh.end());
+			source.connections()[index].connector()._store_learned_weights(
+			    std::move(weights_exc));
 		}
 	}
 	pynn.attr("end")();
