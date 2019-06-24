@@ -84,6 +84,10 @@ ToJson::ToJson(const std::string &simulator, const Json &setup)
 		m_save_json = m_setup["save_json"].get<bool>();
 		m_setup.erase(m_setup.find("save_json"));
 	}
+	m_path = "experiment_XXXXX";
+	filesystem::tmpfile(m_path);
+    
+    m_json_path = exec_json_path::instance().path();
 }
 
 ToJson::~ToJson() = default;
@@ -210,7 +214,7 @@ void pipe_write_helper(std::string file, Json &source)
 }
 }  // namespace
 
-void ToJson::do_run(NetworkBase &network, Real duration) const
+Json ToJson::output_json(NetworkBase &network, Real duration) const
 {
 	Json json_out;
 	json_out["simulator"] = m_simulator;
@@ -219,20 +223,36 @@ void ToJson::do_run(NetworkBase &network, Real duration) const
 	json_out["network"] = network;
 	json_out["log_level"] = global_logger().min_level();
 
-	std::string path = "experiment_XXXXX";
-	filesystem::tmpfile(path);
+	return json_out;
+}
+void ToJson::read_json(Json &result, NetworkBase &network) const
+{
+	const auto &recs = result["recordings"];
+	for (size_t i = 0; i < recs.size(); i++) {
+		for (size_t j = 0; j < recs[i].size(); j++) {
+			ToJson::read_recordings_from_json(recs[i][j], network);
+		}
+	}
+	learned_weights_from_json(result, network);
+	network.runtime(result["runtime"].get<NetworkRuntime>());
+}
 
-	std::thread data_in(pipe_write_helper, path + ".json", std::ref(json_out));
+void ToJson::do_run(NetworkBase &network, Real duration) const
+{
+	auto json_out = output_json(network, duration);
+
+	std::thread data_in(pipe_write_helper, m_path + ".json",
+	                    std::ref(json_out));
 	if (!m_save_json) {
-		if (mkfifo((path + ".json").c_str(), 0666) != 0) {
+		if (mkfifo((m_path + ".json").c_str(), 0666) != 0) {
 			throw std::system_error(errno, std::system_category());
 		}
-		if (mkfifo((path + "_res.json").c_str(), 0666) != 0) {
+		if (mkfifo((m_path + "_res.json").c_str(), 0666) != 0) {
 			throw std::system_error(errno, std::system_category());
 		}
 	}
 
-	Process proc(exec_json_path::instance().path(), {path});
+	Process proc(exec_json_path::instance().path(), {m_path});
 
 	std::thread log_thread_beg(Process::generic_pipe,
 	                           std::ref(proc.child_stdout()),
@@ -244,7 +264,7 @@ void ToJson::do_run(NetworkBase &network, Real duration) const
 	Json result;
 	if (!m_save_json) {
 		std::filebuf fb_res;
-		open_fifo_to_read(path + "_res.json", fb_res);
+		open_fifo_to_read(m_path + "_res.json", fb_res);
 		std::istream res_fifo(&fb_res);
 		result = Json::parse(res_fifo);
 		fb_res.close();
@@ -259,23 +279,16 @@ void ToJson::do_run(NetworkBase &network, Real duration) const
 		                std::to_string(-res)));
 	}
 	if (!m_save_json) {
-		remove((path + "_res.json").c_str());
-		remove((path + ".json").c_str());
+		remove((m_path + "_res.json").c_str());
+		remove((m_path + ".json").c_str());
 	}
 	else {
 		std::ifstream file_in;
-		file_in.open(path + "_res.json", std::ios::binary);
+		file_in.open(m_path + "_res.json", std::ios::binary);
 		result = Json::parse(file_in);
 	}
 
-	const auto &recs = result["recordings"];
-	for (size_t i = 0; i < recs.size(); i++) {
-		for (size_t j = 0; j < recs[i].size(); j++) {
-			ToJson::read_recordings_from_json(recs[i][j], network);
-		}
-	}
-	learned_weights_from_json(result, network);
-	network.runtime(result["runtime"].get<NetworkRuntime>());
+	read_json(result, network);
 }
 std::unordered_set<const NeuronType *> ToJson::supported_neuron_types() const
 {

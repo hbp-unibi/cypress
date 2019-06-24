@@ -23,6 +23,8 @@
 #include <cypress/core/network_base_objects.hpp>
 #include <cypress/util/json.hpp>
 
+#include <thread>
+
 namespace cypress {
 
 /**
@@ -35,7 +37,10 @@ protected:
 	Json m_setup;
 	bool m_save_json = false;
 	void do_run(NetworkBase &network, Real duration) const override;
+    std::string m_path, m_json_path;
 
+    Json output_json(NetworkBase &network, Real duration) const;
+	void read_json(Json& result, NetworkBase &network) const;
 public:
 	/**
 	 * Constructor of the ToJson backend. If setup sets "save_json" : true, all

@@ -26,13 +26,13 @@
 #include <string>
 #include <vector>
 
-
+#include <cypress/backend/serialize/to_json.hpp>
 #include <cypress/core/backend.hpp>
 #include <cypress/util/json.hpp>
 
 namespace cypress {
 
-class Slurm : public PyNN {
+class Slurm : public ToJson {
 private:
 	// Flags for different running modes:
 	// m_write_binnf sets wether binnf files should be written
@@ -41,8 +41,8 @@ private:
 	bool m_exec_python = true;
 	// Read back results from the python process
 	bool m_read_results = true;
-
-	std::string m_filename;
+    
+    std::string m_norm_simulator;
 
 	void do_run(NetworkBase &network, Real duration) const override;
 
@@ -67,9 +67,9 @@ public:
 
 	void set_base_filename(const std::string &filename)
 	{
-		m_filename = filename;
+		m_path = filename;
 	}
-	std::string get_base_filename() const { return m_filename; }
+	const std::string& get_base_filename() const { return m_path; }
 };
 }
 
