@@ -82,6 +82,7 @@ int main(int argc, const char *argv[])
 
 	// Run the simulation
 	net.run(argv[1], num_neurons + inter_spike_intervall + 50, argc, argv);
+    create_dot(net, "STDP Network", "stdp.dot");
 
 	// Gather spike times
 	std::vector<std::vector<Real>> spikes;

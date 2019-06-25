@@ -249,6 +249,7 @@ int main(int argc, const char *argv[])
 	// Run the simulation
 	std::cout << "Running the simulation..." << std::endl;
 	net.run(argv[1], 2000.0, argc, argv);
+    create_dot(net, "Synfire Chain", "chain.dot");
 
 	// Write the results to disk
 	std::cout << "Writing results to disk..." << std::endl;

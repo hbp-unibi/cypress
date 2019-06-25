@@ -76,6 +76,10 @@ int main(int argc, const char *argv[])
 	        std::cout << neuron.signals().get_spikes();
 	    }*/
 
+    // Create graph of the network
+    
+    create_dot(net, "Simple Network", "simple.dot");
+    
 	std::cout << "---------" << std::endl;
 	std::cout << net.runtime().initialize << ", " << net.runtime().sim << ", "
 	          << net.runtime().finalize << ", " << net.runtime().total << ", "

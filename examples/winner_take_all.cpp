@@ -185,6 +185,7 @@ int main(int argc, const char *argv[])
 	// Run the simulation
 	std::cout << "Running the simulation..." << std::endl;
 	net.run(argv[1], t_tot, argc, argv);
+    create_dot(net, "WTA Network", "WTA.dot");
 
 	// Write the output spike times to disk
 	std::cout << "Writing results to disk..." << std::endl;
