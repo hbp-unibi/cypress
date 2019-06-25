@@ -48,5 +48,6 @@
 #include <cypress/util/neuron_parameters.hpp>
 #include <cypress/util/range.hpp>
 #include <cypress/util/spiking_utils.hpp>
+#include <cypress/util/to_dot.hpp>
 
 #endif /* CYPRESS_HPP */

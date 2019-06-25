@@ -150,6 +150,7 @@ add_library(cypress
 	cypress/util/resource
 	cypress/util/spiking_utils
 	cypress/util/terminal
+	cypress/util/to_dot
 )
 message(STATUS "Downloading BrainScaleS library")
 file(DOWNLOAD https://github.com/hbp-unibi/BS2Cypress/raw/master/bin/libBS2CYPRESS.so
