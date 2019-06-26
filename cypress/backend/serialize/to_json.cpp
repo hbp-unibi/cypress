@@ -38,14 +38,14 @@ private:
 	std::string m_path;
 	exec_json_path()
 	{
-		m_path = "./json_exec";  // local
+		m_path = "./cypress_from_json";  // local
 		auto ret = std::system((m_path + " &>/dev/null").c_str());
 		if (ret) {
 			global_logger().debug(
 			    "cypress",
 			    "Installed json executable will be used before "
 			    "subproject executable");
-			m_path = "json_exec";  // install
+			m_path = "cypress_from_json";  // install
 			ret = std::system((m_path + " &>/dev/null").c_str());
 			if (ret) {
 				m_path = JSON_EXEC_PATH;  // subproject

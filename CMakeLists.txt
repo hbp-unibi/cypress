@@ -157,11 +157,12 @@ file(DOWNLOAD https://github.com/hbp-unibi/BS2Cypress/raw/master/bin/libBS2CYPRE
 	${CMAKE_BINARY_DIR}/libBS2CYPRESS.so
 )
 target_compile_definitions(cypress PRIVATE BS_LIBRARY_PATH="${CMAKE_BINARY_DIR}/libBS2CYPRESS.so")
+target_compile_definitions(cypress PRIVATE BS_LIBRARY_INSTALL_PATH="${CMAKE_INSTALL_PREFIX}/lib/libBS2CYPRESS.so")
 
-add_executable(json_exec cypress/backend/serialize/json_exec)
-add_dependencies(json_exec cypress)
-target_link_libraries(json_exec cypress)
-target_compile_definitions(cypress PRIVATE JSON_EXEC_PATH="${CMAKE_BINARY_DIR}/json_exec")
+add_executable(cypress_from_json cypress/backend/serialize/json_exec)
+add_dependencies(cypress_from_json cypress)
+target_link_libraries(cypress_from_json cypress)
+target_compile_definitions(cypress PRIVATE JSON_EXEC_PATH="${CMAKE_BINARY_DIR}/cypress_from_json")
 
 if(STATIC_LINKING)
 	set_target_properties(cypress PROPERTIES POSITION_INDEPENDENT_CODE TRUE)
