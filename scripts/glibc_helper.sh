@@ -39,10 +39,6 @@ for (s in symvers) {
 }
 EOF
 )
-if test -f  "${headerf}"; then
-break
-fi
-
 
 sort ${headerf} -o ${headerf}
 rm ${headerf}.redef
