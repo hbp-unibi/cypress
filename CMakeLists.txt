@@ -27,6 +27,7 @@ include(json_external)
 include(matplotlib_external)
 
 SET(PYBIND11_PYTHON_VERSION "2.7")
+set(PYBIND11_INSTALL TRUE CACHE BOOL "pybind11 install" FORCE INTERNAL)
 add_subdirectory(external/pybind11)
 find_package(PythonLibs 2.7 REQUIRED )
 
@@ -166,11 +167,12 @@ target_compile_definitions(cypress PRIVATE JSON_EXEC_PATH="${CMAKE_BINARY_DIR}/c
 
 if(STATIC_LINKING)
 	set_target_properties(cypress PROPERTIES POSITION_INDEPENDENT_CODE TRUE)
-	target_link_libraries(cypress
+	target_link_libraries(cypress PUBLIC
             pybind11::embed
+            PRIVATE
+            ${PYTHON_LIBRARY}
             dl
             -pthread
-            #-Wl,--whole-archive -lpthread -Wl,--no-whole-archive
             )
 else()
 	target_link_libraries(cypress pthread pybind11::embed dl)
@@ -178,18 +180,14 @@ endif()
 
 # Installation configuration
 install(TARGETS cypress ARCHIVE DESTINATION lib)
+install(TARGETS cypress_from_json RUNTIME DESTINATION bin)
 install(
 	DIRECTORY ${CMAKE_SOURCE_DIR}/cypress
 	DESTINATION include
 	FILES_MATCHING PATTERN "*.hpp"
 )
 install(
-	DIRECTORY ${CMAKE_SOURCE_DIR}/external/pybind11/include/
-	DESTINATION include
-	FILES_MATCHING PATTERN "*.h"
-)
-install(
-	FILES ${CMAKE_BINARY_DIR}/cypress/config.h
+	FILES ${CMAKE_BINARY_DIR}/include/cypress/config.h
 	DESTINATION include/cypress
 )
 install(
@@ -202,6 +200,8 @@ install(
 	DESTINATION share/cmake/Cypress/
 	RENAME CypressConfig.cmake
 )
+install(FILES ${CMAKE_BINARY_DIR}/libBS2CYPRESS.so
+    DESTINATION lib)
 
 # Submodules
 enable_testing()

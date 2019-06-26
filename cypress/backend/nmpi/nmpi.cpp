@@ -218,6 +218,14 @@ NMPI::NMPI(const std::string &backend, int &argc, const char *argv[],
 	}
 }
 
+namespace {
+bool file_exists(const std::string &filename)
+{
+	std::ifstream ifs(filename);
+	return ifs.good();
+}
+}  // namespace
+
 void NMPI::init_bs(const std::string &bs_backend, int &argc, const char *argv[],
                    Json setup, const std::vector<std::string> &files,
                    bool scan_args)
@@ -231,8 +239,24 @@ void NMPI::init_bs(const std::string &bs_backend, int &argc, const char *argv[],
 
 	std::vector<std::string> external_files(files);
 	std::vector<int> external_file_ids(files.size(), -1);
+	std::string bs_lib_path;
+	if (file_exists("./libBS2CYPRESS.so")) {
+		bs_lib_path = "./libBS2CYPRESS.so";
+	}
+	else if (file_exists(std::string(BS_LIBRARY_INSTALL_PATH))) {
+		bs_lib_path = BS_LIBRARY_INSTALL_PATH;
+	}
+	else if (file_exists(std::string(BS_LIBRARY_PATH))) {
+		bs_lib_path = BS_LIBRARY_PATH;
+	}
+	else {
+		throw CypressException(
+		    "libBS2CYPRESS not found! Make sure it is provided locally or "
+		    "install correctly!");
+	}
 
-	external_files.emplace_back(std::string(BS_LIBRARY_PATH));
+	global_logger().debug("cypress", "libBS2CYPRESS path " + bs_lib_path);
+	external_files.emplace_back(std::string(bs_lib_path));
 	external_file_ids.emplace_back(-1);
 
 	// There must be at least one command line argument
