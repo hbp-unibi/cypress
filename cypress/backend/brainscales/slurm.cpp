@@ -98,6 +98,16 @@ Slurm::Slurm(const std::string &simulator, const Json &setup)
 		m_setup.erase(m_setup.find("slurm_filename"));
 	}
 
+	if (m_setup.find("keep_files") != m_setup.end()) {
+		m_keep_file = setup["keep_files"];
+		m_setup.erase(m_setup.find("keep_files"));
+	}
+
+	if (m_setup.find("json") != m_setup.end()) {
+		m_json = setup["json"];
+		m_setup.erase(m_setup.find("json"));
+	}
+
 	auto it = NORMALISED_SIMULATOR_NAMES.find(simulator);
 	if (it != NORMALISED_SIMULATOR_NAMES.end()) {
 		m_norm_simulator = it->second;
@@ -105,14 +115,14 @@ Slurm::Slurm(const std::string &simulator, const Json &setup)
 	else {
 		m_norm_simulator = m_simulator;
 	}
-	
-	if(m_norm_simulator == "nmpm1"){
-        if(m_setup.find("ess")!=m_setup.end()){
-            if(m_setup["ess"].get<bool>()){
-                m_norm_simulator = "ess";
-            }
-        }
-    }
+
+	if (m_norm_simulator == "nmpm1") {
+		if (m_setup.find("ess") != m_setup.end()) {
+			if (m_setup["ess"].get<bool>()) {
+				m_norm_simulator = "ess";
+			}
+		}
+	}
 }
 namespace {
 bool file_is_empty(std::string filename)
@@ -128,8 +138,14 @@ void Slurm::do_run(NetworkBase &network, Real duration) const
 		// TODO Check whether file exists
 		auto json = output_json(network, duration);
 		std::ofstream file_out;
-		file_out.open(m_path + ".cbor", std::ios::binary);
-		Json::to_cbor(json, file_out);
+		if (m_json) {
+			file_out.open(m_path + ".json", std::ios::binary);
+			file_out << json;
+		}
+		else {
+			file_out.open(m_path + ".cbor", std::ios::binary);
+			Json::to_cbor(json, file_out);
+		}
 		file_out.close();
 		system("ls > /dev/null");
 	}
@@ -255,7 +271,7 @@ void Slurm::do_run(NetworkBase &network, Real duration) const
 		for (size_t i = 0; i < 3; i++) {
 			Process proc(slurm, params);
 
-			//std::ofstream log_stream(m_path);
+			// std::ofstream log_stream(m_path);
 
 			// This process is only meant to cover the first milliseconds before
 			// all communication is switched to files.
@@ -272,7 +288,8 @@ void Slurm::do_run(NetworkBase &network, Real duration) const
 			int res = proc.wait();
 			// Synchronize files on servers (Heidelberg setup...)
 			system("ls > /dev/null");
-			if (res != 0 || file_is_empty(m_path + "_res")) {
+			std::string suffix = m_json ? "_res.json" : "_res.cbor";
+			if (res != 0 || file_is_empty(m_path + suffix)) {
 				err_thread.join();
 				log_thread_beg.join();
 				if (i < 2) {
@@ -296,14 +313,17 @@ void Slurm::do_run(NetworkBase &network, Real duration) const
 
 	if (m_read_results) {
 		std::ifstream file_in;
-		file_in.open(m_path + "_res.cbor", std::ios::binary);
+		std::string suffix = m_json ? "_res.json" : "_res.cbor";
+		file_in.open(m_path + suffix, std::ios::binary);
 		auto json = Json::from_cbor(file_in);
 		read_json(json, network);
-		unlink((m_path + "_stdin").c_str());
-		unlink((m_path + "_res").c_str());
-		unlink((m_path + "_log").c_str());
-		unlink((m_path + ".cbor").c_str());
-		unlink((m_path).c_str());
+
+		if (!m_keep_file) {
+			unlink((m_path + suffix).c_str());
+			unlink((m_path + ".cbor").c_str());
+			unlink((m_path + ".json").c_str());
+			unlink((m_path).c_str());
+		}
 	}
 }
 

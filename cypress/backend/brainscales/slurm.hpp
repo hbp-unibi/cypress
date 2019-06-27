@@ -41,8 +41,14 @@ private:
 	bool m_exec_python = true;
 	// Read back results from the python process
 	bool m_read_results = true;
-    
-    std::string m_norm_simulator;
+
+	// keep json/cbor files
+	bool m_keep_file = false;
+
+	// True: use json, false: use cbor
+	bool m_json = false;
+
+	std::string m_norm_simulator;
 
 	void do_run(NetworkBase &network, Real duration) const override;
 
@@ -65,12 +71,9 @@ public:
 
 	void set_flags(size_t num);
 
-	void set_base_filename(const std::string &filename)
-	{
-		m_path = filename;
-	}
-	const std::string& get_base_filename() const { return m_path; }
+	void set_base_filename(const std::string &filename) { m_path = filename; }
+	const std::string &get_base_filename() const { return m_path; }
 };
-}
+}  // namespace cypress
 
 #endif /* CYPRESS_BACKEND_SLURM_HPP */
