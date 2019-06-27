@@ -318,8 +318,8 @@ void Slurm::do_run(NetworkBase &network, Real duration) const
 	if (m_read_results) {
 		std::ifstream file_in;
 		std::string suffix = m_json ? ".json" : ".cbor";
-		file_in.open(m_path + suffix, std::ios::binary);
-		auto json = Json::from_cbor(file_in);
+		file_in.open(m_path + "_res" + suffix, std::ios::binary);
+		Json json = m_json ? Json::parse(file_in) : Json::from_cbor(file_in);
 		read_json(json, network);
 
 		if (!m_keep_file) {
