@@ -252,7 +252,11 @@ void Slurm::do_run(NetworkBase &network, Real duration) const
 			script.append("run_nmpm_software ");
 		}
 
-		script.append(m_json_path + " " + m_path + " 1;ls >/dev/null;wait");
+		script.append(m_json_path + " " + m_path);
+        if(!m_json){
+            script.append(" 1");
+        }
+        script.append(";ls >/dev/null;wait");
 
 		// Synchronize files on servers (Heidelberg setup...)
 		system("ls > /dev/null");
@@ -313,16 +317,14 @@ void Slurm::do_run(NetworkBase &network, Real duration) const
 
 	if (m_read_results) {
 		std::ifstream file_in;
-		std::string suffix = m_json ? "_res.json" : "_res.cbor";
+		std::string suffix = m_json ? ".json" : ".cbor";
 		file_in.open(m_path + suffix, std::ios::binary);
 		auto json = Json::from_cbor(file_in);
 		read_json(json, network);
 
 		if (!m_keep_file) {
 			unlink((m_path + suffix).c_str());
-			unlink((m_path + ".cbor").c_str());
-			unlink((m_path + ".json").c_str());
-			unlink((m_path).c_str());
+			unlink((m_path + "_res" + suffix).c_str());
 		}
 	}
 }
