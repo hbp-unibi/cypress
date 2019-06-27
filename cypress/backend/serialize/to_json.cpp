@@ -678,14 +678,18 @@ void from_json(const Json &json, Network &netw)
 		ToJson::create_pop_from_json(i, netw);
 	}
 
-	const auto &conns = json["connections"];
-	for (auto &i : conns) {
-		ToJson::create_conn_from_json(i, netw);
+	if (json.find("connections") != json.end()) {
+		const auto &conns = json["connections"];
+		for (auto &i : conns) {
+			ToJson::create_conn_from_json(i, netw);
+		}
 	}
-	const auto &recs = json["recordings"];
-	for (size_t i = 0; i < recs.size(); i++) {
-		for (size_t j = 0; j < recs[i].size(); j++) {
-			ToJson::read_recordings_from_json(recs[i][j], netw);
+	if (json.find("recordings") != json.end()) {
+		const auto &recs = json["recordings"];
+		for (size_t i = 0; i < recs.size(); i++) {
+			for (size_t j = 0; j < recs[i].size(); j++) {
+				ToJson::read_recordings_from_json(recs[i][j], netw);
+			}
 		}
 	}
 
