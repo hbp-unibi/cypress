@@ -160,6 +160,7 @@ void Slurm::do_run(NetworkBase &network, Real duration) const
 		bool init_reticles = false;
 		std::string wafer;
 
+		auto ptr = getenv("SINGULARITY_CONTAINER");
 		// Set simulator dependent options for slurm
 		if (m_norm_simulator == "nmpm1") {
 			std::string hicann = "367";
@@ -248,7 +249,7 @@ void Slurm::do_run(NetworkBase &network, Real duration) const
 			              " -z >text.txt &\n");
 		}
 
-		if (m_norm_simulator == "nmpm1") {
+		if (ptr == nullptr) {
 			script.append("run_nmpm_software ");
 		}
 
