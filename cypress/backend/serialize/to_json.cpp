@@ -39,7 +39,7 @@ private:
 	exec_json_path()
 	{
 		m_path = "./cypress_from_json";  // local
-		auto ret = std::system((m_path + " &>/dev/null").c_str());
+		auto ret = execlp((m_path + " &>/dev/null").c_str(), "");
 		if (ret) {
 			global_logger().debug(
 			    "cypress",
@@ -231,6 +231,11 @@ Json ToJson::output_json(NetworkBase &network, Real duration) const
 }
 void ToJson::read_json(Json &result, NetworkBase &network) const
 {
+	if (result.find("exception") != result.end()) {
+		throw CypressException("Json child threw error: " +
+		                       result["exception"].get<std::string>());
+	}
+
 	const auto &recs = result["recordings"];
 	for (size_t i = 0; i < recs.size(); i++) {
 		for (size_t j = 0; j < recs[i].size(); j++) {

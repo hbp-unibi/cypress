@@ -32,32 +32,49 @@ int main(int argc, const char *argv[])
 		return 0;
 	}
 
-	std::ifstream file_in;
-	Json json;
-	if (argc == 3) {
-		file_in.open(std::string(argv[1]) + ".cbor", std::ios::binary);
-		json = Json::from_cbor(file_in);
-	}
-	else {
-		file_in.open(std::string(argv[1]) + ".json", std::ios::binary);
-		json = Json::parse(file_in);
-	}
-	file_in.close();
-	global_logger().min_level(LogSeverity(json["log_level"].get<int32_t>()));
-	Network netw = json["network"].get<Network>();
-	auto backend = netw.make_backend(json["simulator"].get<std::string>(), argc,
-	                                 argv, json["setup"]);
-	netw.run(*backend, json["duration"].get<Real>());
+	try {
+		std::ifstream file_in;
+		Json json;
+		if (argc == 3) {
+			file_in.open(std::string(argv[1]) + ".cbor", std::ios::binary);
+			json = Json::from_cbor(file_in);
+		}
+		else {
+			file_in.open(std::string(argv[1]) + ".json", std::ios::binary);
+			json = Json::parse(file_in);
+		}
+		file_in.close();
+		global_logger().min_level(
+		    LogSeverity(json["log_level"].get<int32_t>()));
+		Network netw = json["network"].get<Network>();
+		auto backend = netw.make_backend(json["simulator"].get<std::string>(),
+		                                 argc, argv, json["setup"]);
+		netw.run(*backend, json["duration"].get<Real>());
 
-	std::ofstream file_out;
-	if (argc == 3) {
-		file_out.open(std::string(argv[1]) + "_res.cbor", std::ios::binary);
-		Json::to_cbor(Json(netw), file_out);
+		std::ofstream file_out;
+		if (argc == 3) {
+			file_out.open(std::string(argv[1]) + "_res.cbor", std::ios::binary);
+			Json::to_cbor(Json(netw), file_out);
+		}
+		else {
+			file_out.open(std::string(argv[1]) + "_res.json", std::ios::binary);
+			file_out << Json(netw);
+		}
+		file_out.close();
 	}
-	else {
-		file_out.open(std::string(argv[1]) + "_res.json", std::ios::binary);
-		file_out << Json(netw);
+	catch (std::exception &e) {
+		Json json;
+		json["exception"] = e.what();
+		std::ofstream file_out;
+		if (argc == 3) {
+			file_out.open(std::string(argv[1]) + "_res.cbor", std::ios::binary);
+			Json::to_cbor(json, file_out);
+		}
+		else {
+			file_out.open(std::string(argv[1]) + "_res.json", std::ios::binary);
+			file_out << json;
+		}
 	}
-	file_out.close();
+
 	return 0;
 }
