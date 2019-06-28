@@ -240,8 +240,8 @@ void NMPI::init_bs(const std::string &bs_backend, int &argc, const char *argv[],
 	std::vector<std::string> external_files(files);
 	std::vector<int> external_file_ids(files.size(), -1);
 	std::string bs_lib_path;
-	if (file_exists("./libBS2CYPRESS.so")) {
-		bs_lib_path = "./libBS2CYPRESS.so";
+	if (file_exists("libBS2CYPRESS.so")) {
+		bs_lib_path = "libBS2CYPRESS.so";
 	}
 	else if (file_exists(std::string(BS_LIBRARY_INSTALL_PATH))) {
 		bs_lib_path = BS_LIBRARY_INSTALL_PATH;
