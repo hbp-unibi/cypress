@@ -39,17 +39,17 @@ private:
 	exec_json_path()
 	{
 		m_path = "./cypress_from_json";  // local
-		auto ret = execlp((m_path + " &>/dev/null").c_str(), "");
+		auto ret = execlp((m_path + " >/dev/null 2>&1").c_str(), "");
 		if (ret) {
 			global_logger().debug(
 			    "cypress",
 			    "Installed json executable will be used before "
 			    "subproject executable");
 			m_path = "cypress_from_json";  // install
-			ret = std::system((m_path + " &>/dev/null").c_str());
+			ret = std::system((m_path + " >/dev/null 2>&1").c_str());
 			if (ret) {
 				m_path = JSON_EXEC_PATH;  // subproject
-				ret = std::system((m_path + " &>/dev/null").c_str());
+				ret = std::system((m_path + " >/dev/null 2>&1").c_str());
 				if (ret) {
 					throw std::runtime_error(
 					    "Could not open json executable. Make sure that the "
