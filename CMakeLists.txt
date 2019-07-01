@@ -21,12 +21,15 @@ project(cypress)
 # Add the local "cmake" directory to the search path
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR}/cmake)
 
+set(BUILD_TEST_EXAMPLES TRUE CACHE BOOL "Set to true for building examples and tests")
+
 # Automatically download and compile Google-Test and the JSON library
 include(gtest_external)
 include(json_external)
 include(matplotlib_external)
 
 SET(PYBIND11_PYTHON_VERSION "2.7")
+set(PYBIND11_INSTALL TRUE CACHE BOOL "pybind11 install" FORCE INTERNAL)
 add_subdirectory(external/pybind11)
 find_package(PythonLibs 2.7 REQUIRED )
 
@@ -57,13 +60,23 @@ set(STATIC_LINKING TRUE CACHE BOOL "True for static linking")
 
 # Link statically
 if(STATIC_LINKING)
-	SET(CMAKE_FIND_LIBRARY_SUFFIXES ".a")
-	SET(BUILD_SHARED_LIBRARIES OFF)
-	if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
-        SET(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libstdc++ -static-libgcc  -Wl,--no-export-dynamic")
+    execute_process (
+                COMMAND ${CMAKE_C_COMPILER} -print-file-name=libc.so.6
+                OUTPUT_VARIABLE GLIBC
+                OUTPUT_STRIP_TRAILING_WHITESPACE)
+    execute_process(
+    COMMAND ${CMAKE_SOURCE_DIR}/scripts/glibc_helper.sh ${GLIBC}
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/include/
+    )
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -include ${CMAKE_BINARY_DIR}/include/glibc.h")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -include ${CMAKE_BINARY_DIR}/include/glibc.h")
+    SET(CMAKE_FIND_LIBRARY_SUFFIXES ".a")
+    SET(BUILD_SHARED_LIBRARIES OFF)
+    if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+        SET(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libstdc++  -Wl,--no-export-dynamic")
         SET(CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE} -s -Wl,--no-export-dynamic")
     else()
-        SET(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libstdc++ -static-libgcc ")
+        SET(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libstdc++")
         SET(CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE} -s")
     endif()
 endif()
@@ -85,29 +98,20 @@ configure_file(cypress/config.h.in include/cypress/config.h)
 # Compile the Python code into a C++ header
 add_custom_command(
 	OUTPUT
-		"${CMAKE_BINARY_DIR}/include/resource/backend/pynn/pynn_interface.hpp"
-		"${CMAKE_BINARY_DIR}/include/resource/backend/pynn/pynn_binnf_loopback.hpp"
 		"${CMAKE_BINARY_DIR}/include/resource/backend/nmpi/nmpi_broker.hpp"
 	COMMAND
 		"${CMAKE_SOURCE_DIR}/resource/build_resources.sh" "${CMAKE_BINARY_DIR}/include/resource/backend"
 	DEPENDS
 		"${CMAKE_SOURCE_DIR}/resource/build_resources.sh"
-		"${CMAKE_SOURCE_DIR}/resource/backend/pynn/binnf.py"
-		"${CMAKE_SOURCE_DIR}/resource/backend/pynn/cli.py"
-		"${CMAKE_SOURCE_DIR}/resource/backend/pynn/constants.py"
-		"${CMAKE_SOURCE_DIR}/resource/backend/pynn/cypress.py"
-		"${CMAKE_SOURCE_DIR}/resource/backend/pynn/loopback.py"
 		"${CMAKE_SOURCE_DIR}/resource/backend/nmpi/broker.py"
 )
 
 # Compile the library itself
 add_library(cypress
-	"${CMAKE_BINARY_DIR}/include/resource/backend/pynn/pynn_interface.hpp"
-	"${CMAKE_BINARY_DIR}/include/resource/backend/pynn/pynn_binnf_loopback.hpp"
 	"${CMAKE_BINARY_DIR}/include/resource/backend/nmpi/nmpi_broker.hpp"
 	cypress/backend/resources
-	cypress/backend/binnf/binnf
-	cypress/backend/binnf/marshaller
+	cypress/backend/brainscales/brainscales_lib
+	cypress/backend/brainscales/slurm
 	cypress/backend/nest/nest
 	cypress/backend/nest/sli
 	cypress/backend/nmpi/nmpi
@@ -115,8 +119,7 @@ add_library(cypress
 	cypress/backend/power/netio4
 	cypress/backend/power/power
 	cypress/backend/pynn/pynn
-	cypress/backend/pynn/pynn2
-	cypress/backend/pynn/slurm
+	cypress/backend/serialize/to_json
 	cypress/core/backend
 	cypress/core/connector
 	cypress/core/data
@@ -150,49 +153,63 @@ add_library(cypress
 	cypress/util/resource
 	cypress/util/spiking_utils
 	cypress/util/terminal
+	cypress/util/to_dot
 )
+message(STATUS "Downloading BrainScaleS library")
+file(DOWNLOAD https://github.com/hbp-unibi/BS2Cypress/raw/master/bin/libBS2CYPRESS.so
+	${CMAKE_BINARY_DIR}/libBS2CYPRESS.so
+)
+target_compile_definitions(cypress PRIVATE BS_LIBRARY_PATH="${CMAKE_BINARY_DIR}/libBS2CYPRESS.so")
+target_compile_definitions(cypress PRIVATE BS_LIBRARY_INSTALL_PATH="${CMAKE_INSTALL_PREFIX}/lib/libBS2CYPRESS.so")
 
+add_executable(cypress_from_json cypress/backend/serialize/json_exec)
+add_dependencies(cypress_from_json cypress)
+target_link_libraries(cypress_from_json cypress)
+target_compile_definitions(cypress PRIVATE JSON_EXEC_PATH="${CMAKE_BINARY_DIR}/cypress_from_json")
 
 if(STATIC_LINKING)
 	set_target_properties(cypress PROPERTIES POSITION_INDEPENDENT_CODE TRUE)
-	target_link_libraries(cypress
+	target_link_libraries(cypress PUBLIC
             pybind11::embed
+            PRIVATE
+            ${PYTHON_LIBRARY}
+            dl
             -pthread
-            #-Wl,--whole-archive -lpthread -Wl,--no-whole-archive
             )
 else()
-	target_link_libraries(cypress pthread pybind11::embed)
+	target_link_libraries(cypress pthread pybind11::embed dl)
 endif()
 
-# Installation configuration
-install(TARGETS cypress ARCHIVE DESTINATION lib)
-install(
-	DIRECTORY ${CMAKE_SOURCE_DIR}/cypress
-	DESTINATION include
-	FILES_MATCHING PATTERN "*.hpp"
-)
-install(
-	DIRECTORY ${CMAKE_SOURCE_DIR}/external/pybind11/include/
-	DESTINATION include
-	FILES_MATCHING PATTERN "*.h"
-)
-install(
-	FILES ${CMAKE_BINARY_DIR}/cypress/config.h
-	DESTINATION include/cypress
-)
-install(
-	DIRECTORY ${CMAKE_BINARY_DIR}/include/cypress
-	DESTINATION include
-	FILES_MATCHING PATTERN "*.hpp"
-)
-install(
-	FILES ${CMAKE_SOURCE_DIR}/cmake/FindCypress.cmake
-	DESTINATION share/cmake/Cypress/
-	RENAME CypressConfig.cmake
-)
+# Check if cypress is built as a subproject
+if (BUILD_TEST_EXAMPLES)
+    # Installation configuration
+    install(TARGETS cypress ARCHIVE DESTINATION lib)
+    install(TARGETS cypress_from_json RUNTIME DESTINATION bin)
+    install(
+        DIRECTORY ${CMAKE_SOURCE_DIR}/cypress
+        DESTINATION include
+        FILES_MATCHING PATTERN "*.hpp"
+    )
+    install(
+        FILES ${CMAKE_BINARY_DIR}/include/cypress/config.h
+        DESTINATION include/cypress
+    )
+    install(
+        DIRECTORY ${CMAKE_BINARY_DIR}/include/cypress
+        DESTINATION include
+        FILES_MATCHING PATTERN "*.hpp"
+    )
+    install(
+        FILES ${CMAKE_SOURCE_DIR}/cmake/FindCypress.cmake
+        DESTINATION share/cmake/Cypress/
+        RENAME CypressConfig.cmake
+    )
+    install(FILES ${CMAKE_BINARY_DIR}/libBS2CYPRESS.so
+        DESTINATION lib)
 
-# Submodules
-enable_testing()
-add_subdirectory(examples)
-add_subdirectory(test)
+    # Submodules
+    enable_testing()
+    add_subdirectory(examples)
+    add_subdirectory(test)
+endif()
 

@@ -30,12 +30,11 @@
 #define CYPRESS_HPP
 
 // Include first to avoid "_POSIX_C_SOURCE redefined" warning
-#include <cypress/backend/pynn/pynn2.hpp>
+#include <cypress/backend/pynn/pynn.hpp>
 
-#include <cypress/backend/binnf/binnf.hpp>
+#include <cypress/backend/serialize/to_json.hpp>
 #include <cypress/backend/nest/nest.hpp>
 #include <cypress/backend/nmpi/nmpi.hpp>
-#include <cypress/backend/pynn/pynn.hpp>
 #include <cypress/backend/resources.hpp>
 #include <cypress/core/backend.hpp>
 #include <cypress/core/connector.hpp>
@@ -49,5 +48,6 @@
 #include <cypress/util/neuron_parameters.hpp>
 #include <cypress/util/range.hpp>
 #include <cypress/util/spiking_utils.hpp>
+#include <cypress/util/to_dot.hpp>
 
 #endif /* CYPRESS_HPP */

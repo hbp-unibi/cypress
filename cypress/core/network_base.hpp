@@ -327,6 +327,15 @@ public:
 	 */
 	const std::vector<ConnectionDescriptor> &connections() const;
     
+    /**
+	 * Returns a a reference at ConnectionDescriptor instances with name,
+	 * describing the connection between the individual populations.
+	 *
+	 * @return a reference at the first connection stored in the
+	 * network instance with name
+	 */
+	const ConnectionDescriptor &connection(std::string name) const;
+    
     
     /**
      * Change the connector from an existing connection. 

@@ -23,6 +23,9 @@ ExternalProject_Add(googletest
 	URL            https://github.com/google/googletest/archive/release-1.8.1.tar.gz
 	URL_HASH SHA512=e6283c667558e1fd6e49fa96e52af0e415a3c8037afe1d28b7ff1ec4c2ef8f49beb70a9327b7fc77eb4052a58c4ccad8b5260ec90e4bceeac7a46ff59c4369d7
 	INSTALL_COMMAND ""
+	CMAKE_ARGS
+        -DCMAKE_CXX_FLAGS=${CMAKE_CXX_FLAGS} 
+        -DCMAKE_C_FLAGS=${CMAKE_C_FLAGS} 
 )
 ExternalProject_Get_Property(googletest SOURCE_DIR BINARY_DIR)
 set(GTEST_INCLUDE_DIRS ${SOURCE_DIR}/googletest/include/)

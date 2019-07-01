@@ -19,26 +19,29 @@
 
 #include <cypress/core/synapses.hpp>
 
-namespace cypress{
+namespace cypress {
 std::shared_ptr<SynapseBase> SynapseBase::make_shared(SynapseBase &synapse)
 {
 	if (synapse.name() == "StaticSynapse") {
-		return std::make_shared<StaticSynapse>(StaticSynapse(synapse.parameters()));
+		return std::make_shared<StaticSynapse>(
+		    StaticSynapse(synapse.parameters()));
 	}
 	else if (synapse.name() == "SpikePairRuleAdditive") {
 		return std::make_shared<SpikePairRuleAdditive>(
-			SpikePairRuleAdditive(synapse.parameters()));
+		    SpikePairRuleAdditive(synapse.parameters()));
 	}
 	else if (synapse.name() == "SpikePairRuleMultiplicative") {
 		return std::make_shared<SpikePairRuleMultiplicative>(
-			SpikePairRuleMultiplicative(synapse.parameters()));
+		    SpikePairRuleMultiplicative(synapse.parameters()));
 	}
 	else if (synapse.name() == "TsodyksMarkramMechanism") {
 		return std::make_shared<TsodyksMarkramMechanism>(
-			TsodyksMarkramMechanism(synapse.parameters()));
+		    TsodyksMarkramMechanism(synapse.parameters()));
 	}
 	else {
-		throw CypressException("New synapse type not registered internally");
+		throw CypressException(
+		    "New synapse type " + synapse.name() +
+		    " not registered internally/not yet implemented!");
 	}
 }
-}
+}  // namespace cypress

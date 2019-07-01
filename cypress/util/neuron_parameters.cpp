@@ -17,6 +17,7 @@
  */
 
 #include <algorithm>  //std::sort
+#include <iomanip>
 #include <random>
 #include <string>
 #include <vector>

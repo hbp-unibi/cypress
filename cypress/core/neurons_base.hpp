@@ -77,8 +77,8 @@ protected:
 public:
 	NeuronType(const NeuronType &) = delete;
 	NeuronType(NeuronType &&) = delete;
-	NeuronType& operator=(const NeuronType &) = delete;
-	NeuronType& operator=(NeuronType &&) = delete;
+	NeuronType &operator=(const NeuronType &) = delete;
+	NeuronType &operator=(NeuronType &&) = delete;
 
 	/**
 	 * Name of the neuron type.
@@ -185,6 +185,19 @@ public:
 	 * Returns a read-only reference at the parameter vector.
 	 */
 	const std::vector<Real> &parameters() const { return read_parameters(); }
+
+	/**
+	 * Sets the all parameters at once. Use with caution, parameters have to be
+	 * in the correct order
+	 *
+	 * @param parameters vector of parameters
+	 */
+	void parameters(std::vector<Real> parameters)
+	{
+		for (auto &p : write_parameters()) {
+			p = parameters;
+		}
+	}
 
 	/**
 	 * Sets the parameter with the given index to the specified value.
@@ -468,6 +481,6 @@ public:
 	using NeuronSignalsBase<NullNeuronSignals, NullNeuron,
 	                        0>::NeuronSignalsBase;
 };
-}
+}  // namespace cypress
 
 #endif /* CYPRESS_CORE_NEURONS_BASE_HPP */

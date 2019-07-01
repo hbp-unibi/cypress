@@ -92,6 +92,7 @@ int main(int argc, const char *argv[])
 
 	// Run the network
 	net.run(argv[1], 0.0, argc, argv);
+    create_dot(net, "Tuning Curves Network", "tuning_curve.dot");
 
 	// Evaluate the neurons, create a result matrix containing the tuning curve
 	// of each neuron in the population as column

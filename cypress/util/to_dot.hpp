@@ -1,6 +1,6 @@
 /*
  *  Cypress -- C++ Spiking Neural Network Simulation Framework
- *  Copyright (C) 2016  Andreas Stöckel
+ *  Copyright (C) 2019 Christoph Ostrau
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -16,31 +16,24 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/**
- * @file resources.hpp
- *
- * File containing declarations of all the resources embedded in the Cypress
- * library.
- *
- * @author Andreas Stöckel
- */
-
 #pragma once
 
-#ifndef CYPRESS_BACKEND_RESOURCES_HPP
-#define CYPRESS_BACKEND_RESOURCES_HPP
-
-#include <cypress/util/resource.hpp>
+#include <cypress/core/network_base.hpp>
 
 namespace cypress {
-
 /**
- * Structure collecting all the globally available resource files.
+ * @brief Generates a dot file for the given network. Calls "dot" to generate a
+ * pdf with a visualization of the network and list connectors
+ *
+ * @param netw network instance
+ * @param graph_label label of the graph, Defaults to "Network Architecture".
+ * @param filename filename to store dot file Defaults to "graph.dot".
+ * @param call_dot call dot? output will be filename".pdf" Defaults to true.
  */
-struct Resources {
-	static const Resource NMPI_BROKER;
-};
 
-}
+void create_dot(const NetworkBase &netw,
+                const std::string graph_label = "Network Architecture",
+                const std::string filename = "graph.dot",
+                const bool call_dot = true);
 
-#endif /* CYPRESS_BACKEND_RESOURCES_HPP */
+}  // namespace cypress

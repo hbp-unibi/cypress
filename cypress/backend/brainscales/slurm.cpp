@@ -15,6 +15,9 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+#include <cypress/backend/pynn/pynn.hpp>
+
+#include <cypress/backend/brainscales/slurm.hpp>
 
 #include <cstdio>
 
@@ -22,7 +25,6 @@
 #include <thread>
 #include <vector>
 
-#include <cypress/backend/pynn/slurm.hpp>
 #include <cypress/backend/resources.hpp>
 #include <cypress/core/network_base.hpp>
 #include <cypress/json.hpp>
@@ -31,6 +33,17 @@
 #include <cypress/util/process.hpp>
 
 namespace cypress {
+
+static const std::unordered_map<std::string, std::string>
+    NORMALISED_SIMULATOR_NAMES = {
+        {"hardware.spikey", "spikey"},
+        {"spikey", "spikey"},
+        {"Spikey", "spikey"},
+        {"brainscales", "nmpm1"},
+        {"BrainScaleS", "nmpm1"},
+        {"nmpm1", "nmpm1"},
+        {"ess", "ess"},
+};
 
 void Slurm::set_flags(size_t num)
 {
@@ -74,18 +87,41 @@ void Slurm::set_flags(size_t num)
 }
 
 Slurm::Slurm(const std::string &simulator, const Json &setup)
-    : PyNN(simulator, setup)
+    : ToJson(simulator, setup)
 {
-	if (setup.find("slurm_mode") != setup.end()) {
+	if (m_setup.find("slurm_mode") != m_setup.end()) {
 		set_flags(setup["slurm_mode"]);
+		m_setup.erase(m_setup.find("slurm_mode"));
 	}
-	if (setup.find("slurm_filename") != setup.end()) {
-		m_filename = setup["slurm_filename"];
+	if (m_setup.find("slurm_filename") != m_setup.end()) {
+		m_path = setup["slurm_filename"];
+		m_setup.erase(m_setup.find("slurm_filename"));
+	}
+
+	if (m_setup.find("keep_files") != m_setup.end()) {
+		m_keep_file = setup["keep_files"];
+		m_setup.erase(m_setup.find("keep_files"));
+	}
+
+	if (m_setup.find("json") != m_setup.end()) {
+		m_json = setup["json"];
+		m_setup.erase(m_setup.find("json"));
+	}
+
+	auto it = NORMALISED_SIMULATOR_NAMES.find(simulator);
+	if (it != NORMALISED_SIMULATOR_NAMES.end()) {
+		m_norm_simulator = it->second;
 	}
 	else {
-		// Generate filename
-		m_filename = ".cypress_" + m_normalised_simulator + "_XXXXXX";
-		filesystem::tmpfile(m_filename);
+		m_norm_simulator = m_simulator;
+	}
+
+	if (m_norm_simulator == "nmpm1") {
+		if (m_setup.find("ess") != m_setup.end()) {
+			if (m_setup["ess"].get<bool>()) {
+				m_norm_simulator = "ess";
+			}
+		}
 	}
 }
 namespace {
@@ -100,17 +136,22 @@ void Slurm::do_run(NetworkBase &network, Real duration) const
 {
 	if (m_write_binnf) {
 		// TODO Check whether file exists
-		write_binnf(network, m_filename);
+		auto json = output_json(network, duration);
+		std::ofstream file_out;
+		if (m_json) {
+			file_out.open(m_path + ".json", std::ios::binary);
+			file_out << json;
+		}
+		else {
+			file_out.open(m_path + ".cbor", std::ios::binary);
+			Json::to_cbor(json, file_out);
+		}
+		file_out.close();
+		system("ls > /dev/null");
 	}
 
 	if (m_exec_python) {
-		std::string import = get_import(m_imports, m_simulator);
 		std::vector<std::string> params;
-
-		// Creating file, so that the python part won't create fifos and block
-		// afterwards
-		std::ofstream(m_filename + "_res", std::ios::out).close();
-		std::ofstream(m_filename + "_log", std::ios::out).close();
 
 		// Get the current working directory
 		std::string current_dir = std::string(get_current_dir_name()) + "/";
@@ -119,8 +160,9 @@ void Slurm::do_run(NetworkBase &network, Real duration) const
 		bool init_reticles = false;
 		std::string wafer;
 
+		auto ptr = getenv("SINGULARITY_CONTAINER");
 		// Set simulator dependent options for slurm
-		if (m_normalised_simulator == "nmpm1") {
+		if (m_norm_simulator == "nmpm1") {
 			std::string hicann = "367";
 			wafer = "33";
 			if (m_setup.find("hicann") != m_setup.end()) {
@@ -153,10 +195,10 @@ void Slurm::do_run(NetworkBase &network, Real duration) const
 			// Temporary solution to avoid L1 locking issues when using several
 			// hicanns
 			/*if (m_setup.find("hicann") != m_setup.end()) {
-				if (m_setup["hicann"].is_array() &&
-				    m_setup["hicann"].size() >= 3) {
-					init_reticles = true;
-				}
+			    if (m_setup["hicann"].is_array() &&
+			        m_setup["hicann"].size() >= 3) {
+			        init_reticles = true;
+			    }
 			}*/
 
 			params = std::vector<std::string>({
@@ -170,7 +212,7 @@ void Slurm::do_run(NetworkBase &network, Real duration) const
 			    "-c",
 			});
 		}
-		else if (m_normalised_simulator == "spikey") {
+		else if (m_norm_simulator == "spikey") {
 			size_t station = 538;
 			if (m_setup.find("station") != m_setup.end()) {
 				station = m_setup["station"];
@@ -187,16 +229,16 @@ void Slurm::do_run(NetworkBase &network, Real duration) const
 			    "-c",
 			});
 		}
-
-		else if (m_normalised_simulator == "ess") {
+		else if (m_norm_simulator == "ess") {
 			params = std::vector<std::string>({
 			    "-c",
-			    "sbatch -p simulation -c 8 --mem 30G" /* 
-			    "-p", "simulation", "-c", "8", "--mem", "30G", "bash", "-c"*/,
+			    "sbatch -p simulation -c 8 --mem 30G" /*
+			    "-p", "simulation", "-c", "8", "--mem", "30G", "bash", "-c"*/
+			    ,
 			});
 		}
 		else {
-			throw NotSupportedException("Simulator " + m_normalised_simulator +
+			throw NotSupportedException("Simulator " + m_simulator +
 			                            " not supported with Slurm!");
 		}
 
@@ -207,25 +249,22 @@ void Slurm::do_run(NetworkBase &network, Real duration) const
 			              " -z >text.txt &\n");
 		}
 
-		if(m_normalised_simulator == "nmpm1"){
+		if (ptr == nullptr) {
 			script.append("run_nmpm_software ");
 		}
 
-		script.append(
-		    "python " +
-		    Resources::PYNN_INTERFACE.open_local(m_filename + ".py") + " run " +
-		    "--simulator " + m_normalised_simulator + " --library " + import +
-		    " --setup " + "'" + m_setup.dump() + "'" + " --duration " +
-		    std::to_string(duration) + " --in " + current_dir + m_filename +
-		    "_stdin" + " --out " + current_dir + m_filename + "_res" +
-		    " --logs " + current_dir + m_filename + "_log; ls >/dev/null;wait");
+		script.append(m_json_path + " " + m_path);
+        if(!m_json){
+            script.append(" 1");
+        }
+        script.append(";ls >/dev/null;wait");
 
 		// Synchronize files on servers (Heidelberg setup...)
 		system("ls > /dev/null");
 
 		// Run the srun (non-blocking at this point)
 		std::string slurm;
-		if (m_normalised_simulator == "ess") {
+		if (m_norm_simulator == "ess") {
 			slurm = "bash";
 			params.back().append(" -W <<EOF\n#!/bin/sh\n" + script + "\nEOF");
 		}
@@ -237,7 +276,7 @@ void Slurm::do_run(NetworkBase &network, Real duration) const
 		for (size_t i = 0; i < 3; i++) {
 			Process proc(slurm, params);
 
-			std::ofstream log_stream(m_filename);
+			// std::ofstream log_stream(m_path);
 
 			// This process is only meant to cover the first milliseconds before
 			// all communication is switched to files.
@@ -248,13 +287,14 @@ void Slurm::do_run(NetworkBase &network, Real duration) const
 			// Continiously track stderr of child
 			std::thread err_thread(Process::generic_pipe,
 			                       std::ref(proc.child_stderr()),
-			                       std::ref(log_stream));
+			                       std::ref(std::cerr));
 
 			// Wait for process to finish
 			int res = proc.wait();
 			// Synchronize files on servers (Heidelberg setup...)
 			system("ls > /dev/null");
-			if (res != 0 || file_is_empty(m_filename + "_res")) {
+			std::string suffix = m_json ? "_res.json" : "_res.cbor";
+			if (res != 0 || file_is_empty(m_path + suffix)) {
 				err_thread.join();
 				log_thread_beg.join();
 				if (i < 2) {
@@ -268,7 +308,7 @@ void Slurm::do_run(NetworkBase &network, Real duration) const
 				}
 				throw ExecutionError(
 				    std::string("Error while executing the simulator, see ") +
-				    m_filename + " for the simulators stderr output");
+				    m_path + " for the simulators stderr output");
 			}
 			err_thread.join();
 			log_thread_beg.join();
@@ -277,12 +317,16 @@ void Slurm::do_run(NetworkBase &network, Real duration) const
 	}
 
 	if (m_read_results) {
-		read_back_binnf(network, m_filename);
-		unlink((m_filename + "_stdin").c_str());
-		unlink((m_filename + "_res").c_str());
-		unlink((m_filename + "_log").c_str());
-		unlink((m_filename + ".py").c_str());
-		unlink((m_filename).c_str());
+		std::ifstream file_in;
+		std::string suffix = m_json ? ".json" : ".cbor";
+		file_in.open(m_path + "_res" + suffix, std::ios::binary);
+		Json json = m_json ? Json::parse(file_in) : Json::from_cbor(file_in);
+		read_json(json, network);
+
+		if (!m_keep_file) {
+			unlink((m_path + suffix).c_str());
+			unlink((m_path + "_res" + suffix).c_str());
+		}
 	}
 }
 

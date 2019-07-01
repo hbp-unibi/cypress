@@ -47,4 +47,3 @@ target_link_libraries(time_consumption_connectors cypress)
 
 add_executable(plastic_synapses STDP)
 target_link_libraries(plastic_synapses cypress)
-

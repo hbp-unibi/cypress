@@ -30,28 +30,22 @@ namespace cypress {
 
 // Connection which is greater than all other possible valid connections,
 // but smaller than the smallest invalid connection
-static const Connection LAST_VALID(std::numeric_limits<PopulationIndex>::max(),
-                                   std::numeric_limits<PopulationIndex>::max(),
-                                   std::numeric_limits<NeuronIndex>::max(),
-                                   std::numeric_limits<NeuronIndex>::max(), 1.0,
-                                   0.0);
+static const LocalConnection LAST_VALID(std::numeric_limits<NeuronIndex>::max(),
+                                        std::numeric_limits<NeuronIndex>::max(),
+                                        1.0, 0.0);
 
-std::vector<Connection> instantiate_connections(
+std::vector<std::vector<LocalConnection>> instantiate_connections(
     const std::vector<ConnectionDescriptor> &descrs)
 {
 	// Iterate over the connection descriptors and instantiate them
-	std::vector<Connection> res;
-	for (const auto &descr : descrs) {
-		descr.connect(res);
+	std::vector<std::vector<LocalConnection>> res(descrs.size());
+	for (size_t i = 0; i < descrs.size(); i++) {
+		descrs[i].connect(res[i]);  // Sort the generated connections
+		std::sort(res[i].begin(), res[i].end());
+		// Resize the connection list to end at the first invalid connection
+		auto it = std::upper_bound(res[i].begin(), res[i].end(), LAST_VALID);
+		res[i].resize(it - res[i].begin());
 	}
-
-	// Sort the generated connections
-	std::sort(res.begin(), res.end());
-
-	// Resize the connection list to end at the first invalid connection
-	auto it = std::upper_bound(res.begin(), res.end(), LAST_VALID);
-	res.resize(it - res.begin());
-
 	return res;
 }
 
@@ -60,7 +54,7 @@ std::vector<Connection> instantiate_connections(
  */
 
 void AllToAllConnector::connect(const ConnectionDescriptor &descr,
-                                std::vector<Connection> &tar) const
+                                std::vector<LocalConnection> &tar) const
 {
 	if ((!descr.connector().allow_self_connections()) &&
 	    descr.pid_src() == descr.pid_tar()) {
@@ -69,8 +63,7 @@ void AllToAllConnector::connect(const ConnectionDescriptor &descr,
 			for (NeuronIndex n_tar = descr.nid_tar0(); n_tar < descr.nid_tar1();
 			     n_tar++) {
 				if (n_src != n_tar) {
-					tar.emplace_back(descr.pid_src(), descr.pid_tar(), n_src,
-					                 n_tar, *m_synapse);
+					tar.emplace_back(n_src, n_tar, *m_synapse);
 				}
 			}
 		}
@@ -80,8 +73,7 @@ void AllToAllConnector::connect(const ConnectionDescriptor &descr,
 		     n_src++) {
 			for (NeuronIndex n_tar = descr.nid_tar0(); n_tar < descr.nid_tar1();
 			     n_tar++) {
-				tar.emplace_back(descr.pid_src(), descr.pid_tar(), n_src, n_tar,
-				                 *m_synapse);
+				tar.emplace_back(n_src, n_tar, *m_synapse);
 			}
 		}
 	}
@@ -92,11 +84,11 @@ void AllToAllConnector::connect(const ConnectionDescriptor &descr,
  */
 
 void OneToOneConnector::connect(const ConnectionDescriptor &descr,
-                                std::vector<Connection> &tar) const
+                                std::vector<LocalConnection> &tar) const
 {
 	for (NeuronIndex i = 0; i < descr.nsrc(); i++) {
-		tar.emplace_back(descr.pid_src(), descr.pid_tar(), descr.nid_src0() + i,
-		                 descr.nid_tar0() + i, *m_synapse);
+		tar.emplace_back(descr.nid_src0() + i, descr.nid_tar0() + i,
+		                 *m_synapse);
 	}
 }
 
@@ -105,19 +97,16 @@ void OneToOneConnector::connect(const ConnectionDescriptor &descr,
  */
 
 void FromListConnector::connect(const ConnectionDescriptor &descr,
-                                std::vector<Connection> &tar) const
+                                std::vector<LocalConnection> &tar) const
 {
-	for (const LocalConnection &c : m_connections) {
-		if (c.SynapseParameters.size() > 2) {
-			// TODO
-			throw ExecutionError(
-			    "Only static synapses are supported for this backend!");
+	tar = m_connections;
+	for (auto it = tar.begin(); it != tar.end();) {
+		if ((*it).src >= descr.nid_src0() && (*it).src < descr.nid_src1() &&
+		    (*it).tar >= descr.nid_tar0() && (*it).tar < descr.nid_tar1()) {
+			++it;
 		}
-		StaticSynapse temp(c.SynapseParameters);
-		if (c.src >= descr.nid_src0() && c.src < descr.nid_src1() &&
-		    c.tar >= descr.nid_tar0() && c.tar < descr.nid_tar1()) {
-			tar.emplace_back(descr.pid_src(), descr.pid_tar(), c.src, c.tar,
-			                 temp);
+		else {
+			it = tar.erase(it);
 		}
 	}
 }
@@ -125,5 +114,31 @@ void FromListConnector::connect(const ConnectionDescriptor &descr,
 bool FromListConnector::group_connect(const ConnectionDescriptor &) const
 {
 	return false;
+}
+
+void FromListConnector::update_learned_weights()
+{
+	if (!m_synapse->learning()) {
+		throw CypressException(
+		    "Requested learned weights, although Synapse is static");
+	}
+
+	if (m_weights.size() == 0) {
+		throw CypressException(
+		    "Update of learned weights only possible after simulation!");
+	}
+	if (m_weights.size() != m_connections.size()) {
+		throw CypressException(
+		    "Size of learned weights is not equal to the connection list "
+		    "stored in the connector!");
+	}
+	for (const auto& conn_learned : m_weights) {
+		for (auto& conn : m_connections) {
+			if ((conn_learned.src == conn.src) &&
+			    (conn_learned.tar == conn.tar)) {
+				conn.SynapseParameters[0] = conn_learned.SynapseParameters[0];
+			}
+		}
+	}
 }
 }  // namespace cypress

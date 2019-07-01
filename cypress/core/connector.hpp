@@ -82,36 +82,6 @@ struct Synapse {
 	bool valid() const { return (weight != 0.0) && (delay >= 0.0); }
 };
 
-#pragma pack(push, 1)
-
-struct __local_connection {
-	/**
-	 * Source neuron index within the specified source population.
-	 */
-	NeuronIndex src;
-
-	/**
-	 * Target neuron index within the specified target population.
-	 */
-	NeuronIndex tar;
-
-	/**
-	 * Connection weight
-	 */
-	Real weight;
-
-	/**
-	 * Connection delay
-	 */
-	Real delay;
-
-	__local_connection(NeuronIndex src, NeuronIndex tar, Real weight,
-	                   Real delay)
-	    : src(src), tar(tar), weight(weight), delay(delay)
-	{
-	}
-};
-#pragma pack(pop)
 /**
  * The LocalConnection class is a stripped-down version of the Connection class
  * which only contains the neuron indices and not the source and target
@@ -175,69 +145,15 @@ struct LocalConnection {
 		return temp;
 	}
 
-	__local_connection __old_absolute_connection()
-	{
-		return __local_connection(src, tar, SynapseParameters[0],
-		                          SynapseParameters[1]);
-	}
-};
-
-struct Connection {
-	/**
-	 * Source population index.
-	 */
-	uint32_t psrc;
-
-	/**
-	 * Target population index.
-	 */
-	uint32_t ptar;
-
-	/**
-	 * Neuron connection properties.
-	 */
-	LocalConnection n;
-
-	/**
-	 * Constructor of the Connection class. Per default all fields are
-	 * initialised with zero.
-	 */
-	Connection(uint32_t psrc = 0, uint32_t ptar = 0, uint32_t nsrc = 0,
-	           uint32_t ntar = 0, Real weight = 0.0, Real delay = 0.0)
-	    : psrc(psrc), ptar(ptar), n(nsrc, ntar, weight, delay)
-	{
-	}
-	Connection(uint32_t psrc, uint32_t ptar, uint32_t nsrc, uint32_t ntar,
-	           SynapseBase synapse)
-	    : psrc(psrc), ptar(ptar), n(nsrc, ntar, synapse)
-	{
-	}
-
-	/**
-	 * Checks whether the connection is valid.
-	 */
-	bool valid() const { return n.valid(); }
-
-	/**
-	 * Returns true if the synapse is excitatory.
-	 */
-	bool excitatory() const { return n.excitatory(); }
-
-	/**
-	 * Returns true if the synapse is inhibitory.
-	 */
-	bool inhibitory() const { return n.inhibitory(); }
-
 	/**
 	 * Checks whether two Connection instances are equal.
 	 */
-	bool operator==(const Connection &s) const
+	bool operator==(const LocalConnection &s) const
 	{
-		return Comperator<uint32_t>::equals(1 - uint32_t(valid()),
-		                                    1 - uint32_t(s.valid()))(
-		           psrc, s.psrc)(ptar, s.ptar)(n.src, s.n.src)(n.tar,
-		                                                       s.n.tar)() &&
-		       n.SynapseParameters == s.n.SynapseParameters;
+		return Comperator<uint32_t>::equals(
+		           1 - uint32_t(valid()), 1 - uint32_t(s.valid()))(src, s.src)(
+		           tar, s.tar)() &&
+		       SynapseParameters == s.SynapseParameters;
 	}
 
 	/**
@@ -246,11 +162,11 @@ struct Connection {
 	 * ptar, nsrc, ntar. Invalid neurons are sorted to the end to be able to
 	 * simply throw them away.
 	 */
-	bool operator<(const Connection &s) const
+	bool operator<(const LocalConnection &s) const
 	{
 		return Comperator<uint32_t>::smaller(
-		    1 - uint32_t(valid()), 1 - uint32_t(s.valid()))(psrc, s.psrc)(
-		    ptar, s.ptar)(n.src, s.n.src)(n.tar, s.n.tar)();
+		    1 - uint32_t(valid()), 1 - uint32_t(s.valid()))(src, s.src)(
+		    tar, s.tar)();
 	}
 };
 
@@ -359,7 +275,7 @@ public:
 	 * @param tar is the vector the connections should be appended to.
 	 */
 	virtual void connect(const ConnectionDescriptor &descr,
-	                     std::vector<Connection> &tar) const = 0;
+	                     std::vector<LocalConnection> &tar) const = 0;
 
 	/**
 	 * Flag that allows to use the backend connection descriptor instead of a
@@ -436,7 +352,7 @@ public:
 	 *
 	 * @param weights matrix of new weights
 	 */
-	void _store_learned_weights(std::vector<LocalConnection> weights)
+	void _store_learned_weights(std::vector<LocalConnection> &&weights)
 	{
 		m_weights = std::move(weights);
 	}
@@ -505,6 +421,29 @@ public:
 	 */
 	static std::unique_ptr<FromListConnector> from_list(
 	    std::initializer_list<LocalConnection> connections);
+
+	/**
+	 * Create a list connector which creates connections according to the given
+	 * list.
+	 *
+	 * @param connections is a list of connections that should be created.
+	 * @param synapse prototype synapse for non-standard synapses
+	 * @return Unique pointer to the connector
+	 */
+	static std::unique_ptr<FromListConnector> from_list(
+	    const std::vector<LocalConnection> &connections, SynapseBase &synapse);
+
+	/**
+	 * Create a list connector which creates connections according to the given
+	 * list.
+	 *
+	 * @param connections is a list of connections that should be created.
+	 * @param synapse prototype synapse for non-standard synapses
+	 * @return Unique pointer to the connector
+	 */
+	static std::unique_ptr<FromListConnector> from_list(
+	    std::initializer_list<LocalConnection> connections,
+	    SynapseBase &synapse);
 
 	/**
 	 * Create a list connector which creates connections according to the given
@@ -783,7 +722,7 @@ private:
 	NeuronIndex m_nid_tar0;
 	NeuronIndex m_nid_tar1;
 	std::shared_ptr<Connector> m_connector;
-	std::string m_name;
+	std::string m_label;
 
 public:
 	/**
@@ -792,7 +731,7 @@ public:
 	ConnectionDescriptor(uint32_t pid_src, uint32_t nid_src0, uint32_t nid_src1,
 	                     uint32_t pid_tar, uint32_t nid_tar0, uint32_t nid_tar1,
 	                     std::shared_ptr<Connector> connector = nullptr,
-	                     const char *name = "")
+	                     const char *label = "")
 	    : m_pid_src(pid_src),
 	      m_nid_src0(nid_src0),
 	      m_nid_src1(nid_src1),
@@ -800,7 +739,7 @@ public:
 	      m_nid_tar0(nid_tar0),
 	      m_nid_tar1(nid_tar1),
 	      m_connector(std::move(connector)),
-	      m_name(std::string(name))
+	      m_label(std::string(label))
 	{
 	}
 
@@ -816,8 +755,8 @@ public:
 	NeuronIndex nid_src0() const { return m_nid_src0; }
 
 	/**
-	 * Index of the first neuron in the target population involved in the
-	 * connection.
+	 * Index of the last-plus-one neuron in the target population involved in
+	 * the connection.
 	 */
 	NeuronIndex nid_src1() const { return m_nid_src1; }
 
@@ -859,7 +798,7 @@ public:
 	 * @param tar is the target vector to which the connections should be
 	 * written.
 	 */
-	void connect(std::vector<Connection> &tar) const
+	void connect(std::vector<LocalConnection> &tar) const
 	{
 		connector().connect(*this, tar);
 	}
@@ -908,7 +847,12 @@ public:
 		                        m_nid_tar1 - m_nid_tar0);
 	}
 
-	const std::string &name() const { return m_name; }
+	/**
+	 * Return custom connection label
+	 *
+	 * @return label of the connection
+	 */
+	const std::string &label() const { return m_label; }
 };
 
 /**
@@ -917,9 +861,10 @@ public:
  *
  * @param descrs is a list of connection descriptors which should be turned into
  * a list of connections.
- * @return a flat vector containing the instantiated connections.
+ * @return a vector of vectors containing the instantiated connections for each
+ * Descriptor
  */
-std::vector<Connection> instantiate_connections(
+std::vector<std::vector<LocalConnection>> instantiate_connections(
     const std::vector<ConnectionDescriptor> &descrs);
 
 bool instantiate_connections_to_file(
@@ -954,7 +899,7 @@ public:
 	~AllToAllConnector() override = default;
 
 	void connect(const ConnectionDescriptor &descr,
-	             std::vector<Connection> &tar) const override;
+	             std::vector<LocalConnection> &tar) const override;
 
 	bool group_connect(const ConnectionDescriptor &) const override
 	{
@@ -982,7 +927,7 @@ public:
 	~OneToOneConnector() override = default;
 
 	void connect(const ConnectionDescriptor &descr,
-	             std::vector<Connection> &tar) const override;
+	             std::vector<LocalConnection> &tar) const override;
 
 	bool group_connect(const ConnectionDescriptor &) const override
 	{
@@ -1010,22 +955,47 @@ public:
 class FromListConnector : public Connector {
 private:
 	std::vector<LocalConnection> m_connections;
+	void check_synapse()
+	{
+		if (m_synapse->parameter_names().size() !=
+		    m_connections[0].SynapseParameters.size()) {
+			throw CypressException(
+			    "Please provide an instance of the synapse type in the from "
+			    "list connector!");
+		}
+	}
 
 public:
+	explicit FromListConnector(std::vector<LocalConnection> connections,
+	                           SynapseBase &synapse)
+	    : Connector(synapse, true), m_connections(std::move(connections))
+	{
+		check_synapse();
+	}
+
+	FromListConnector(std::initializer_list<LocalConnection> connections,
+	                  SynapseBase &synapse)
+	    : Connector(synapse, true), m_connections(connections)
+	{
+		check_synapse();
+	}
+
 	explicit FromListConnector(std::vector<LocalConnection> connections)
 	    : Connector(0.0, 0.0, true), m_connections(std::move(connections))
 	{
+		check_synapse();
 	}
 
 	FromListConnector(std::initializer_list<LocalConnection> connections)
 	    : Connector(0.0, 0.0, true), m_connections(connections)
 	{
+		check_synapse();
 	}
 
 	~FromListConnector() override = default;
 
 	void connect(const ConnectionDescriptor &descr,
-	             std::vector<Connection> &tar) const override;
+	             std::vector<LocalConnection> &tar) const override;
 
 	bool group_connect(const ConnectionDescriptor &) const override;
 
@@ -1034,6 +1004,13 @@ public:
 	size_t size(size_t, size_t) const override { return m_connections.size(); }
 
 	std::string name() const override { return "FromListConnector"; }
+
+	/**
+	 * @brief Update the weights of all connections from the last simulation, if
+	 * learning synapses have been used
+	 *
+	 */
+	void update_learned_weights();
 };
 
 class FunctorConnectorBase : public Connector {
@@ -1060,7 +1037,7 @@ public:
 	~FunctorConnector() override = default;
 
 	void connect(const ConnectionDescriptor &descr,
-	             std::vector<Connection> &tar) const override
+	             std::vector<LocalConnection> &tar) const override
 	{
 		for (NeuronIndex n_src = descr.nid_src0(); n_src < descr.nid_src1();
 		     n_src++) {
@@ -1068,8 +1045,8 @@ public:
 			     n_tar++) {
 				Synapse synapse = m_cback(n_src, n_tar);
 				if (synapse.valid()) {
-					tar.emplace_back(descr.pid_src(), descr.pid_tar(), n_src,
-					                 n_tar, synapse.weight, synapse.delay);
+					tar.emplace_back(n_src, n_tar, synapse.weight,
+					                 synapse.delay);
 				}
 			}
 		}
@@ -1119,15 +1096,14 @@ public:
 	~UniformFunctorConnector() override = default;
 
 	void connect(const ConnectionDescriptor &descr,
-	             std::vector<Connection> &tar) const override
+	             std::vector<LocalConnection> &tar) const override
 	{
 		for (NeuronIndex n_src = descr.nid_src0(); n_src < descr.nid_src1();
 		     n_src++) {
 			for (NeuronIndex n_tar = descr.nid_tar0(); n_tar < descr.nid_tar1();
 			     n_tar++) {
 				if (m_cback(n_src, n_tar)) {
-					tar.emplace_back(descr.pid_src(), descr.pid_tar(), n_src,
-					                 n_tar, *m_synapse);
+					tar.emplace_back(n_src, n_tar, *m_synapse);
 				}
 			}
 		}
@@ -1175,23 +1151,22 @@ public:
 	~FixedProbabilityConnector() override = default;
 
 	void connect(const ConnectionDescriptor &descr,
-	             std::vector<Connection> &tar) const override
+	             std::vector<LocalConnection> &tar) const override
 	{
 		const size_t first = tar.size();   // Old number of connections
 		m_connector->connect(descr, tar);  // Instantiate the connections
 		std::uniform_real_distribution<Real> distr(0.0, 1.0);
 		for (size_t i = first; i < tar.size(); i++) {
 			if (distr(*m_engine) >= m_additional_parameter) {
-				tar[i].n.SynapseParameters[0] =
-				    0.0;  // Invalidate the connection
+				tar[i].SynapseParameters[0] = 0.0;  // Invalidate the connection
 			}
 		}
 
 		if ((!descr.connector().allow_self_connections()) &&
 		    descr.pid_src() == descr.pid_tar()) {
 			for (size_t i = first; i < tar.size(); i++) {
-				if (tar[i].n.src == tar[i].n.tar) {
-					tar[i].n.SynapseParameters[0] =
+				if (tar[i].src == tar[i].tar) {
+					tar[i].SynapseParameters[0] =
 					    0.0;  // Invalidate the connection
 				}
 			}
@@ -1355,15 +1330,14 @@ public:
 	~FixedFanInConnector() override = default;
 
 	void connect(const ConnectionDescriptor &descr,
-	             std::vector<Connection> &tar) const override
+	             std::vector<LocalConnection> &tar) const override
 	{
 		if (descr.pid_src() == descr.pid_tar()) {
 			Base::generate_connections(
 			    descr.nid_src0(), descr.nsrc(), Base::m_additional_parameter,
 			    descr.nid_tar0(), descr.nid_tar1(),
 			    [&](size_t i, size_t r) {
-				    tar.emplace_back(descr.pid_src(), descr.pid_tar(), r, i,
-				                     *this->m_synapse);
+				    tar.emplace_back(r, i, *this->m_synapse);
 			    },
 			    descr.connector().allow_self_connections());
 		}
@@ -1372,8 +1346,7 @@ public:
 			    descr.nid_src0(), descr.nsrc(), Base::m_additional_parameter,
 			    descr.nid_tar0(), descr.nid_tar1(),
 			    [&](size_t i, size_t r) {
-				    tar.emplace_back(descr.pid_src(), descr.pid_tar(), r, i,
-				                     *this->m_synapse);
+				    tar.emplace_back(r, i, *this->m_synapse);
 			    },
 			    true);
 		}
@@ -1434,15 +1407,14 @@ public:
 	~FixedFanOutConnector() override = default;
 
 	void connect(const ConnectionDescriptor &descr,
-	             std::vector<Connection> &tar) const override
+	             std::vector<LocalConnection> &tar) const override
 	{
 		if (descr.pid_src() == descr.pid_tar()) {
 			Base::generate_connections(
 			    descr.nid_tar0(), descr.ntar(), Base::m_additional_parameter,
 			    descr.nid_src0(), descr.nid_src1(),
 			    [&](size_t i, size_t r) {
-				    tar.emplace_back(descr.pid_src(), descr.pid_tar(), i, r,
-				                     *this->m_synapse);
+				    tar.emplace_back(i, r, *this->m_synapse);
 			    },
 			    descr.connector().allow_self_connections());
 		}
@@ -1451,8 +1423,7 @@ public:
 			    descr.nid_tar0(), descr.ntar(), Base::m_additional_parameter,
 			    descr.nid_src0(), descr.nid_src1(),
 			    [&](size_t i, size_t r) {
-				    tar.emplace_back(descr.pid_src(), descr.pid_tar(), i, r,
-				                     *this->m_synapse);
+				    tar.emplace_back(i, r, *this->m_synapse);
 			    },
 			    true);
 		}
@@ -1509,6 +1480,18 @@ inline std::unique_ptr<OneToOneConnector> Connector::one_to_one(
     SynapseBase &synapse)
 {
 	return std::make_unique<OneToOneConnector>(synapse);
+}
+
+inline std::unique_ptr<FromListConnector> Connector::from_list(
+    const std::vector<LocalConnection> &connections, SynapseBase &synapse)
+{
+	return std::make_unique<FromListConnector>(connections, synapse);
+}
+
+inline std::unique_ptr<FromListConnector> Connector::from_list(
+    std::initializer_list<LocalConnection> connections, SynapseBase &synapse)
+{
+	return std::make_unique<FromListConnector>(connections, synapse);
 }
 
 inline std::unique_ptr<FromListConnector> Connector::from_list(

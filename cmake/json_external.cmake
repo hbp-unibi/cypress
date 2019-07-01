@@ -15,9 +15,9 @@
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 # Download the JSON library
-message(STATUS "Downloading https://github.com/nlohmann/json/releases/download/v2.1.0/json.hpp")
+message(STATUS "Download https://github.com/nlohmann/json/releases/download/v3.6.1/json.hpp")
 file(DOWNLOAD
-	https://github.com/nlohmann/json/releases/download/v2.1.0/json.hpp
+	https://github.com/nlohmann/json/releases/download/v3.6.1/json.hpp
 	${CMAKE_BINARY_DIR}/include/cypress/json.hpp
-	EXPECTED_HASH SHA256=a571dee92515b685784fd527e38405cf3f5e13e96edbfe3f03d6df2e363a767b
+	EXPECTED_HASH SHA256=d2eeb25d2e95bffeb08ebb7704cdffd2e8fca7113eba9a0b38d60a5c391ea09a
 )

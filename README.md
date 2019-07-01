@@ -13,7 +13,7 @@ significantly shortening the time required when performing experiments.
 
 [![Build Status](https://travis-ci.org/hbp-unibi/cypress.svg?branch=master)](https://travis-ci.org/hbp-unibi/cypress) [![Documentation](https://img.shields.io/badge/docs-doxygen-blue.svg)](https://hbp-unibi.github.io/cypress/index.html)
 
-Installation
+Building the sources
 ------------
 
 Cypress requires a C++14 compliant compiler such as GCC 4.9 and CMake in version 3.0 (or later). In order to run Cypress applications on the Neuromorphic Compute Platform, they must be statically linked. To this end you should install the `glibc-static` and `libstdc++-static` libraries provided by your distribution. On Fedora you can install these using
@@ -21,9 +21,9 @@ Cypress requires a C++14 compliant compiler such as GCC 4.9 and CMake in version
 sudo dnf install glibc-static libstdc++-static
 ```
 
-Furthermore Python in version 2.7 and `pip` must be installed, as well as the PyPi packages `pyNN`, `requests` and `pyminifier`. You can install the latter using
+Furthermore Python in version 2.7 and `pip` must be installed, as well as the PyPi package `pyNN`. You can install the latter using
 ```bash
-sudo pip install pyNN requests pyminifier
+sudo pip install pyNN
 ```
 
 In order to run network simulations you also need to install NEST or PyNN with an appropriate simulator backend (for example sPyNNaker). See http://www.nest-simulator.org/ for information on how to install NEST.
@@ -39,7 +39,7 @@ make && make test
 Example
 -------
 
-The recommended way to use cypress is to use CMakes ExternalProject_Add. An example project how to use that can be found at [github](https://github.com/hbp-unibi/cypress_example). This repository should be the starting point for your networks.
+The recommended way to use cypress is to use CMakes ExternalProject_Add. An example project how to use that can be found at [github](https://github.com/hbp-unibi/cypress_example). This repository should be the starting point for your networks. See below for more details.
 
 However, if you want to use cypress more directly, here is an example how to do that:
 
@@ -75,7 +75,7 @@ int main(int argc, const char *argv[])
 
 You can compile this code using the following command line:
 ```bash
-g++ -std=c++14 cypress_test.cpp -o cypress_test -lcypress -lpthread
+g++ -std=c++14 cypress_test.cpp -o cypress_test -lcypress -lpthread -ldl
 ```
 Then run it with the native NEST backing using
 ```bash
@@ -118,6 +118,9 @@ a major bottleneck. However, constructing networks in C++ is extremely fast. Fur
 this amazing alien C++ technology-thingy allows to detect most errors in your code before actually
 executing it. Who would have thought of that?
 
+### Graph visualization via dot (Graphviz)
+Simply call ``` create_dot(netw, "graph_label")``` to create a simplified visualization of your created network.
+
 ### Supported Backends
 
 Currently we support the following backends:
@@ -128,6 +131,7 @@ Currently we support the following backends:
  * `spikey`, the predecessor of BrainScaleS (https://www.kip.uni-heidelberg.de/vision/research/spikey/)
 
 Futhermore, backends available through the Neuromorphic Platform Service nmpi can be used via `nmpi.backend`. If you have access to the Heidelberg server environment, jobs can be executed from the entry server or one of the computation nodes by using `slurm.x`, with which resources are automatically allocated. 
+To parallelize simulators, `json.x` serializes a network to json and executes an independent process with simulator `x`, reading the network infrastructure from the generate json. 
 
 Backend specific performance and setup knobs
 ------------
@@ -145,6 +149,22 @@ Only on the hardware:
 
 ### SpiNNaker
  * `neurons_per_core` Sets the maximal number of neurons for the IaF neuron with conductance based synapses. Possible values: 1, ..., 255, ... ; Default: None (255?)
+ 
+Using Cypress in your own project
+------------
+
+The easiest way is to set up your project like in this example project [github](https://github.com/hbp-unibi/cypress_example).
+
+For installation of cypress, choose the installation path calling ```cmake .. -DCMAKE_INSTALL_PREFIX=<path> -DSTATIC_LINKING=TRUE``` from your build folder (replacing `<path>` with your installation path). Here, we recommend to install using ```~/.local/``` for installation without sudo. 
+Currently, you also need to change the CMakeLists.txt in ```external/pybind11/```. In lines 151/155 disable the if statement (pybind11 issue 1733). A final ```make && make install``` will install the project to your requested location. 
+
+In your subproject, add
+```cmake 
+find_package(Cypress REQUIRED)
+include_directories(${CYPRESS_INCLUDE_DIRS})
+```
+to your cmake file. All your executables must then be linked to ```${CYPRESS_LIBRARY}```.
+
 
 FAQ
 ------------
