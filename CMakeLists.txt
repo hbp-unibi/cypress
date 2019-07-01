@@ -21,6 +21,8 @@ project(cypress)
 # Add the local "cmake" directory to the search path
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR}/cmake)
 
+set(BUILD_TEST_EXAMPLES TRUE CACHE BOOL "Set to true for building examples and tests")
+
 # Automatically download and compile Google-Test and the JSON library
 include(gtest_external)
 include(json_external)
@@ -179,7 +181,7 @@ else()
 endif()
 
 # Check if cypress is built as a subproject
-if (CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
+if (BUILD_TEST_EXAMPLES)
     # Installation configuration
     install(TARGETS cypress ARCHIVE DESTINATION lib)
     install(TARGETS cypress_from_json RUNTIME DESTINATION bin)
