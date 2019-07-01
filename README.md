@@ -153,10 +153,10 @@ Only on the hardware:
 Using Cypress in your own project
 ------------
 
-The most easiest way is to set up your project like in this example project [github](https://github.com/hbp-unibi/cypress_example).
+The easiest way is to set up your project like in this example project [github](https://github.com/hbp-unibi/cypress_example).
 
 For installation of cypress, choose the installation path calling ```cmake .. -DCMAKE_INSTALL_PREFIX=<path> -DSTATIC_LINKING=TRUE``` from your build folder (replacing `<path>` with your installation path). Here, we recommend to install using ```~/.local/``` for installation without sudo. 
-Currently, you also need to change the CMakeLists.txt in ```external/pybind11/```. In line 23, change ```set(PYBIND11_MASTER_PROJECT OFF)``` to ```set(PYBIND11_MASTER_PROJECT ON)``` (pybind11 issue 1733). A final ```make && make install``` will install the project to your requested location. 
+Currently, you also need to change the CMakeLists.txt in ```external/pybind11/```. In lines 151/155 disable the if statement (pybind11 issue 1733). A final ```make && make install``` will install the project to your requested location. 
 
 In your subproject, add
 ```cmake 
