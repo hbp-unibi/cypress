@@ -178,33 +178,36 @@ else()
 	target_link_libraries(cypress pthread pybind11::embed dl)
 endif()
 
-# Installation configuration
-install(TARGETS cypress ARCHIVE DESTINATION lib)
-install(TARGETS cypress_from_json RUNTIME DESTINATION bin)
-install(
-	DIRECTORY ${CMAKE_SOURCE_DIR}/cypress
-	DESTINATION include
-	FILES_MATCHING PATTERN "*.hpp"
-)
-install(
-	FILES ${CMAKE_BINARY_DIR}/include/cypress/config.h
-	DESTINATION include/cypress
-)
-install(
-	DIRECTORY ${CMAKE_BINARY_DIR}/include/cypress
-	DESTINATION include
-	FILES_MATCHING PATTERN "*.hpp"
-)
-install(
-	FILES ${CMAKE_SOURCE_DIR}/cmake/FindCypress.cmake
-	DESTINATION share/cmake/Cypress/
-	RENAME CypressConfig.cmake
-)
-install(FILES ${CMAKE_BINARY_DIR}/libBS2CYPRESS.so
-    DESTINATION lib)
+# Check if cypress is built as a subproject
+if (CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
+    # Installation configuration
+    install(TARGETS cypress ARCHIVE DESTINATION lib)
+    install(TARGETS cypress_from_json RUNTIME DESTINATION bin)
+    install(
+        DIRECTORY ${CMAKE_SOURCE_DIR}/cypress
+        DESTINATION include
+        FILES_MATCHING PATTERN "*.hpp"
+    )
+    install(
+        FILES ${CMAKE_BINARY_DIR}/include/cypress/config.h
+        DESTINATION include/cypress
+    )
+    install(
+        DIRECTORY ${CMAKE_BINARY_DIR}/include/cypress
+        DESTINATION include
+        FILES_MATCHING PATTERN "*.hpp"
+    )
+    install(
+        FILES ${CMAKE_SOURCE_DIR}/cmake/FindCypress.cmake
+        DESTINATION share/cmake/Cypress/
+        RENAME CypressConfig.cmake
+    )
+    install(FILES ${CMAKE_BINARY_DIR}/libBS2CYPRESS.so
+        DESTINATION lib)
 
-# Submodules
-enable_testing()
-add_subdirectory(examples)
-add_subdirectory(test)
+    # Submodules
+    enable_testing()
+    add_subdirectory(examples)
+    add_subdirectory(test)
+endif()
 
