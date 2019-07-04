@@ -1056,16 +1056,19 @@ std::tuple<py::object, py::object> PyNN::list_connect(
 			counter_in++;
 		}
 	}
-	auto synapse_type =
-	    get_synapse(conn.connector().synapse_name(),
-	                conn.connector().synapse()->parameters(), pynn, 0.0, 1.0);
+
+	auto temp_params = conn.connector().synapse()->parameters();
+	if (temp_params[0] == 0) {
+		temp_params[0] = 0.1;
+		temp_params[1] = 1.0;  // Bug on SpiNNaker
+	}
+	bool static_synapse = conn.connector().synapse_name() == "StaticSynapse"
+	                          ? true
+	                          : false;  // SpiNNaker 4 bug
+	auto synapse_type = get_synapse(conn.connector().synapse_name(),
+	                                temp_params, pynn, 0.0, 1.0);
 	std::vector<std::string> syn_param_names =
 	    conn.connector().synapse()->parameter_names();
-	if (py::cast<std::string>(py::module::import("pyNN").attr("__version__")) ==
-	    "0.8.3") {
-		syn_param_names[0] = "weigths";
-		syn_param_names[1] = "delays";
-	}
 	py::list py_names = py::cast(syn_param_names);
 
 	if (conns_full.size() - num_inh > 0) {
@@ -1074,8 +1077,14 @@ std::tuple<py::object, py::object> PyNN::list_connect(
 		});
 		py::array temp_array({(*conns_exc).rows(), (*conns_exc).cols()},
 		                     (*conns_exc).data(), capsule);
-		py::object connector = pynn.attr("FromListConnector")(
-		    temp_array, "column_names"_a = py_names);
+		py::object connector;
+		if (static_synapse) {
+			connector = pynn.attr("FromListConnector")(temp_array);
+		}
+		else {
+			connector = pynn.attr("FromListConnector")(
+			    temp_array, "column_names"_a = py_names);
+		}
 		std::get<0>(ret) = pynn.attr("Projection")(
 		    pypopulations[conn.pid_src()], pypopulations[conn.pid_tar()],
 		    connector, "synapse_type"_a = synapse_type,
@@ -1087,9 +1096,14 @@ std::tuple<py::object, py::object> PyNN::list_connect(
 		});
 		py::array temp_array({(*conns_inh).rows(), (*conns_inh).cols()},
 		                     (*conns_inh).data(), capsule);
-
-		py::object connector = pynn.attr("FromListConnector")(
-		    temp_array, "column_names"_a = py_names);
+		py::object connector;
+		if (static_synapse) {
+			connector = pynn.attr("FromListConnector")(temp_array);
+		}
+		else {
+			connector = pynn.attr("FromListConnector")(
+			    temp_array, "column_names"_a = py_names);
+		}
 		if (!current_based) {
 			std::get<1>(ret) = pynn.attr("Projection")(
 			    pypopulations[conn.pid_src()], pypopulations[conn.pid_tar()],
