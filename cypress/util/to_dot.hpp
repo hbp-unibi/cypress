@@ -30,7 +30,6 @@ namespace cypress {
  * @param filename filename to store dot file Defaults to "graph.dot".
  * @param call_dot call dot? output will be filename".pdf" Defaults to true.
  */
-
 void create_dot(const NetworkBase &netw,
                 const std::string graph_label = "Network Architecture",
                 const std::string filename = "graph.dot",
