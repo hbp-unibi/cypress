@@ -1051,7 +1051,7 @@ std::tuple<py::object, py::object> PyNN::list_connect(
 				(*conns_inh)(counter_in, 3) = i.SynapseParameters[1];
 			}
 			for (size_t j = 2; j < i.SynapseParameters.size(); j++) {
-				(*conns_exc)(counter_ex, 2 + j) = i.SynapseParameters[j];
+				(*conns_exc)(counter_in, 2 + j) = i.SynapseParameters[j];
 			}
 			counter_in++;
 		}
