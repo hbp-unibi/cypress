@@ -1059,8 +1059,13 @@ std::tuple<py::object, py::object> PyNN::list_connect(
 	auto synapse_type =
 	    get_synapse(conn.connector().synapse_name(),
 	                conn.connector().synapse()->parameters(), pynn, 0.0, 1.0);
-	const std::vector<std::string> &syn_param_names =
+	std::vector<std::string> syn_param_names =
 	    conn.connector().synapse()->parameter_names();
+	if (py::cast<std::string>(py::module::import("pyNN").attr("__version__")) ==
+	    "0.8.3") {
+		syn_param_names[0] = "weigths";
+		syn_param_names[1] = "delays";
+	}
 	py::list py_names = py::cast(syn_param_names);
 
 	if (conns_full.size() - num_inh > 0) {
