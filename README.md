@@ -149,6 +149,7 @@ Only on the hardware:
 
 ### SpiNNaker
  * `neurons_per_core` Sets the maximal number of neurons for the IaF neuron with conductance based synapses. Possible values: 1, ..., 255, ... ; Default: None (255?)
+ * `timestep` Sets the timestep of the simulation. Default is 1.0, possible are also 0.1, 0.01. The latter slow down the simulation by a factor of 10,100.
  
 Using Cypress in your own project
 ------------
