@@ -18,7 +18,7 @@
 
 #include <../genn/include/genn/backends/cuda/backend.h>
 #include <../genn/include/genn/backends/cuda/optimiser.h>
-#include <../genn/include/genn/backends/single_threaded_cpu/optimiser.h>
+#include <../genn/include/genn/backends/single_threaded_cpu/backend.h>
 #include <../genn/include/genn/genn/code_generator/generateAll.h>
 #include <../genn/include/genn/genn/code_generator/generateMakefile.h>
 #include <../genn/include/genn/genn/modelSpecInternal.h>  // TODO
@@ -30,12 +30,73 @@
 #include <cypress/backend/genn/genn.hpp>
 #include <cypress/core/exceptions.hpp>
 #include <cypress/core/neurons.hpp>
+#include <cypress/util/logger.hpp>
 
 #include <cypress/core/network_base_objects.hpp>
 
 #define UNPACK7(v) v[0], v[1], v[2], v[3], v[4], v[5], v[6]
 
-std::vector<float> spikeTimes{5.0, 7.0};
+class FixedNumberPostWithReplacementNoAutapse
+    : public InitSparseConnectivitySnippet::Base {
+public:
+	DECLARE_SNIPPET(FixedNumberPostWithReplacementNoAutapse, 1);
+
+	SET_ROW_BUILD_CODE(
+	    "const scalar u = $(gennrand_uniform);\n"
+	    "x += (1.0 - x) * (1.0 - pow(u, 1.0 / (scalar)($(rowLength) - c)));\n"
+	    "const unsigned int postIdx = (unsigned int)(x * $(num_post));\n"
+	    "if(postIdx != $(id_pre)){\n"
+	    "if(postIdx < $(num_post)) {\n"
+	    "   $(addSynapse, postIdx);\n"
+	    "}\n"
+	    "else {\n"
+	    "   $(addSynapse, $(num_post) - 1);\n"
+	    "}\n"
+	    "c++;\n"
+	    "if(c >= $(rowLength)) {\n"
+	    "   $(endRow);\n"
+	    "}}\n");
+	SET_ROW_BUILD_STATE_VARS({{"x", "scalar", 0.0}, {"c", "unsigned int", 0}});
+
+	SET_PARAM_NAMES({"rowLength"});
+
+	SET_CALC_MAX_ROW_LENGTH_FUNC([](unsigned int, unsigned int,
+	                                const std::vector<double> &pars) {
+		return (unsigned int)pars[0];
+	});
+};
+IMPLEMENT_SNIPPET(FixedNumberPostWithReplacementNoAutapse);
+
+class FixedNumberPostWithReplacement
+    : public InitSparseConnectivitySnippet::Base {
+public:
+	DECLARE_SNIPPET(FixedNumberPostWithReplacement, 1);
+
+	SET_ROW_BUILD_CODE(
+	    "const scalar u = $(gennrand_uniform);\n"
+	    "x += (1.0 - x) * (1.0 - pow(u, 1.0 / (scalar)($(rowLength) - c)));\n"
+	    "const unsigned int postIdx = (unsigned int)(x * $(num_post));\n"
+	    "if(postIdx < $(num_post)) {\n"
+	    "   $(addSynapse, postIdx);\n"
+	    "}\n"
+	    "else {\n"
+	    "   $(addSynapse, $(num_post) - 1);\n"
+	    "}\n"
+	    "c++;\n"
+	    "if(c >= $(rowLength)) {\n"
+	    "   $(endRow);\n"
+	    "}\n");
+	SET_ROW_BUILD_STATE_VARS({{"x", "scalar", 0.0}, {"c", "unsigned int", 0}});
+
+	SET_PARAM_NAMES({"rowLength"});
+
+	SET_CALC_MAX_ROW_LENGTH_FUNC([](unsigned int, unsigned int,
+	                                const std::vector<double> &pars) {
+		return (unsigned int)pars[0];
+	});
+};
+IMPLEMENT_SNIPPET(FixedNumberPostWithReplacement);
+
 namespace cypress {
 GeNN::GeNN(const Json &setup)
 {
@@ -43,9 +104,8 @@ GeNN::GeNN(const Json &setup)
 		m_timestep = setup["timestep"].get<Real>();
 	}
 	if (setup.count("gpu") > 0) {
-		m_gpu = setup["gpu"].get<float>();
+		m_gpu = setup["gpu"].get<bool>();
 	}
-
 	// TODO
 }
 std::unordered_set<const NeuronType *> GeNN::supported_neuron_types() const
@@ -135,56 +195,75 @@ NeuronGroup *create_neuron_group(const PopulationBase &pop,
 	}
 }
 
-InitSparseConnectivitySnippet::Init genn_connector(std::string name,
-                                                   SynapseMatrixType &type,
-                                                   bool allow_self_connections,
-                                                   Real additional_parameter)
+InitSparseConnectivitySnippet::Init genn_connector(
+    std::string name, SynapseMatrixType &type,
+    const bool allow_self_connections, const Real additional_parameter,
+    const bool full_pops, bool &list_connected)
 {
-	type = SynapseMatrixType::BITMASK_GLOBALG;
-	if (name == "AllToAllConnector") {
-		if (allow_self_connections) {
-			return initConnectivity<
-			    InitSparseConnectivitySnippet::FixedProbability>(1.0);
+	list_connected = false;
+	if (full_pops) {
+		type = SynapseMatrixType::BITMASK_GLOBALG;
+		if (name == "AllToAllConnector") {
+			if (allow_self_connections) {
+				type = SynapseMatrixType::DENSE_GLOBALG;
+				return initConnectivity<
+				    InitSparseConnectivitySnippet::Uninitialised>();
+			}
+			else {
+				return initConnectivity<
+				    InitSparseConnectivitySnippet::FixedProbabilityNoAutapse>(
+				    1.0);
+			}
 		}
-		else {
-			return initConnectivity<
-			    InitSparseConnectivitySnippet::FixedProbabilityNoAutapse>(1.0);
+		else if (name == "OneToOneConnector") {
+			type = SynapseMatrixType::SPARSE_GLOBALG;
+			return initConnectivity<InitSparseConnectivitySnippet::OneToOne>();
+		}
+		/*else if (conn.connector().name() == "FixedFanInConnector") {
+		    *connector =
+		        initConnectivity<InitSparseConnectivitySnippet::OneToOne>();
+		}
+		*/
+		else if (name == "FixedFanOutConnector") {
+			if (allow_self_connections) {
+				return initConnectivity<FixedNumberPostWithReplacement>(
+				    (unsigned int)additional_parameter);
+			}
+			else {
+
+				return initConnectivity<
+				    FixedNumberPostWithReplacementNoAutapse>(
+				    (unsigned int)additional_parameter);
+			}
+		}
+		else if (name == "RandomConnector") {
+			if (additional_parameter == 1.0 && allow_self_connections) {
+				type = SynapseMatrixType::DENSE_GLOBALG;
+				return initConnectivity<
+				    InitSparseConnectivitySnippet::Uninitialised>();
+			}
+			if (allow_self_connections) {
+				return initConnectivity<
+				    InitSparseConnectivitySnippet::FixedProbability>(
+				    additional_parameter);
+			}
+			else {
+				return initConnectivity<
+				    InitSparseConnectivitySnippet::FixedProbabilityNoAutapse>(
+				    additional_parameter);
+			}
 		}
 	}
-	else if (name == "OneToOneConnector") {
-		type = SynapseMatrixType::SPARSE_GLOBALG;
-		return initConnectivity<InitSparseConnectivitySnippet::OneToOne>();
-	}
-	/*else if (conn.connector().name() == "FixedFanInConnector") {
-	    *connector =
-	        initConnectivity<InitSparseConnectivitySnippet::OneToOne>();
-	}
-	else if (conn.connector().name() == "FixedFanOutConnector") {
-	    *connector =
-	        initConnectivity<InitSparseConnectivitySnippet::OneToOne>();
-	}*/
-	else if (name == "RandomConnector") {
-		if (allow_self_connections) {
-			return initConnectivity<
-			    InitSparseConnectivitySnippet::FixedProbability>(
-			    additional_parameter);
-		}
-		else {
-			return initConnectivity<
-			    InitSparseConnectivitySnippet::FixedProbabilityNoAutapse>(
-			    additional_parameter);
-		}
-	}
-	else {
-		// TODO List Connector
-		throw ExecutionError("Chosen Connector is not yet supported by GeNN");
-	}
+	// default case
+	list_connected = true;
+	type = SynapseMatrixType::DENSE_INDIVIDUALG;
+	return initConnectivity<InitSparseConnectivitySnippet::Uninitialised>();
 }
 
-SynapseGroup *group_connect(const std::vector<PopulationBase> pops,
-                            ModelSpecInternal &model,
-                            const ConnectionDescriptor &conn, std::string name,
-                            Real timestep)
+SynapseGroup *connect(const std::vector<PopulationBase> pops,
+                      ModelSpecInternal &model,
+                      const ConnectionDescriptor &conn, std::string name,
+                      Real timestep, bool &list_connected)
 {
 	// pops[conn.pid_tar()].homogeneous_parameters();
 	// TODO : inhomogenous tau_syn and E_rev, popviews
@@ -193,6 +272,12 @@ SynapseGroup *group_connect(const std::vector<PopulationBase> pops,
 	Real weight = conn.connector().synapse()->parameters()[0];
 	unsigned int delay =
 	    (unsigned int)(conn.connector().synapse()->parameters()[1] / timestep);
+	bool full_pops = (conn.nid_src0() == 0) &&
+	                 (size_t(conn.nid_src1()) == pops[conn.pid_src()].size()) &&
+	                 (conn.nid_tar0() == 0) &&
+	                 (size_t(conn.nid_tar1()) == pops[conn.pid_tar()].size());
+	bool allow_self_connections = conn.connector().allow_self_connections() ||
+	                              !(conn.pid_src() == conn.pid_tar());
 
 	if (cond_based) {
 		if (!conn.connector().synapse()->learning()) {
@@ -207,11 +292,15 @@ SynapseGroup *group_connect(const std::vector<PopulationBase> pops,
 				tau = pops[conn.pid_tar()].parameters().parameters()[3];
 			}
 			SynapseMatrixType type;
-			auto connector =
-			    genn_connector(conn.connector().name(), type,
-			                   conn.connector().allow_self_connections(),
-			                   conn.connector().additional_parameter());
 
+			auto connector = genn_connector(
+			    conn.connector().name(), type, allow_self_connections,
+			    conn.connector().additional_parameter(), full_pops,
+			    list_connected);
+
+			if (list_connected) {
+				return nullptr;
+			}
 			return model.addSynapsePopulation<WeightUpdateModels::StaticPulse,
 			                                  PostsynapticModels::ExpCond>(
 			    name, type, delay, "pop_" + std::to_string(conn.pid_src()),
@@ -229,15 +318,113 @@ SynapseGroup *group_connect(const std::vector<PopulationBase> pops,
 	}
 }
 
+std::tuple<SynapseGroup *, SynapseGroup *,
+           std::shared_ptr<std::vector<LocalConnection>>>
+list_connect_pre(const std::vector<PopulationBase> pops,
+                 ModelSpecInternal &model, const ConnectionDescriptor &conn,
+                 std::string name, Real timestep)
+{
+
+	if (conn.connector().name() == "FromListConnector" ||
+	    conn.connector().name() == "FunctorConnector") {
+		global_logger().info(
+		    "GeNN",
+		    "List connections only allow one delay per connector! We will use "
+		    "the delay provided by the default synapse object!");
+	}
+	auto conns_full = std::make_shared<std::vector<LocalConnection>>();
+	conn.connect(*conns_full);
+
+	size_t num_inh = 0;
+	for (auto &i : *conns_full) {
+		if (i.inhibitory()) {
+			num_inh++;
+		}
+	}
+
+	bool cond_based = pops[conn.pid_tar()].type().conductance_based;
+	if (!cond_based) {
+		throw;
+	}
+
+	unsigned int delay =
+	    (unsigned int)(conn.connector().synapse()->parameters()[1] / timestep);
+	SynapseGroup *synex = nullptr, *synin = nullptr;
+
+	if (conns_full->size() - num_inh > 0) {
+		double rev_pot = pops[conn.pid_tar()].parameters().parameters()[8];
+		double tau = pops[conn.pid_tar()].parameters().parameters()[2];
+		synex = model.addSynapsePopulation<WeightUpdateModels::StaticPulse,
+		                                   PostsynapticModels::ExpCond>(
+		    name + "_ex", SynapseMatrixType::DENSE_INDIVIDUALG, delay,
+		    "pop_" + std::to_string(conn.pid_src()),
+		    "pop_" + std::to_string(conn.pid_tar()), {}, {0.0}, {tau, rev_pot},
+		    {});
+	}
+
+	// inhibitory
+	if (num_inh > 0) {
+		double rev_pot = pops[conn.pid_tar()].parameters().parameters()[9];
+		double tau = pops[conn.pid_tar()].parameters().parameters()[3];
+		synin = model.addSynapsePopulation<WeightUpdateModels::StaticPulse,
+		                                   PostsynapticModels::ExpCond>(
+		    name + "_in", SynapseMatrixType::DENSE_INDIVIDUALG, delay,
+		    "pop_" + std::to_string(conn.pid_src()),
+		    "pop_" + std::to_string(conn.pid_tar()), {}, {0.0}, {tau, rev_pot},
+		    {});
+	}
+	return std::make_tuple(synex, synin, std::move(conns_full));
+}
+
+typedef void (*PushFunction)(bool);
+void list_connect_post(
+    std::string name,
+    std::tuple<SynapseGroup *, SynapseGroup *,
+               std::shared_ptr<std::vector<LocalConnection>>> &tuple,
+    SharedLibraryModel<float> &slm, size_t size_src, size_t size_tar)
+{
+	float *weights_in, *weights_ex;
+	if (std::get<0>(tuple)) {
+		weights_ex =
+		    *(static_cast<float **>(slm.getSymbol("g" + name + "_ex")));
+	}
+
+	if (std::get<1>(tuple)) {
+		weights_in =
+		    *(static_cast<float **>(slm.getSymbol("g" + name + "_in")));
+	}
+
+	for (auto &i : *(std::get<2>(tuple))) {
+		if (i.inhibitory()) {
+			weights_in[size_tar * i.src + i.tar] =
+			    -float(i.SynapseParameters[0]);
+		}
+		else {
+			weights_ex[size_tar * i.src + i.tar] =
+			    float(i.SynapseParameters[0]);
+		}
+	}
+
+	if (std::get<0>(tuple)) {
+		((PushFunction)slm.getSymbol("pushg" + name + "_exToDevice"))(false);
+	}
+	if (std::get<1>(tuple)) {
+		((PushFunction)slm.getSymbol("pushg" + name + "_inToDevice"))(false);
+	}
+	std::get<2>(tuple)->clear();
+}
+
 void GeNN::do_run(NetworkBase &network, Real duration) const
 {
+	// General Setup
 	ModelSpecInternal model;
-	model.setPrecision(FloatType::GENN_FLOAT);
+	model.setPrecision(FloatType::GENN_FLOAT);  // TODO: template to use double
 	model.setTimePrecision(TimePrecision::DEFAULT);
 	model.setDT(m_timestep);  // Timestep in ms
 	model.setMergePostsynapticModels(true);
 	model.setName("cypressnet");  // TODO random net
 
+	// Create Populations
 	auto &populations = network.populations();
 	std::vector<NeuronGroup *> neuron_groups;
 	for (size_t i = 0; i < populations.size(); i++) {
@@ -245,37 +432,62 @@ void GeNN::do_run(NetworkBase &network, Real duration) const
 		    populations[i], model, ("pop_" + std::to_string(i))));
 	}
 
+	// Create connections
 	std::vector<SynapseGroup *> synapse_groups;
+	std::vector<std::tuple<SynapseGroup *, SynapseGroup *,
+	                       std::shared_ptr<std::vector<LocalConnection>>>>
+	    synapse_groups_list;
+	std::vector<size_t> list_connected_ids;
 	auto &connections = network.connections();
 	for (size_t i = 0; i < connections.size(); i++) {
-		synapse_groups.emplace_back(
-		    group_connect(populations, model, connections[i],
-		                  "conn_" + std::to_string(i), m_timestep));
+		bool list_connected;
+		synapse_groups.emplace_back(connect(populations, model, connections[i],
+		                                    "conn_" + std::to_string(i),
+		                                    m_timestep, list_connected));
+		if (list_connected) {
+			synapse_groups_list.emplace_back(
+			    list_connect_pre(populations, model, connections[i],
+			                     "conn_" + std::to_string(i), m_timestep));
+			list_connected_ids.emplace_back(i);
+		}
 	}
 
+	// Build the model and compile
 	model.finalize();
-
 	std::string path = "./" + model.getName() + "_CODE/";
 	mkdir(path.c_str(), 0777);
 	if (m_gpu) {
+		CodeGenerator::CUDA::Preferences prefs;
+#ifndef NDEBUG
+		prefs.debugCode = true;
+#else
+		prefs.optimizeCode = true;
+#endif
 		auto bck = CodeGenerator::CUDA::Optimiser::createBackend(
-		    model, filesystem::path("test_netw/"), 0, {});
+		    model, filesystem::path("test_netw/"), 0, prefs);
 		auto moduleNames = CodeGenerator::generateAll(model, bck, path, false);
 		std::ofstream makefile(path + "Makefile");
 		CodeGenerator::generateMakefile(makefile, bck, moduleNames);
 		makefile.close();
 	}
 	else {
-		auto bck = CodeGenerator::SingleThreadedCPU::Optimiser::createBackend(
-		    model, filesystem::path(path), 0, {});
+		CodeGenerator::SingleThreadedCPU::Preferences prefs;
+#ifndef NDEBUG
+		prefs.debugCode = true;
+#else
+		prefs.optimizeCode = true;
+#endif
+		CodeGenerator::SingleThreadedCPU::Backend bck(0, model.getPrecision(),
+		                                              prefs);
+
 		auto moduleNames = CodeGenerator::generateAll(model, bck, path, false);
 		std::ofstream makefile(path + "Makefile");
 		CodeGenerator::generateMakefile(makefile, bck, moduleNames);
 		makefile.close();
 	}
-
 	system(("make -j 4 -C " + path + " &>/dev/null").c_str());
 
+	//     // Open the compiled Library as dynamically loaded library
 	auto slm = SharedLibraryModel<float>();
 	bool open = slm.open("./", "cypressnet");
 	if (!open) {
@@ -289,6 +501,7 @@ void GeNN::do_run(NetworkBase &network, Real duration) const
 	auto *T = static_cast<float *>(slm.getSymbol("t"));
 	// auto *iT = static_cast<unsigned long long *>(slm.getSymbol("iT"));
 
+	// Set up spike times of spike source arrays
 	for (size_t i = 0; i < populations.size(); i++) {
 		const auto &pop = populations[i];
 		if (&pop.type() == &SpikeSourceArray::inst()) {
@@ -337,9 +550,17 @@ void GeNN::do_run(NetworkBase &network, Real duration) const
 		}
 	}
 
+	// List Connections
+	for (size_t i = 0; i < list_connected_ids.size(); i++) {
+		size_t id = list_connected_ids[i];
+		list_connect_post("conn_" + std::to_string(id), synapse_groups_list[i],
+		                  slm, populations[connections[id].pid_src()].size(),
+		                  populations[connections[id].pid_tar()].size());
+	}
+
 	slm.initializeSparse();
 
-	// getPointers
+	// Get Pointers to observables
 	std::vector<unsigned int *> spike_ptrs;
 	std::vector<unsigned int *> spike_cnt_ptrs;
 	std::vector<float *> v_ptrs;
@@ -382,6 +603,7 @@ void GeNN::do_run(NetworkBase &network, Real duration) const
 		                                               std::vector<Real>());
 	}
 
+	// Run the simulation and pull all recorded variables
 	while (*T < duration) {
 		slm.stepTime();
 		for (size_t i = 0; i < spike_ptrs.size(); i++) {
@@ -408,6 +630,8 @@ void GeNN::do_run(NetworkBase &network, Real duration) const
 		auto &pop = populations[i];
 		for (size_t neuron = 0; neuron < pop.size(); neuron++) {}
 	}
+
+	// Convert spike data
 	for (size_t i = 0; i < populations.size(); i++) {
 		auto &pop = populations[i];
 		if (pop.homogeneous_record()) {
