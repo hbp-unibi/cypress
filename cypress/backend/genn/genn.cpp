@@ -36,6 +36,7 @@
 
 #define UNPACK7(v) v[0], v[1], v[2], v[3], v[4], v[5], v[6]
 
+// Adapted from GeNN repository
 class FixedNumberPostWithReplacementNoAutapse
     : public InitSparseConnectivitySnippet::Base {
 public:
@@ -67,6 +68,7 @@ public:
 };
 IMPLEMENT_SNIPPET(FixedNumberPostWithReplacementNoAutapse);
 
+// Adapted from GeNN repository
 class FixedNumberPostWithReplacement
     : public InitSparseConnectivitySnippet::Base {
 public:
@@ -263,7 +265,7 @@ InitSparseConnectivitySnippet::Init genn_connector(
 SynapseGroup *connect(const std::vector<PopulationBase> pops,
                       ModelSpecInternal &model,
                       const ConnectionDescriptor &conn, std::string name,
-                      Real timestep, bool &list_connected)
+                      Real timestep, bool &list_connect)
 {
 	// pops[conn.pid_tar()].homogeneous_parameters();
 	// TODO : inhomogenous tau_syn and E_rev, popviews
@@ -278,6 +280,14 @@ SynapseGroup *connect(const std::vector<PopulationBase> pops,
 	                 (size_t(conn.nid_tar1()) == pops[conn.pid_tar()].size());
 	bool allow_self_connections = conn.connector().allow_self_connections() ||
 	                              !(conn.pid_src() == conn.pid_tar());
+	SynapseMatrixType type;
+
+	auto connector = genn_connector(
+	    conn.connector().name(), type, allow_self_connections,
+	    conn.connector().additional_parameter(), full_pops, list_connect);
+	if (list_connect) {
+		return nullptr;
+	}
 
 	if (cond_based) {
 		if (!conn.connector().synapse()->learning()) {
@@ -290,32 +300,34 @@ SynapseGroup *connect(const std::vector<PopulationBase> pops,
 			else {
 				rev_pot = pops[conn.pid_tar()].parameters().parameters()[9];
 				tau = pops[conn.pid_tar()].parameters().parameters()[3];
+				weight = -weight;
 			}
-			SynapseMatrixType type;
 
-			auto connector = genn_connector(
-			    conn.connector().name(), type, allow_self_connections,
-			    conn.connector().additional_parameter(), full_pops,
-			    list_connected);
-
-			if (list_connected) {
-				return nullptr;
-			}
 			return model.addSynapsePopulation<WeightUpdateModels::StaticPulse,
 			                                  PostsynapticModels::ExpCond>(
 			    name, type, delay, "pop_" + std::to_string(conn.pid_src()),
 			    "pop_" + std::to_string(conn.pid_tar()), {}, {weight},
 			    {tau, rev_pot}, {}, connector);
 		}
-		else {
-			throw ExecutionError(
-			    "Learning synapses are currently not supported");
-		}
 	}
 	else {
-		throw ExecutionError(
-		    "Current-based models are currently not supported");
+		if (!conn.connector().synapse()->learning()) {
+			double tau;
+			if (weight >= 0) {
+				tau = pops[conn.pid_tar()].parameters().parameters()[2];
+			}
+			else {
+				tau = pops[conn.pid_tar()].parameters().parameters()[3];
+			}
+
+			return model.addSynapsePopulation<WeightUpdateModels::StaticPulse,
+			                                  PostsynapticModels::ExpCurr>(
+			    name, type, delay, "pop_" + std::to_string(conn.pid_src()),
+			    "pop_" + std::to_string(conn.pid_tar()), {}, {weight}, {tau},
+			    {}, connector);
+		}
 	}
+	throw ExecutionError("Learning synapses are currently not supported");
 }
 
 std::tuple<SynapseGroup *, SynapseGroup *,
@@ -343,35 +355,52 @@ list_connect_pre(const std::vector<PopulationBase> pops,
 	}
 
 	bool cond_based = pops[conn.pid_tar()].type().conductance_based;
-	if (!cond_based) {
-		throw;
-	}
 
 	unsigned int delay =
 	    (unsigned int)(conn.connector().synapse()->parameters()[1] / timestep);
 	SynapseGroup *synex = nullptr, *synin = nullptr;
 
 	if (conns_full->size() - num_inh > 0) {
-		double rev_pot = pops[conn.pid_tar()].parameters().parameters()[8];
-		double tau = pops[conn.pid_tar()].parameters().parameters()[2];
-		synex = model.addSynapsePopulation<WeightUpdateModels::StaticPulse,
-		                                   PostsynapticModels::ExpCond>(
-		    name + "_ex", SynapseMatrixType::DENSE_INDIVIDUALG, delay,
-		    "pop_" + std::to_string(conn.pid_src()),
-		    "pop_" + std::to_string(conn.pid_tar()), {}, {0.0}, {tau, rev_pot},
-		    {});
+		if (cond_based) {
+			double rev_pot = pops[conn.pid_tar()].parameters().parameters()[8];
+			double tau = pops[conn.pid_tar()].parameters().parameters()[2];
+			synex = model.addSynapsePopulation<WeightUpdateModels::StaticPulse,
+			                                   PostsynapticModels::ExpCond>(
+			    name + "_ex", SynapseMatrixType::DENSE_INDIVIDUALG, delay,
+			    "pop_" + std::to_string(conn.pid_src()),
+			    "pop_" + std::to_string(conn.pid_tar()), {}, {0.0},
+			    {tau, rev_pot}, {});
+		}
+		else {
+			double tau = pops[conn.pid_tar()].parameters().parameters()[2];
+			synex = model.addSynapsePopulation<WeightUpdateModels::StaticPulse,
+			                                   PostsynapticModels::ExpCurr>(
+			    name + "_ex", SynapseMatrixType::DENSE_INDIVIDUALG, delay,
+			    "pop_" + std::to_string(conn.pid_src()),
+			    "pop_" + std::to_string(conn.pid_tar()), {}, {0.0}, {tau}, {});
+		}
 	}
 
 	// inhibitory
 	if (num_inh > 0) {
-		double rev_pot = pops[conn.pid_tar()].parameters().parameters()[9];
-		double tau = pops[conn.pid_tar()].parameters().parameters()[3];
-		synin = model.addSynapsePopulation<WeightUpdateModels::StaticPulse,
-		                                   PostsynapticModels::ExpCond>(
-		    name + "_in", SynapseMatrixType::DENSE_INDIVIDUALG, delay,
-		    "pop_" + std::to_string(conn.pid_src()),
-		    "pop_" + std::to_string(conn.pid_tar()), {}, {0.0}, {tau, rev_pot},
-		    {});
+		if (cond_based) {
+			double rev_pot = pops[conn.pid_tar()].parameters().parameters()[9];
+			double tau = pops[conn.pid_tar()].parameters().parameters()[3];
+			synin = model.addSynapsePopulation<WeightUpdateModels::StaticPulse,
+			                                   PostsynapticModels::ExpCond>(
+			    name + "_in", SynapseMatrixType::DENSE_INDIVIDUALG, delay,
+			    "pop_" + std::to_string(conn.pid_src()),
+			    "pop_" + std::to_string(conn.pid_tar()), {}, {0.0},
+			    {tau, rev_pot}, {});
+		}
+		else {
+			double tau = pops[conn.pid_tar()].parameters().parameters()[3];
+			synin = model.addSynapsePopulation<WeightUpdateModels::StaticPulse,
+			                                   PostsynapticModels::ExpCurr>(
+			    name + "_in", SynapseMatrixType::DENSE_INDIVIDUALG, delay,
+			    "pop_" + std::to_string(conn.pid_src()),
+			    "pop_" + std::to_string(conn.pid_tar()), {}, {0.0}, {tau}, {});
+		}
 	}
 	return std::make_tuple(synex, synin, std::move(conns_full));
 }
@@ -381,7 +410,7 @@ void list_connect_post(
     std::string name,
     std::tuple<SynapseGroup *, SynapseGroup *,
                std::shared_ptr<std::vector<LocalConnection>>> &tuple,
-    SharedLibraryModel<float> &slm, size_t size_src, size_t size_tar)
+    SharedLibraryModel<float> &slm, size_t size_tar, bool cond_based)
 {
 	float *weights_in, *weights_ex;
 	if (std::get<0>(tuple)) {
@@ -397,7 +426,8 @@ void list_connect_post(
 	for (auto &i : *(std::get<2>(tuple))) {
 		if (i.inhibitory()) {
 			weights_in[size_tar * i.src + i.tar] =
-			    -float(i.SynapseParameters[0]);
+			    cond_based ? -float(i.SynapseParameters[0])
+			               : float(i.SynapseParameters[0]);
 		}
 		else {
 			weights_ex[size_tar * i.src + i.tar] =
@@ -553,9 +583,11 @@ void GeNN::do_run(NetworkBase &network, Real duration) const
 	// List Connections
 	for (size_t i = 0; i < list_connected_ids.size(); i++) {
 		size_t id = list_connected_ids[i];
+		bool cond_based =
+		    populations[connections[id].pid_tar()].type().conductance_based;
 		list_connect_post("conn_" + std::to_string(id), synapse_groups_list[i],
-		                  slm, populations[connections[id].pid_src()].size(),
-		                  populations[connections[id].pid_tar()].size());
+		                  slm, populations[connections[id].pid_tar()].size(),
+		                  cond_based);
 	}
 
 	slm.initializeSparse();
