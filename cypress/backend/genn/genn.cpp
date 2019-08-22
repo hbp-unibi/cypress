@@ -122,6 +122,13 @@ static const std::map<size_t, size_t> ind_condlif(
 static const std::map<size_t, size_t> ind_currlif(
     {{0, 0}, {1, 1}, {2, 5}, {3, 7}, {4, 6}, {5, 8}, {6, 4}});
 
+/**
+ * @brief Maps cypress parameters to genn parameters
+ *
+ * @param params_src cypress parameters
+ * @param map one of the global defined maps above
+ * @return std::vector< double > list of genn parameters
+ */
 inline std::vector<double> map_params_to_genn(
     const NeuronParameters &params_src, const std::map<size_t, size_t> &map)
 {
@@ -132,6 +139,14 @@ inline std::vector<double> map_params_to_genn(
 	return params;
 }
 
+/**
+ * @brief Checks whether given parameter is homogeneous, although parameters are
+ * set to inhomogenous
+ *
+ * @param pop the population to check
+ * @param param_id index of parameter
+ * @return true if homogeneous, false if inhomogenous
+ */
 bool check_param_for_homogeneity(const PopulationBase &pop, size_t param_id)
 {
 	auto param = pop[0].parameters()[param_id];
@@ -143,6 +158,13 @@ bool check_param_for_homogeneity(const PopulationBase &pop, size_t param_id)
 	return true;
 }
 
+/**
+ * @brief returns a vector of all inhomogeneous indices in given population
+ *
+ * @param pop Population to check
+ * @param map one of the globally defined maps above
+ * @return std::vector< size_t > vector of inh parameters
+ */
 std::vector<size_t> inhomogeneous_indices(const PopulationBase &pop,
                                           const std::map<size_t, size_t> &map)
 {
@@ -155,6 +177,14 @@ std::vector<size_t> inhomogeneous_indices(const PopulationBase &pop,
 	return indices;
 }
 
+/**
+ * @brief Creates a GeNN neuron group for given population
+ *
+ * @param pop Cypress population
+ * @param model GeNN model to add the population to
+ * @param name name of the population
+ * @return NeuronGroup* pointer to GeNN neuron group
+ */
 NeuronGroup *create_neuron_group(const PopulationBase &pop,
                                  ModelSpecInternal &model, std::string name)
 {
@@ -197,6 +227,22 @@ NeuronGroup *create_neuron_group(const PopulationBase &pop,
 	}
 }
 
+/**
+ * @brief Returns the initialisation object for given connector. If the
+ * connector cannot directly mapped to a GeNN connector, list_connected is set
+ * to true and returns an Uninitialised object
+ *
+ * @param name cypress name of the connector
+ * @param type will contain information on how to store connectivity in memory
+ * @param allow_self_connections will remove connections going to the same
+ * neuron id, IMPORTANT: GeNN connectors cannot check if src and tar pops are
+ * the same, has to be done before
+ * @param additional_parameter parameter of the connector (e.g. connection
+ * probability)
+ * @param full_pops connector acts on full population (false for popviews)
+ * @param list_connected stores, whether we need fall back list connector
+ * @return InitSparseConnectivitySnippet::Init initialisation object
+ */
 InitSparseConnectivitySnippet::Init genn_connector(
     std::string name, SynapseMatrixType &type,
     const bool allow_self_connections, const Real additional_parameter,
@@ -262,7 +308,18 @@ InitSparseConnectivitySnippet::Init genn_connector(
 	return initConnectivity<InitSparseConnectivitySnippet::Uninitialised>();
 }
 
-SynapseGroup *connect(const std::vector<PopulationBase> pops,
+/**
+ * @brief Connect two population
+ *
+ * @param pops list of cypress populations
+ * @param model GeNN model
+ * @param conn cypress connection
+ * @param name name of the GeNN SynapseGroup
+ * @param timestep timestep of the simulator
+ * @param list_connect stores whether we need to use fall-back list connector
+ * @return SynapseGroup* pointer to synapse group
+ */
+SynapseGroup *connect(const std::vector<PopulationBase> &pops,
                       ModelSpecInternal &model,
                       const ConnectionDescriptor &conn, std::string name,
                       Real timestep, bool &list_connect)
@@ -330,6 +387,16 @@ SynapseGroup *connect(const std::vector<PopulationBase> pops,
 	throw ExecutionError("Learning synapses are currently not supported");
 }
 
+/**
+ * @brief List connection init before compiling GeNN
+ *
+ * @param pops cypress populations
+ * @param model GeNN model
+ * @param conn cypress connection
+ * @param name name for the GeNN SynapseGroups
+ * @param timestep simulator timestep
+ * @return tuple with excitatory and inhibitory SynapseGroup
+ */
 std::tuple<SynapseGroup *, SynapseGroup *,
            std::shared_ptr<std::vector<LocalConnection>>>
 list_connect_pre(const std::vector<PopulationBase> pops,
@@ -406,6 +473,16 @@ list_connect_pre(const std::vector<PopulationBase> pops,
 }
 
 typedef void (*PushFunction)(bool);
+
+/**
+ * @brief List connector after allocateMem and before sparse allocation
+ *
+ * @param name of the synapse group
+ * @param tuple tuple of synapse groups
+ * @param slm pointer to dynamically loaded GeNN lib
+ * @param size_tar size of the target population
+ * @param cond_based true if target pop is conductance_based
+ */
 void list_connect_post(
     std::string name,
     std::tuple<SynapseGroup *, SynapseGroup *,
@@ -444,49 +521,18 @@ void list_connect_post(
 	std::get<2>(tuple)->clear();
 }
 
-void GeNN::do_run(NetworkBase &network, Real duration) const
+/**
+ * @brief Build, compile and load the model
+ *
+ * @param gpu flag whether to use gpu
+ * @param model GeNN model
+ * @return SharedLibraryModel< float > object to access loaded model
+ */
+SharedLibraryModel<float> build_and_make(bool gpu, ModelSpecInternal &model)
 {
-	// General Setup
-	ModelSpecInternal model;
-	model.setPrecision(FloatType::GENN_FLOAT);  // TODO: template to use double
-	model.setTimePrecision(TimePrecision::DEFAULT);
-	model.setDT(m_timestep);  // Timestep in ms
-	model.setMergePostsynapticModels(true);
-	model.setName("cypressnet");  // TODO random net
-
-	// Create Populations
-	auto &populations = network.populations();
-	std::vector<NeuronGroup *> neuron_groups;
-	for (size_t i = 0; i < populations.size(); i++) {
-		neuron_groups.emplace_back(create_neuron_group(
-		    populations[i], model, ("pop_" + std::to_string(i))));
-	}
-
-	// Create connections
-	std::vector<SynapseGroup *> synapse_groups;
-	std::vector<std::tuple<SynapseGroup *, SynapseGroup *,
-	                       std::shared_ptr<std::vector<LocalConnection>>>>
-	    synapse_groups_list;
-	std::vector<size_t> list_connected_ids;
-	auto &connections = network.connections();
-	for (size_t i = 0; i < connections.size(); i++) {
-		bool list_connected;
-		synapse_groups.emplace_back(connect(populations, model, connections[i],
-		                                    "conn_" + std::to_string(i),
-		                                    m_timestep, list_connected));
-		if (list_connected) {
-			synapse_groups_list.emplace_back(
-			    list_connect_pre(populations, model, connections[i],
-			                     "conn_" + std::to_string(i), m_timestep));
-			list_connected_ids.emplace_back(i);
-		}
-	}
-
-	// Build the model and compile
-	model.finalize();
 	std::string path = "./" + model.getName() + "_CODE/";
 	mkdir(path.c_str(), 0777);
-	if (m_gpu) {
+	if (gpu) {
 		CodeGenerator::CUDA::Preferences prefs;
 #ifndef NDEBUG
 		prefs.debugCode = true;
@@ -517,7 +563,7 @@ void GeNN::do_run(NetworkBase &network, Real duration) const
 	}
 	system(("make -j 4 -C " + path + " &>/dev/null").c_str());
 
-	//     // Open the compiled Library as dynamically loaded library
+	// Open the compiled Library as dynamically loaded library
 	auto slm = SharedLibraryModel<float>();
 	bool open = slm.open("./", "cypressnet");
 	if (!open) {
@@ -525,12 +571,18 @@ void GeNN::do_run(NetworkBase &network, Real duration) const
 		    "Could not open Shared Library Model of GeNN network. Make sure "
 		    "that code generation and make were successful!");
 	}
-	slm.allocateMem();
-	slm.initialize();
+	return slm;
+}
 
-	auto *T = static_cast<float *>(slm.getSymbol("t"));
-	// auto *iT = static_cast<unsigned long long *>(slm.getSymbol("iT"));
-
+/**
+ * @brief Setup of spike data for spike source arrays
+ *
+ * @param populations cypress populations
+ * @param slm loaded GeNN model
+ */
+void setup_spike_sources(const std::vector<PopulationBase> &populations,
+                         SharedLibraryModel<float> &slm)
+{
 	// Set up spike times of spike source arrays
 	for (size_t i = 0; i < populations.size(); i++) {
 		const auto &pop = populations[i];
@@ -579,6 +631,189 @@ void GeNN::do_run(NetworkBase &network, Real duration) const
 			}
 		}
 	}
+}
+
+/**
+ * @brief Resolve all pointers to access GeNN data
+ *
+ * @param spike_ptrs Pointers to access spikes
+ * @param spike_cnt_ptrs pointer to access which neurons has spiked
+ * @param v_ptrs Pointer to voltage state variables
+ * @param record_full_spike stores which pops record all neurons
+ * @param record_full_v stores which pops record all neurons
+ * @param record_part_spike stores which pops record partially
+ * @param record_part_v stores which pops record partially
+ * @param populations list of cypress populations
+ * @param slm loaded GeNN model
+ */
+void resolve_ptrs(std::vector<unsigned int *> &spike_ptrs,
+                  std::vector<unsigned int *> &spike_cnt_ptrs,
+                  std::vector<float *> &v_ptrs,
+                  std::vector<size_t> &record_full_spike,
+                  std::vector<size_t> &record_full_v,
+                  std::vector<size_t> &record_part_spike,
+                  std::vector<size_t> &record_part_v,
+                  const std::vector<PopulationBase> &populations,
+                  SharedLibraryModel<float> &slm)
+{
+	for (size_t i = 0; i < populations.size(); i++) {
+		const auto &pop = populations[i];
+		if (pop.homogeneous_record()) {
+			if (pop.signals().is_recording(0)) {
+				spike_cnt_ptrs.emplace_back((*(static_cast<unsigned int **>(
+				    slm.getSymbol("glbSpkCntpop_" + std::to_string(i))))));
+				spike_ptrs.emplace_back((*(static_cast<unsigned int **>(
+				    slm.getSymbol("glbSpkpop_" + std::to_string(i))))));
+				record_full_spike.emplace_back(pop.pid());
+			}
+			else {
+				spike_ptrs.emplace_back(nullptr);
+				spike_cnt_ptrs.emplace_back(nullptr);
+			}
+			if (pop.signals().size() > 1 && pop.signals().is_recording(1)) {
+				v_ptrs.emplace_back(*(static_cast<float **>(
+				    slm.getSymbol("Vpop_" + std::to_string(i)))));
+				record_full_v.emplace_back(pop.pid());
+			}
+			else {
+				v_ptrs.emplace_back(nullptr);
+			}
+		}
+		else {
+			spike_ptrs.emplace_back(nullptr);
+			spike_cnt_ptrs.emplace_back(nullptr);
+			v_ptrs.emplace_back(nullptr);
+			for (auto neuron : pop) {
+				if (neuron.signals().is_recording(0)) {
+					record_part_spike.emplace_back(neuron.pid());
+
+					spike_cnt_ptrs[neuron.pid()] =
+					    ((*(static_cast<unsigned int **>(slm.getSymbol(
+					        "glbSpkCntpop_" + std::to_string(i))))));
+					spike_ptrs[neuron.pid()] = ((*(static_cast<unsigned int **>(
+					    slm.getSymbol("glbSpkpop_" + std::to_string(i))))));
+					break;
+				}
+			}
+			if (&pop.type() != &SpikeSourceArray::inst()) {
+				for (auto neuron : pop) {
+					if (neuron.signals().is_recording(1)) {
+						record_part_v.emplace_back(neuron.pid());
+						v_ptrs[neuron.pid()] = (*(static_cast<float **>(
+						    slm.getSymbol("Vpop_" + std::to_string(i)))));
+						break;
+					}
+				}
+			}
+		}
+	}
+}
+
+/**
+ * @brief Prepares container for storing spikes
+ *
+ * @param populations list of cypress populations
+ * @return container
+ */
+auto prepare_spike_storage(const std::vector<PopulationBase> &populations)
+{
+	size_t size = populations.size();
+	std::vector<std::vector<std::vector<Real>>> spike_data(
+	    size, std::vector<std::vector<Real>>());
+
+	for (size_t i = 0; i < size; i++) {
+		spike_data[i] = std::vector<std::vector<Real>>(populations[i].size(),
+		                                               std::vector<Real>());
+	}
+	return spike_data;
+}
+
+/**
+ * @brief Prepares container for storing voltage traces of recording neurons
+ *
+ * @param populations list of cypress populations
+ * @param time_slots number of time slots in current simulation
+ * @param record_full_v vector with indices which pops record voltage
+ * @param record_part_v vector with indices which pops partially record voltage
+ * @return container
+ */
+auto prepare_v_storage(const std::vector<PopulationBase> &populations,
+                       const size_t time_slots,
+                       const std::vector<size_t> &record_full_v,
+                       const std::vector<size_t> &record_part_v)
+{
+	size_t size = populations.size();
+	std::vector<std::vector<std::shared_ptr<Matrix<Real>>>> v_data(
+	    size, std::vector<std::shared_ptr<Matrix<Real>>>());
+
+	for (size_t i = 0; i < size; i++) {
+		v_data[i] = std::vector<std::shared_ptr<Matrix<Real>>>(
+		    populations[i].size(), std::shared_ptr<Matrix<Real>>());
+	}
+	for (auto id : record_full_v) {
+		for (size_t nid = 0; nid < populations[id].size(); nid++) {
+			v_data[id][nid] =
+			    std::make_shared<Matrix<Real>>(Matrix<Real>(time_slots, 2));
+		}
+	}
+	for (auto id : record_part_v) {
+		for (size_t nid = 0; nid < populations[id].size(); nid++) {
+			if (populations[id][nid].signals().is_recording(1)) {
+				v_data[id][nid] =
+				    std::make_shared<Matrix<Real>>(Matrix<Real>(time_slots, 2));
+			}
+		}
+	}
+
+	return v_data;
+}
+
+void GeNN::do_run(NetworkBase &network, Real duration) const
+{
+	// General Setup
+	ModelSpecInternal model;
+	model.setPrecision(FloatType::GENN_FLOAT);  // TODO: template to use double
+	model.setTimePrecision(TimePrecision::DEFAULT);
+	model.setDT(m_timestep);  // Timestep in ms
+	model.setMergePostsynapticModels(true);
+	model.setName("cypressnet");  // TODO random net
+
+	// Create Populations
+	auto &populations = network.populations();
+	std::vector<NeuronGroup *> neuron_groups;
+	for (size_t i = 0; i < populations.size(); i++) {
+		neuron_groups.emplace_back(create_neuron_group(
+		    populations[i], model, ("pop_" + std::to_string(i))));
+	}
+
+	// Create connections
+	std::vector<SynapseGroup *> synapse_groups;
+	std::vector<std::tuple<SynapseGroup *, SynapseGroup *,
+	                       std::shared_ptr<std::vector<LocalConnection>>>>
+	    synapse_groups_list;
+	std::vector<size_t> list_connected_ids;
+	auto &connections = network.connections();
+	for (size_t i = 0; i < connections.size(); i++) {
+		bool list_connected;
+		synapse_groups.emplace_back(connect(populations, model, connections[i],
+		                                    "conn_" + std::to_string(i),
+		                                    m_timestep, list_connected));
+		if (list_connected) {
+			synapse_groups_list.emplace_back(
+			    list_connect_pre(populations, model, connections[i],
+			                     "conn_" + std::to_string(i), m_timestep));
+			list_connected_ids.emplace_back(i);
+		}
+	}
+
+	// Build the model and compile
+	model.finalize();
+	auto slm = build_and_make(m_gpu, model);
+	slm.allocateMem();
+	slm.initialize();
+	auto *T = static_cast<float *>(slm.getSymbol("t"));
+
+	setup_spike_sources(populations, slm);
 
 	// List Connections
 	for (size_t i = 0; i < list_connected_ids.size(); i++) {
@@ -593,91 +828,109 @@ void GeNN::do_run(NetworkBase &network, Real duration) const
 	slm.initializeSparse();
 
 	// Get Pointers to observables
-	std::vector<unsigned int *> spike_ptrs;
-	std::vector<unsigned int *> spike_cnt_ptrs;
+	std::vector<unsigned int *> spike_ptrs, spike_cnt_ptrs;
 	std::vector<float *> v_ptrs;
-	std::vector<bool> record_full;
 
-	for (size_t i = 0; i < populations.size(); i++) {
-		const auto &pop = populations[i];
-		if (pop.homogeneous_record()) {
-			record_full.emplace_back(true);
-			if (pop.signals().is_recording(0)) {
-				spike_cnt_ptrs.emplace_back((*(static_cast<unsigned int **>(
-				    slm.getSymbol("glbSpkCntpop_" + std::to_string(i))))));
-				spike_ptrs.emplace_back((*(static_cast<unsigned int **>(
-				    slm.getSymbol("glbSpkpop_" + std::to_string(i))))));
-			}
-			else {
-				spike_ptrs.emplace_back(nullptr);
-			}
-			if (pop.signals().size() > 1 && pop.signals().is_recording(1)) {
-				v_ptrs.emplace_back(*(static_cast<float **>(
-				    slm.getSymbol("Vpop_" + std::to_string(i)))));
-			}
-			else {
-				v_ptrs.emplace_back(nullptr);
-			}
-		}
-		else {
-			record_full.emplace_back(false);
-			// TODO
-			throw;
-		}
-	}
+	// Store which populations are recorded
+	std::vector<size_t> record_full_spike, record_full_v, record_part_spike,
+	    record_part_v;
+	resolve_ptrs(spike_ptrs, spike_cnt_ptrs, v_ptrs, record_full_spike,
+	             record_full_v, record_part_spike, record_part_v, populations,
+	             slm);
 
-	std::vector<std::vector<std::vector<Real>>> spike_data(
-	    populations.size(), std::vector<std::vector<Real>>());
-
-	for (size_t i = 0; i < spike_ptrs.size(); i++) {
-
-		spike_data[i] = std::vector<std::vector<Real>>(populations[i].size(),
-		                                               std::vector<Real>());
-	}
+	auto spike_data = prepare_spike_storage(populations);
+	auto v_data = prepare_v_storage(populations, size_t(duration / m_timestep),
+	                                record_full_v, record_part_v);
 
 	// Run the simulation and pull all recorded variables
 	while (*T < duration) {
 		slm.stepTime();
-		for (size_t i = 0; i < spike_ptrs.size(); i++) {
-			if (record_full[i]) {
-				if (spike_ptrs[i] != nullptr) {
-					slm.pullSpikesFromDevice("pop_" + std::to_string(i));
 
-					for (unsigned int id = 0; id < *(spike_cnt_ptrs[i]); id++) {
-						spike_data[i][(spike_ptrs[i])[id]].push_back(Real(*T));
-					}
+		// Fully recorded spikes
+		for (auto id : record_full_spike) {
+			slm.pullSpikesFromDevice("pop_" + std::to_string(id));
+			for (unsigned int nid = 0; nid < *(spike_cnt_ptrs[id]); nid++) {
+				spike_data[id][(spike_ptrs[id])[nid]].push_back(Real(*T));
+			}
+		}
+
+		// Fully recorded voltage
+		size_t time_slot = size_t(std::round(*T / m_timestep)) - 1;
+		for (auto id : record_full_v) {
+			slm.pullVarFromDevice("pop_" + std::to_string(id), "V");
+			for (size_t nid = 0; nid < populations[id].size(); nid++) {
+				(*v_data[id][nid])(time_slot, 0) = *T;
+				(*v_data[id][nid])(time_slot, 1) = v_ptrs[id][nid];
+			}
+		}
+
+		// Partially recorded spikes
+		for (auto id : record_part_spike) {
+			slm.pullSpikesFromDevice("pop_" + std::to_string(id));
+			for (unsigned int nid = 0; nid < *(spike_cnt_ptrs[id]); nid++) {
+				if (populations[id][nid].signals().is_recording(0)) {
+					spike_data[id][(spike_ptrs[id])[nid]].push_back(Real(*T));
 				}
 			}
 		}
 
-		/*slm.pullSpikesFromDevice("a");
-		slm.pullSpikesFromDevice("b");
-		slm.pullVarFromDevice("a", "V");*/
-		/*for (size_t i = 0; i < 10; i++) {
-		    std::cout << ", V: " << *(vptr + i);
+		// Partially recorded voltage
+		for (auto id : record_part_v) {
+			slm.pullVarFromDevice("pop_" + std::to_string(id), "V");
+			for (size_t nid = 0; nid < populations[id].size(); nid++) {
+				if (populations[id][nid].signals().is_recording(1)) {
+					(*v_data[id][nid])(time_slot, 0) = *T;
+					(*v_data[id][nid])(time_slot, 1) = v_ptrs[id][nid];
+				}
+			}
 		}
-		std::cout << std::endl;*/
 	}
-	for (size_t i = 0; i < populations.size(); i++) {
-		auto &pop = populations[i];
-		for (size_t neuron = 0; neuron < pop.size(); neuron++) {}
+	// Convert spike data
+	for (auto id : record_full_spike) {
+		auto &pop = populations[id];
+		for (size_t neuron = 0; neuron < pop.size(); neuron++) {
+			auto data = std::make_shared<Matrix<Real>>(
+			    spike_data[id][neuron].size(), 1);
+			for (size_t j = 0; j < spike_data[id][neuron].size(); j++) {
+				(*data)(j, 0) = spike_data[id][neuron][j];
+			}
+			auto neuron_inst = pop[neuron];
+			neuron_inst.signals().data(0, std::move(data));
+		}
 	}
 
-	// Convert spike data
-	for (size_t i = 0; i < populations.size(); i++) {
-		auto &pop = populations[i];
-		if (pop.homogeneous_record()) {
-			record_full.emplace_back(true);
-			if (pop.signals().is_recording(0)) {
-				for (size_t neuron = 0; neuron < pop.size(); neuron++) {
-					auto data = std::make_shared<Matrix<Real>>(
-					    spike_data[i][neuron].size(), 1);
-					for (size_t j = 0; j < spike_data[i][neuron].size(); j++) {
-						(*data)(j, 0) = spike_data[i][neuron][j];
-					}
-					auto neuron_inst = pop[neuron];
-					neuron_inst.signals().data(0, std::move(data));
+	// Convert spike data Partially
+	for (auto id : record_part_spike) {
+		auto &pop = populations[id];
+		for (size_t neuron = 0; neuron < pop.size(); neuron++) {
+			if (pop[neuron].signals().is_recording(0)) {
+				auto data = std::make_shared<Matrix<Real>>(
+				    spike_data[id][neuron].size(), 1);
+				for (size_t j = 0; j < spike_data[id][neuron].size(); j++) {
+					(*data)(j, 0) = spike_data[id][neuron][j];
 				}
+				auto neuron_inst = pop[neuron];
+				neuron_inst.signals().data(0, std::move(data));
+			}
+		}
+	}
+
+	// Store voltage trace
+	for (auto id : record_full_v) {
+		auto &pop = populations[id];
+		for (size_t neuron = 0; neuron < pop.size(); neuron++) {
+			auto neuron_inst = pop[neuron];
+			neuron_inst.signals().data(1, std::move(v_data[id][neuron]));
+		}
+	}
+
+	// Store voltage trace partially
+	for (auto id : record_part_v) {
+		auto &pop = populations[id];
+		for (size_t neuron = 0; neuron < pop.size(); neuron++) {
+			if (pop[neuron].signals().is_recording(1)) {
+				auto neuron_inst = pop[neuron];
+				neuron_inst.signals().data(1, std::move(v_data[id][neuron]));
 			}
 		}
 	}
