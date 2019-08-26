@@ -37,14 +37,11 @@ namespace cypress {
 
 class GeNN : public Backend {
 private:
-
 	void do_run(NetworkBase &network, Real duration) const override;
-    
-    double m_timestep = 0.1;
-    // bool double_precision = false; ? 
-    
-    bool m_gpu = true;
-    
+
+	double m_timestep = 0.1;
+	bool m_gpu = true;
+	bool m_double = false;
 
 public:
 	/**
@@ -81,8 +78,7 @@ public:
 	 * Returns the canonical name of the backend.
 	 */
 	std::string name() const override { return "genn"; }
-	
-	//void load_pop(const NeuronGroup& neuron);
-};
-}
 
+	// void load_pop(const NeuronGroup& neuron);
+};
+}  // namespace cypress
