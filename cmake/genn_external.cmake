@@ -24,8 +24,8 @@ else()
 endif()
 
 ExternalProject_Add(genn_ext
-        GIT_REPOSITORY        "https://github.com/genn-team/genn"
-        GIT_TAG               "4.0.2"
+        GIT_REPOSITORY        "https://github.com/costrau/genn"
+        GIT_TAG               master
         CONFIGURE_COMMAND     sed -i "s/private/protected/g" <SOURCE_DIR>/pygenn/genn_wrapper/include/SharedLibraryModel.h
         CMAKE_COMMAND         ""
         BUILD_COMMAND         make -j -C <SOURCE_DIR>
