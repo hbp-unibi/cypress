@@ -1011,6 +1011,8 @@ public:
 	 *
 	 */
 	void update_learned_weights();
+
+	std::vector<LocalConnection> &get_connections() { return m_connections; }
 };
 
 class FunctorConnectorBase : public Connector {
