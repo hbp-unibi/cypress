@@ -29,8 +29,13 @@ ExternalProject_Add(googletest
 )
 ExternalProject_Get_Property(googletest SOURCE_DIR BINARY_DIR)
 set(GTEST_INCLUDE_DIRS ${SOURCE_DIR}/googletest/include/)
+message(warning ${BINARY_DIR})
 set(GTEST_LIBRARIES
 	${BINARY_DIR}/googlemock/gtest/libgtest.a
 	${BINARY_DIR}/googlemock/gtest/libgtest_main.a
 )
+set(GTEST_LIBRARY_NO_MAIN
+	${BINARY_DIR}/googlemock/gtest/libgtest.a
+)
+message(warning ${GTEST_LIBRARIES})
 

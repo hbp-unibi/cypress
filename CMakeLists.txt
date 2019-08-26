@@ -27,6 +27,7 @@ set(BUILD_TEST_EXAMPLES TRUE CACHE BOOL "Set to true for building examples and t
 include(gtest_external)
 include(json_external)
 include(matplotlib_external)
+include(genn_external)
 
 SET(PYBIND11_PYTHON_VERSION "2.7")
 set(PYBIND11_INSTALL TRUE CACHE BOOL "pybind11 install" FORCE INTERNAL)
@@ -112,6 +113,7 @@ add_library(cypress
 	cypress/backend/resources
 	cypress/backend/brainscales/brainscales_lib
 	cypress/backend/brainscales/slurm
+	cypress/backend/genn/genn
 	cypress/backend/nest/nest
 	cypress/backend/nest/sli
 	cypress/backend/nmpi/nmpi
@@ -155,6 +157,9 @@ add_library(cypress
 	cypress/util/terminal
 	cypress/util/to_dot
 )
+
+add_dependencies(cypress genn_ext)
+set_target_properties(cypress PROPERTIES POSITION_INDEPENDENT_CODE ON)
 message(STATUS "Downloading BrainScaleS library")
 file(DOWNLOAD https://github.com/hbp-unibi/BS2Cypress/raw/master/bin/libBS2CYPRESS.so
 	${CMAKE_BINARY_DIR}/libBS2CYPRESS.so
@@ -173,11 +178,12 @@ if(STATIC_LINKING)
             pybind11::embed
             PRIVATE
             ${PYTHON_LIBRARY}
+            ${GENN_LIBRARIES}
             dl
             -pthread
             )
 else()
-	target_link_libraries(cypress pthread pybind11::embed dl)
+	target_link_libraries(cypress ${GENN_LIBRARIES} pthread pybind11::embed dl)
 endif()
 
 # Check if cypress is built as a subproject

@@ -16,14 +16,15 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <../genn/include/genn/backends/cuda/backend.h>
-#include <../genn/include/genn/backends/cuda/optimiser.h>
-#include <../genn/include/genn/backends/single_threaded_cpu/backend.h>
-#include <../genn/include/genn/genn/code_generator/generateAll.h>
-#include <../genn/include/genn/genn/code_generator/generateMakefile.h>
-#include <../genn/include/genn/genn/modelSpecInternal.h>  // TODO
-#include <../genn/include/genn/third_party/path.h>
-#include <../genn/pygenn/genn_wrapper/include/SharedLibraryModel.h>
+#ifdef CUDA_PATH_DEFINED
+#include <genn/backends/cuda/optimiser.h>
+#endif
+#include <SharedLibraryModel.h>
+#include <genn/backends/single_threaded_cpu/backend.h>
+#include <genn/genn/code_generator/generateAll.h>
+#include <genn/genn/code_generator/generateMakefile.h>
+#include <genn/genn/modelSpecInternal.h>  // TODO
+#include <genn/third_party/path.h>
 
 #include <fstream>
 
@@ -35,6 +36,12 @@
 #include <cypress/core/network_base_objects.hpp>
 
 #define UNPACK7(v) v[0], v[1], v[2], v[3], v[4], v[5], v[6]
+
+template <typename T>
+class SharedLibraryModel_ : public SharedLibraryModel<T> {
+public:
+	using SharedLibraryModel<T>::getSymbol;
+};
 
 // Adapted from GeNN repository
 class FixedNumberPostWithReplacementNoAutapse
@@ -487,7 +494,7 @@ void list_connect_post(
     std::string name,
     std::tuple<SynapseGroup *, SynapseGroup *,
                std::shared_ptr<std::vector<LocalConnection>>> &tuple,
-    SharedLibraryModel<float> &slm, size_t size_tar, bool cond_based)
+    SharedLibraryModel_<float> &slm, size_t size_tar, bool cond_based)
 {
 	float *weights_in, *weights_ex;
 	if (std::get<0>(tuple)) {
@@ -526,13 +533,14 @@ void list_connect_post(
  *
  * @param gpu flag whether to use gpu
  * @param model GeNN model
- * @return SharedLibraryModel< float > object to access loaded model
+ * @return SharedLibraryModel_< float > object to access loaded model
  */
-SharedLibraryModel<float> build_and_make(bool gpu, ModelSpecInternal &model)
+SharedLibraryModel_<float> build_and_make(bool gpu, ModelSpecInternal &model)
 {
 	std::string path = "./" + model.getName() + "_CODE/";
 	mkdir(path.c_str(), 0777);
 	if (gpu) {
+#ifdef CUDA_PATH_DEFINED
 		CodeGenerator::CUDA::Preferences prefs;
 #ifndef NDEBUG
 		prefs.debugCode = true;
@@ -545,6 +553,9 @@ SharedLibraryModel<float> build_and_make(bool gpu, ModelSpecInternal &model)
 		std::ofstream makefile(path + "Makefile");
 		CodeGenerator::generateMakefile(makefile, bck, moduleNames);
 		makefile.close();
+#else
+		throw ExecutionError("GeNN has not been compiled with GPU support!");
+#endif
 	}
 	else {
 		CodeGenerator::SingleThreadedCPU::Preferences prefs;
@@ -564,7 +575,7 @@ SharedLibraryModel<float> build_and_make(bool gpu, ModelSpecInternal &model)
 	system(("make -j 4 -C " + path + " &>/dev/null").c_str());
 
 	// Open the compiled Library as dynamically loaded library
-	auto slm = SharedLibraryModel<float>();
+	auto slm = SharedLibraryModel_<float>();
 	bool open = slm.open("./", "cypressnet");
 	if (!open) {
 		throw ExecutionError(
@@ -581,7 +592,7 @@ SharedLibraryModel<float> build_and_make(bool gpu, ModelSpecInternal &model)
  * @param slm loaded GeNN model
  */
 void setup_spike_sources(const std::vector<PopulationBase> &populations,
-                         SharedLibraryModel<float> &slm)
+                         SharedLibraryModel_<float> &slm)
 {
 	// Set up spike times of spike source arrays
 	for (size_t i = 0; i < populations.size(); i++) {
@@ -654,7 +665,7 @@ void resolve_ptrs(std::vector<unsigned int *> &spike_ptrs,
                   std::vector<size_t> &record_part_spike,
                   std::vector<size_t> &record_part_v,
                   const std::vector<PopulationBase> &populations,
-                  SharedLibraryModel<float> &slm)
+                  SharedLibraryModel_<float> &slm)
 {
 	for (size_t i = 0; i < populations.size(); i++) {
 		const auto &pop = populations[i];
