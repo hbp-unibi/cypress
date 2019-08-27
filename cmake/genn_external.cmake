@@ -41,11 +41,11 @@ set(GENN_INCLUDE_DIRS
     ${SOURCE_DIR}/include/genn/genn
     ${SOURCE_DIR}/include/genn/third_party/
     ${SOURCE_DIR}/pygenn/genn_wrapper/include/
-    ${CUDA_INCLUDE_DIRS}
 )
-include_directories(${GENN_INCLUDE_DIRS}  ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES})
+include_directories(${GENN_INCLUDE_DIRS})
 
 if((DEFINED ENV{CUDA_PATH}) OR (EXISTS ${SOURCE_DIR}/lib/libgenn_cuda_backend.a))
+    include_directories(${CUDA_INCLUDE_DIRS} ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES})
     add_compile_definitions(CUDA_PATH_DEFINED)
     set(GENN_LIBRARIES
         ${SOURCE_DIR}/lib/libgenn_cuda_backend.a
