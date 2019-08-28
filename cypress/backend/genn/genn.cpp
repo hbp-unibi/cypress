@@ -292,7 +292,8 @@ SynapseGroup *create_synapse_group(
 		auto &params = conn.connector().synapse()->parameters();
 		return model.addSynapsePopulation<
 		    GeNNModels::SpikePairRuleMultiplicative, PostsynapticModel>(
-		    name, type, delay, "pop_" + std::to_string(conn.pid_src()),
+		    name, SynapseMatrixType::SPARSE_INDIVIDUALG, delay,
+		    "pop_" + std::to_string(conn.pid_src()),
 		    "pop_" + std::to_string(conn.pid_tar()), {},
 		    {
 		        weight[0],  // weight
@@ -386,7 +387,7 @@ SynapseGroup *connect(const std::vector<PopulationBase> &pops,
 		    connector);
 	}
 	else {
-		if (!conn.connector().synapse()->learning()) { // TODO
+		if (!conn.connector().synapse()->learning()) {  // TODO
 			T tau;
 			if (weight >= 0) {
 				tau = T(pops[conn.pid_tar()].parameters().parameters()[2]);
@@ -989,8 +990,7 @@ void GeNN::do_run(NetworkBase &network, Real duration) const
 		model.setPrecision(FloatType::GENN_DOUBLE);
 	}
 	else {
-		model.setPrecision(
-		    FloatType::GENN_FLOAT);
+		model.setPrecision(FloatType::GENN_FLOAT);
 	}
 	model.setTimePrecision(TimePrecision::DEFAULT);
 	model.setDT(m_timestep);  // Timestep in ms
