@@ -117,6 +117,7 @@ add_library(cypress
 	cypress/backend/brainscales/brainscales_lib
 	cypress/backend/brainscales/slurm
 	cypress/backend/genn/genn
+	cypress/backend/genn/genn_models
 	cypress/backend/nest/nest
 	cypress/backend/nest/sli
 	cypress/backend/nmpi/nmpi

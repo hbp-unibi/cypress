@@ -23,88 +23,20 @@
 #include <genn/backends/single_threaded_cpu/backend.h>
 #include <genn/genn/code_generator/generateAll.h>
 #include <genn/genn/code_generator/generateMakefile.h>
-#include <genn/genn/modelSpecInternal.h>  // TODO
+#include <genn/genn/modelSpecInternal.h>
 #include <genn/third_party/path.h>
 
 #include <fstream>
 
 #include <cypress/backend/genn/genn.hpp>
 #include <cypress/core/exceptions.hpp>
+#include <cypress/core/network_base_objects.hpp>
 #include <cypress/core/neurons.hpp>
 #include <cypress/util/logger.hpp>
 
-#include <cypress/core/network_base_objects.hpp>
+#include <cypress/backend/genn/genn_models.hpp>
 
 #define UNPACK7(v) v[0], v[1], v[2], v[3], v[4], v[5], v[6]
-
-template <typename T>
-class SharedLibraryModel_ : public SharedLibraryModel<T> {
-public:
-	using SharedLibraryModel<T>::getSymbol;
-};
-
-// Adapted from GeNN repository
-class FixedNumberPostWithReplacementNoAutapse
-    : public InitSparseConnectivitySnippet::Base {
-public:
-	DECLARE_SNIPPET(FixedNumberPostWithReplacementNoAutapse, 1);
-
-	SET_ROW_BUILD_CODE(
-	    "const scalar u = $(gennrand_uniform);\n"
-	    "x += (1.0 - x) * (1.0 - pow(u, 1.0 / (scalar)($(rowLength) - c)));\n"
-	    "const unsigned int postIdx = (unsigned int)(x * $(num_post));\n"
-	    "if(postIdx != $(id_pre)){\n"
-	    "if(postIdx < $(num_post)) {\n"
-	    "   $(addSynapse, postIdx);\n"
-	    "}\n"
-	    "else {\n"
-	    "   $(addSynapse, $(num_post) - 1);\n"
-	    "}\n"
-	    "c++;\n"
-	    "if(c >= $(rowLength)) {\n"
-	    "   $(endRow);\n"
-	    "}}\n");
-	SET_ROW_BUILD_STATE_VARS({{"x", "scalar", 0.0}, {"c", "unsigned int", 0}});
-
-	SET_PARAM_NAMES({"rowLength"});
-
-	SET_CALC_MAX_ROW_LENGTH_FUNC([](unsigned int, unsigned int,
-	                                const std::vector<double> &pars) {
-		return (unsigned int)pars[0];
-	});
-};
-IMPLEMENT_SNIPPET(FixedNumberPostWithReplacementNoAutapse);
-
-// Adapted from GeNN repository
-class FixedNumberPostWithReplacement
-    : public InitSparseConnectivitySnippet::Base {
-public:
-	DECLARE_SNIPPET(FixedNumberPostWithReplacement, 1);
-
-	SET_ROW_BUILD_CODE(
-	    "const scalar u = $(gennrand_uniform);\n"
-	    "x += (1.0 - x) * (1.0 - pow(u, 1.0 / (scalar)($(rowLength) - c)));\n"
-	    "const unsigned int postIdx = (unsigned int)(x * $(num_post));\n"
-	    "if(postIdx < $(num_post)) {\n"
-	    "   $(addSynapse, postIdx);\n"
-	    "}\n"
-	    "else {\n"
-	    "   $(addSynapse, $(num_post) - 1);\n"
-	    "}\n"
-	    "c++;\n"
-	    "if(c >= $(rowLength)) {\n"
-	    "   $(endRow);\n"
-	    "}\n");
-	SET_ROW_BUILD_STATE_VARS({{"x", "scalar", 0.0}, {"c", "unsigned int", 0}});
-
-	SET_PARAM_NAMES({"rowLength"});
-
-	SET_CALC_MAX_ROW_LENGTH_FUNC([](unsigned int, unsigned int,
-	                                const std::vector<double> &pars) {
-		return (unsigned int)pars[0];
-	});
-};
-IMPLEMENT_SNIPPET(FixedNumberPostWithReplacement);
 
 namespace cypress {
 GeNN::GeNN(const Json &setup)
@@ -286,13 +218,14 @@ InitSparseConnectivitySnippet::Init genn_connector(
 		*/
 		else if (name == "FixedFanOutConnector") {
 			if (allow_self_connections) {
-				return initConnectivity<FixedNumberPostWithReplacement>(
+				return initConnectivity<
+				    GeNNModels::FixedNumberPostWithReplacement>(
 				    (unsigned int)additional_parameter);
 			}
 			else {
 
 				return initConnectivity<
-				    FixedNumberPostWithReplacementNoAutapse>(
+				    GeNNModels::FixedNumberPostWithReplacementNoAutapse>(
 				    (unsigned int)additional_parameter);
 			}
 		}
@@ -318,6 +251,83 @@ InitSparseConnectivitySnippet::Init genn_connector(
 	list_connected = true;
 	type = SynapseMatrixType::DENSE_INDIVIDUALG;
 	return initConnectivity<InitSparseConnectivitySnippet::Uninitialised>();
+}
+
+template <typename PostsynapticModel, int NUM_VARS>
+SynapseGroup *create_synapse_group(
+    ModelSpecInternal &model, const ConnectionDescriptor &conn,
+    const std::string name, const SynapseMatrixType type,
+    const unsigned int delay, Models::VarInitContainerBase<NUM_VARS> weight,
+    const typename PostsynapticModel::ParamValues &vars,
+    const InitSparseConnectivitySnippet::Init &connector)
+{
+	auto syn_name = conn.connector().synapse_name();
+	if (syn_name == "StaticSynapse") {
+
+		return model.addSynapsePopulation<WeightUpdateModels::StaticPulse,
+		                                  PostsynapticModel>(
+		    name, type, delay, "pop_" + std::to_string(conn.pid_src()),
+		    "pop_" + std::to_string(conn.pid_tar()), {}, weight, vars, {},
+		    connector);
+	}
+	else if (syn_name == "SpikePairRuleAdditive") {
+		auto &params = conn.connector().synapse()->parameters();
+		return model.addSynapsePopulation<GeNNModels::SpikePairRuleAdditive,
+		                                  PostsynapticModel>(
+		    name, SynapseMatrixType::SPARSE_INDIVIDUALG, delay,
+		    "pop_" + std::to_string(conn.pid_src()),
+		    "pop_" + std::to_string(conn.pid_tar()), {},
+		    {
+		        weight[0],  // weight
+		        params[4],  // Aplus
+		        params[5],  // AMinus
+		        params[6],  // WMin
+		        params[7],  // WMax
+		    },
+		    {0.0, params[2]},  // PreVar init, tauPlus
+		    {0.0, params[3]},  // PostVar init, tauMinus
+		    vars, {}, connector);
+	}
+	else if (syn_name == "SpikePairRuleMultiplicative") {
+		auto &params = conn.connector().synapse()->parameters();
+		return model.addSynapsePopulation<
+		    GeNNModels::SpikePairRuleMultiplicative, PostsynapticModel>(
+		    name, type, delay, "pop_" + std::to_string(conn.pid_src()),
+		    "pop_" + std::to_string(conn.pid_tar()), {},
+		    {
+		        weight[0],  // weight
+		        params[4],  // Aplus
+		        params[5],  // AMinus
+		        params[6],  // WMin
+		        params[7],  // WMax
+		    },
+		    {0.0, params[2]},  // PreVar init, tauPlus
+		    {0.0, params[3]},  // PostVar init, tauMinus
+		    vars, {}, connector);
+	}
+	else if (syn_name == "TsodyksMarkramMechanism") {
+		auto &params = conn.connector().synapse()->parameters();
+		return model.addSynapsePopulation<GeNNModels::TsodyksMarkramSynapse,
+		                                  PostsynapticModel>(
+		    name, type, delay, "pop_" + std::to_string(conn.pid_src()),
+		    "pop_" + std::to_string(conn.pid_tar()), {},
+		    {
+		        params[2],  // U
+		        params[3],  // tauRec
+		        params[4],  // tauFacil
+		        0.0,        // tauPsc, not existent in original model TODO
+		        weight[0],  // weight/g
+		        0.0,        // u
+		        1.0,        // x
+		        0.0,        // y
+		        0.0         // z
+		    },
+		    {},  // PreVar init
+		    {},  // PostVar init
+		    vars, {}, connector);
+	}
+	throw ExecutionError("SynapseModel " + syn_name +
+	                     "is not supported on this backend");
 }
 
 /**
@@ -360,27 +370,23 @@ SynapseGroup *connect(const std::vector<PopulationBase> &pops,
 	}
 
 	if (cond_based) {
-		if (!conn.connector().synapse()->learning()) {
-			T rev_pot, tau;
-			if (weight >= 0) {  // TODO : adapt for EifCondExpIsfaIsta
-				rev_pot = T(pops[conn.pid_tar()].parameters().parameters()[8]);
-				tau = T(pops[conn.pid_tar()].parameters().parameters()[2]);
-			}
-			else {
-				rev_pot = T(pops[conn.pid_tar()].parameters().parameters()[9]);
-				tau = T(pops[conn.pid_tar()].parameters().parameters()[3]);
-				weight = -weight;
-			}
-
-			return model.addSynapsePopulation<WeightUpdateModels::StaticPulse,
-			                                  PostsynapticModels::ExpCond>(
-			    name, type, delay, "pop_" + std::to_string(conn.pid_src()),
-			    "pop_" + std::to_string(conn.pid_tar()), {}, {weight},
-			    {tau, rev_pot}, {}, connector);
+		T rev_pot, tau;
+		if (weight >= 0) {  // TODO : adapt for EifCondExpIsfaIsta
+			rev_pot = T(pops[conn.pid_tar()].parameters().parameters()[8]);
+			tau = T(pops[conn.pid_tar()].parameters().parameters()[2]);
 		}
+		else {
+			rev_pot = T(pops[conn.pid_tar()].parameters().parameters()[9]);
+			tau = T(pops[conn.pid_tar()].parameters().parameters()[3]);
+			weight = -weight;
+		}
+
+		return create_synapse_group<PostsynapticModels::ExpCond, 1>(
+		    model, conn, name, type, delay, {weight}, {tau, rev_pot},
+		    connector);
 	}
 	else {
-		if (!conn.connector().synapse()->learning()) {
+		if (!conn.connector().synapse()->learning()) { // TODO
 			T tau;
 			if (weight >= 0) {
 				tau = T(pops[conn.pid_tar()].parameters().parameters()[2]);
@@ -501,7 +507,7 @@ void list_connect_post(
     std::string name,
     std::tuple<SynapseGroup *, SynapseGroup *,
                std::shared_ptr<std::vector<LocalConnection>>> &tuple,
-    SharedLibraryModel_<T> &slm, size_t size_tar, bool cond_based)
+    GeNNModels::SharedLibraryModel_<T> &slm, size_t size_tar, bool cond_based)
 {
 	T *weights_in, *weights_ex;
 	if (std::get<0>(tuple)) {
@@ -540,7 +546,8 @@ void list_connect_post(
  * @return SharedLibraryModel_< float > object to access loaded model
  */
 template <typename T>
-SharedLibraryModel_<T> build_and_make(bool gpu, ModelSpecInternal &model)
+GeNNModels::SharedLibraryModel_<T> build_and_make(bool gpu,
+                                                  ModelSpecInternal &model)
 {
 	std::string path = "./" + model.getName() + "_CODE/";
 	mkdir(path.c_str(), 0777);
@@ -577,10 +584,14 @@ SharedLibraryModel_<T> build_and_make(bool gpu, ModelSpecInternal &model)
 		CodeGenerator::generateMakefile(makefile, bck, moduleNames);
 		makefile.close();
 	}
+#ifndef NDEBUG
+	system(("make -j 4 -C " + path).c_str());
+#else
 	system(("make -j 4 -C " + path + " &>/dev/null").c_str());
+#endif
 
 	// Open the compiled Library as dynamically loaded library
-	auto slm = SharedLibraryModel_<T>();
+	auto slm = GeNNModels::SharedLibraryModel_<T>();
 	bool open = slm.open("./", "cypressnet");
 	if (!open) {
 		throw ExecutionError(
@@ -598,7 +609,7 @@ SharedLibraryModel_<T> build_and_make(bool gpu, ModelSpecInternal &model)
  */
 template <typename T>
 void setup_spike_sources(const std::vector<PopulationBase> &populations,
-                         SharedLibraryModel_<T> &slm)
+                         GeNNModels::SharedLibraryModel_<T> &slm)
 {
 	// Set up spike times of spike source arrays
 	for (size_t i = 0; i < populations.size(); i++) {
@@ -664,12 +675,15 @@ void setup_spike_sources(const std::vector<PopulationBase> &populations,
  * @param slm loaded GeNN model
  */
 template <typename T>
-void resolve_ptrs(
-    std::vector<unsigned int *> &spike_ptrs,
-    std::vector<unsigned int *> &spike_cnt_ptrs, std::vector<T *> &v_ptrs,
-    std::vector<size_t> &record_full_spike, std::vector<size_t> &record_full_v,
-    std::vector<size_t> &record_part_spike, std::vector<size_t> &record_part_v,
-    const std::vector<PopulationBase> &populations, SharedLibraryModel_<T> &slm)
+void resolve_ptrs(std::vector<unsigned int *> &spike_ptrs,
+                  std::vector<unsigned int *> &spike_cnt_ptrs,
+                  std::vector<T *> &v_ptrs,
+                  std::vector<size_t> &record_full_spike,
+                  std::vector<size_t> &record_full_v,
+                  std::vector<size_t> &record_part_spike,
+                  std::vector<size_t> &record_part_v,
+                  const std::vector<PopulationBase> &populations,
+                  GeNNModels::SharedLibraryModel_<T> &slm)
 {
 	for (size_t i = 0; i < populations.size(); i++) {
 		const auto &pop = populations[i];
@@ -945,6 +959,26 @@ void do_run_templ(NetworkBase &network, Real duration, ModelSpecInternal &model,
 			}
 		}
 	}
+
+	for (size_t i = 0; i < network.connections().size(); i++) {
+		auto &conn = network.connections()[i];
+		if (conn.connector().synapse()->learning()) {
+			T *weights = *(
+			    static_cast<T **>(slm.getSymbol("gconn_" + std::to_string(i))));
+			std::vector<LocalConnection> weight_store;
+			size_t src_size = populations[conn.pid_src()].size();
+			size_t tar_size = populations[conn.pid_tar()].size();
+			for (size_t srcnid = 0; srcnid < src_size; srcnid++) {
+				for (size_t tarnid = 0; tarnid < tar_size; tarnid++) {
+					weight_store.push_back(LocalConnection(
+					    srcnid, tarnid, weights[tar_size * srcnid + tarnid],
+					    0));  // TODO
+				}
+			}
+			conn.connector()._store_learned_weights(std::move(weight_store));
+		}
+	}
+	// TODO runtime
 }
 
 void GeNN::do_run(NetworkBase &network, Real duration) const
@@ -956,7 +990,7 @@ void GeNN::do_run(NetworkBase &network, Real duration) const
 	}
 	else {
 		model.setPrecision(
-		    FloatType::GENN_FLOAT);  // TODO: template to use double
+		    FloatType::GENN_FLOAT);
 	}
 	model.setTimePrecision(TimePrecision::DEFAULT);
 	model.setDT(m_timestep);  // Timestep in ms
