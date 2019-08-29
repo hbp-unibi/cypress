@@ -27,7 +27,6 @@ set(BUILD_TEST_EXAMPLES TRUE CACHE BOOL "Set to true for building examples and t
 include(gtest_external)
 include(json_external)
 include(matplotlib_external)
-include(genn_external)
 
 SET(PYBIND11_PYTHON_VERSION "2.7")
 set(PYBIND11_INSTALL TRUE CACHE BOOL "pybind11 install" FORCE INTERNAL)
@@ -162,6 +161,7 @@ add_library(cypress
 	cypress/util/to_dot
 )
 
+include(genn_external)
 add_dependencies(cypress genn_ext)
 set_target_properties(cypress PROPERTIES POSITION_INDEPENDENT_CODE ON)
 message(STATUS "Downloading BrainScaleS library")

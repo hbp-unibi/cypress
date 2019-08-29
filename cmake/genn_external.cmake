@@ -46,7 +46,7 @@ include_directories(${GENN_INCLUDE_DIRS})
 
 if((DEFINED ENV{CUDA_PATH}) OR (EXISTS ${SOURCE_DIR}/lib/libgenn_cuda_backend.a))
     include_directories(${CUDA_INCLUDE_DIRS} ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES})
-    add_compile_definitions(CUDA_PATH_DEFINED)
+    target_compile_definitions(cypress CUDA_PATH_DEFINED)
     set(GENN_LIBRARIES
         ${SOURCE_DIR}/lib/libgenn_cuda_backend.a
         ${SOURCE_DIR}/lib/libgenn.a
