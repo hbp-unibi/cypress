@@ -964,6 +964,7 @@ void do_run_templ(NetworkBase &network, Real duration, ModelSpecInternal &model,
 	for (size_t i = 0; i < network.connections().size(); i++) {
 		auto &conn = network.connections()[i];
 		if (conn.connector().synapse()->learning()) {
+			slm.pullStateFromDevice("conn_" + std::to_string(i));
 			T *weights = *(
 			    static_cast<T **>(slm.getSymbol("gconn_" + std::to_string(i))));
 			std::vector<LocalConnection> weight_store;
@@ -979,6 +980,7 @@ void do_run_templ(NetworkBase &network, Real duration, ModelSpecInternal &model,
 			conn.connector()._store_learned_weights(std::move(weight_store));
 		}
 	}
+
 	// TODO runtime
 }
 
@@ -994,7 +996,7 @@ void GeNN::do_run(NetworkBase &network, Real duration) const
 	}
 	model.setTimePrecision(TimePrecision::DEFAULT);
 	model.setDT(m_timestep);  // Timestep in ms
-	model.setMergePostsynapticModels(true);
+	// model.setMergePostsynapticModels(true); // Currently disabled, bug #255
 	model.setName("cypressnet");  // TODO random net
 	if (m_double) {
 		do_run_templ<double>(network, duration, model, m_timestep, m_gpu);
