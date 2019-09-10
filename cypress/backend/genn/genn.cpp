@@ -260,76 +260,113 @@ SynapseGroup *create_synapse_group(
     const std::string name, const SynapseMatrixType type,
     const unsigned int delay, Models::VarInitContainerBase<NUM_VARS> weight,
     const typename PostsynapticModel::ParamValues &vars,
-    const InitSparseConnectivitySnippet::Init &connector)
+    const InitSparseConnectivitySnippet::Init &connector, bool cond_inhib)
 {
 	auto syn_name = conn.connector().synapse_name();
 	if (syn_name == "StaticSynapse") {
-
 		return model.addSynapsePopulation<WeightUpdateModels::StaticPulse,
 		                                  PostsynapticModel>(
 		    name, type, delay, "pop_" + std::to_string(conn.pid_src()),
 		    "pop_" + std::to_string(conn.pid_tar()), {}, weight, vars, {},
 		    connector);
 	}
-	else if (syn_name == "SpikePairRuleAdditive") {
-		auto &params = conn.connector().synapse()->parameters();
-		return model.addSynapsePopulation<GeNNModels::SpikePairRuleAdditive,
-		                                  PostsynapticModel>(
-		    name, SynapseMatrixType::SPARSE_INDIVIDUALG, delay,
-		    "pop_" + std::to_string(conn.pid_src()),
-		    "pop_" + std::to_string(conn.pid_tar()), {},
-		    {
-		        weight[0],  // weight
-		        params[4],  // Aplus
-		        params[5],  // AMinus
-		        params[6],  // WMin
-		        params[7],  // WMax
-		    },
-		    {0.0, params[2]},  // PreVar init, tauPlus
-		    {0.0, params[3]},  // PostVar init, tauMinus
-		    vars, {}, connector);
-	}
-	else if (syn_name == "SpikePairRuleMultiplicative") {
-		auto &params = conn.connector().synapse()->parameters();
-		return model.addSynapsePopulation<
-		    GeNNModels::SpikePairRuleMultiplicative, PostsynapticModel>(
-		    name, SynapseMatrixType::SPARSE_INDIVIDUALG, delay,
-		    "pop_" + std::to_string(conn.pid_src()),
-		    "pop_" + std::to_string(conn.pid_tar()), {},
-		    {
-		        weight[0],  // weight
-		        params[4],  // Aplus
-		        params[5],  // AMinus
-		        params[6],  // WMin
-		        params[7],  // WMax
-		    },
-		    {0.0, params[2]},  // PreVar init, tauPlus
-		    {0.0, params[3]},  // PostVar init, tauMinus
-		    vars, {}, connector);
-	}
-	else if (syn_name == "TsodyksMarkramMechanism") {
-		throw ExecutionError("SynapseModel " + syn_name +
-		                     "is not supported on this backend");
-		auto &params = conn.connector().synapse()->parameters();
-		return model.addSynapsePopulation<GeNNModels::TsodyksMarkramSynapse,
-		                                  PostsynapticModel>(
-		    name, SynapseMatrixType::SPARSE_INDIVIDUALG, delay,
-		    "pop_" + std::to_string(conn.pid_src()),
-		    "pop_" + std::to_string(conn.pid_tar()), {},
-		    {
-		        params[2],  // U
-		        params[3],  // tauRec
-		        params[4],  // tauFacil
-		        1.0,        // tauPsc, not existent in original model TODO
-		        weight[0],  // weight/g
-		        0.0,        // u
-		        1.0,        // x
-		        0.0,        // y
-		        0.0         // z
-		    },
-		    {},  // PreVar init
-		    {},  // PostVar init
-		    vars, {}, connector);
+	else {
+		SynapseMatrixType type2;
+		if (type == SynapseMatrixType::DENSE_INDIVIDUALG) {
+			type2 = SynapseMatrixType::DENSE_INDIVIDUALG;
+		}
+		else {
+			type2 = SynapseMatrixType::SPARSE_INDIVIDUALG;
+		}
+		if (syn_name == "SpikePairRuleAdditive") {
+			auto &params = conn.connector().synapse()->parameters();
+			if (cond_inhib) {
+				return model.addSynapsePopulation<
+				    GeNNModels::SpikePairRuleAdditive, PostsynapticModel>(
+				    name, type2, delay, "pop_" + std::to_string(conn.pid_src()),
+				    "pop_" + std::to_string(conn.pid_tar()), {},
+				    {
+				        weight[0],   // weight
+				        params[4],   // Aplus
+				        params[5],   // AMinus
+				        -params[7],  // WMin
+				        -params[6],  // WMax
+				    },
+				    {0.0, params[2]},  // PreVar init, tauPlus
+				    {0.0, params[3]},  // PostVar init, tauMinus
+				    vars, {}, connector);
+			}
+			return model.addSynapsePopulation<GeNNModels::SpikePairRuleAdditive,
+			                                  PostsynapticModel>(
+			    name, type2, delay, "pop_" + std::to_string(conn.pid_src()),
+			    "pop_" + std::to_string(conn.pid_tar()), {},
+			    {
+			        weight[0],  // weight
+			        params[4],  // Aplus
+			        params[5],  // AMinus
+			        params[6],  // WMin
+			        params[7],  // WMax
+			    },
+			    {0.0, params[2]},  // PreVar init, tauPlus
+			    {0.0, params[3]},  // PostVar init, tauMinus
+			    vars, {}, connector);
+		}
+		else if (syn_name == "SpikePairRuleMultiplicative") {
+			auto &params = conn.connector().synapse()->parameters();
+			if (cond_inhib) {
+				return model.addSynapsePopulation<
+				    GeNNModels::SpikePairRuleMultiplicative, PostsynapticModel>(
+				    name, type2, delay, "pop_" + std::to_string(conn.pid_src()),
+				    "pop_" + std::to_string(conn.pid_tar()), {},
+				    {
+				        weight[0],   // weight
+				        params[4],   // Aplus
+				        params[5],   // AMinus
+				        -params[7],  // WMin
+				        -params[6],  // WMax
+				    },
+				    {0.0, params[2]},  // PreVar init, tauPlus
+				    {0.0, params[3]},  // PostVar init, tauMinus
+				    vars, {}, connector);
+			}
+			return model.addSynapsePopulation<
+			    GeNNModels::SpikePairRuleMultiplicative, PostsynapticModel>(
+			    name, type2, delay, "pop_" + std::to_string(conn.pid_src()),
+			    "pop_" + std::to_string(conn.pid_tar()), {},
+			    {
+			        weight[0],  // weight
+			        params[4],  // Aplus
+			        params[5],  // AMinus
+			        params[6],  // WMin
+			        params[7],  // WMax
+			    },
+			    {0.0, params[2]},  // PreVar init, tauPlus
+			    {0.0, params[3]},  // PostVar init, tauMinus
+			    vars, {}, connector);
+		}
+		else if (syn_name == "TsodyksMarkramMechanism") {
+			throw ExecutionError("SynapseModel " + syn_name +
+			                     "is not supported on this backend");
+			auto &params = conn.connector().synapse()->parameters();
+			return model.addSynapsePopulation<GeNNModels::TsodyksMarkramSynapse,
+			                                  PostsynapticModel>(
+			    name, type2, delay, "pop_" + std::to_string(conn.pid_src()),
+			    "pop_" + std::to_string(conn.pid_tar()), {},
+			    {
+			        params[2],  // U
+			        params[3],  // tauRec
+			        params[4],  // tauFacil
+			        1.0,        // tauPsc, not existent in original model TODO
+			        weight[0],  // weight/g
+			        0.0,        // u
+			        1.0,        // x
+			        0.0,        // y
+			        0.0         // z
+			    },
+			    {},  // PreVar init
+			    {},  // PostVar init
+			    vars, {}, connector);
+		}
 	}
 	throw ExecutionError("SynapseModel " + syn_name +
 	                     "is not supported on this backend");
@@ -352,9 +389,6 @@ SynapseGroup *connect(const std::vector<PopulationBase> &pops,
                       const ConnectionDescriptor &conn, std::string name,
                       T timestep, bool &list_connect)
 {
-	// pops[conn.pid_tar()].homogeneous_parameters();
-	// TODO : inhomogenous tau_syn and E_rev, popviews
-
 	bool cond_based = pops[conn.pid_tar()].type().conductance_based;
 	T weight = T(conn.connector().synapse()->parameters()[0]);
 	unsigned int delay =
@@ -377,30 +411,57 @@ SynapseGroup *connect(const std::vector<PopulationBase> &pops,
 	if (cond_based) {
 		T rev_pot, tau;
 		if (weight >= 0) {  // TODO : adapt for EifCondExpIsfaIsta
+			bool test1 = check_param_for_homogeneity(pops[conn.pid_tar()], 8);
+			bool test2 = check_param_for_homogeneity(pops[conn.pid_tar()], 2);
+			if (!(test1 && test2)) {
+				// TODO
+				throw ExecutionError(
+				    "Inhomogeneous synapse parameters not supported by GeNN");
+			}
 			rev_pot = T(pops[conn.pid_tar()].parameters().parameters()[8]);
 			tau = T(pops[conn.pid_tar()].parameters().parameters()[2]);
 		}
 		else {
+			bool test1 = check_param_for_homogeneity(pops[conn.pid_tar()], 9);
+			bool test2 = check_param_for_homogeneity(pops[conn.pid_tar()], 3);
+			if (!(test1 && test2)) {
+				// TODO
+				throw ExecutionError(
+				    "Inhomogeneous synapse parameters not supported by GeNN");
+			}
 			rev_pot = T(pops[conn.pid_tar()].parameters().parameters()[9]);
 			tau = T(pops[conn.pid_tar()].parameters().parameters()[3]);
+
 			weight = -weight;
 		}
 
 		return create_synapse_group<PostsynapticModels::ExpCond, 1>(
-		    model, conn, name, type, delay, {weight}, {tau, rev_pot},
-		    connector);
+		    model, conn, name, type, delay, {weight}, {tau, rev_pot}, connector,
+		    weight < 0);
 	}
 	else {
 		T tau;
 		if (weight >= 0) {
+			bool test1 = check_param_for_homogeneity(pops[conn.pid_tar()], 2);
+			if (!test1) {
+				// TODO
+				throw ExecutionError(
+				    "Inhomogeneous synapse parameters not supported by GeNN");
+			}
 			tau = T(pops[conn.pid_tar()].parameters().parameters()[2]);
 		}
 		else {
+			bool test1 = check_param_for_homogeneity(pops[conn.pid_tar()], 3);
+			if (!test1) {
+				// TODO
+				throw ExecutionError(
+				    "Inhomogeneous synapse parameters not supported by GeNN");
+			}
 			tau = T(pops[conn.pid_tar()].parameters().parameters()[3]);
 		}
 
 		return create_synapse_group<PostsynapticModels::ExpCurr, 1>(
-		    model, conn, name, type, delay, {weight}, {tau}, connector);
+		    model, conn, name, type, delay, {weight}, {tau}, connector, false);
 	}
 }
 
@@ -449,18 +510,12 @@ list_connect_pre(const std::vector<PopulationBase> pops,
 		if (cond_based) {
 			T rev_pot = T(pops[conn.pid_tar()].parameters().parameters()[8]);
 			T tau = T(pops[conn.pid_tar()].parameters().parameters()[2]);
-			/*synex =
-			   model.addSynapsePopulation<WeightUpdateModels::StaticPulse,
-			                                   PostsynapticModels::ExpCond>(
-			    name + "_ex", SynapseMatrixType::DENSE_INDIVIDUALG, delay,
-			    "pop_" + std::to_string(conn.pid_src()),
-			    "pop_" + std::to_string(conn.pid_tar()), {}, {0.0},
-			    {tau, rev_pot}, {});*/
 			synex = create_synapse_group<PostsynapticModels::ExpCond, 1>(
 			    model, conn, name + "_ex", SynapseMatrixType::DENSE_INDIVIDUALG,
 			    delay, {0.0}, {tau, rev_pot},
 			    initConnectivity<
-			        InitSparseConnectivitySnippet::Uninitialised>());
+			        InitSparseConnectivitySnippet::Uninitialised>(),
+			    false);
 		}
 		else {
 			T tau = T(pops[conn.pid_tar()].parameters().parameters()[2]);
@@ -468,7 +523,8 @@ list_connect_pre(const std::vector<PopulationBase> pops,
 			    model, conn, name + "_ex", SynapseMatrixType::DENSE_INDIVIDUALG,
 			    delay, {0.0}, {tau},
 			    initConnectivity<
-			        InitSparseConnectivitySnippet::Uninitialised>());
+			        InitSparseConnectivitySnippet::Uninitialised>(),
+			    false);
 		}
 	}
 
@@ -481,7 +537,8 @@ list_connect_pre(const std::vector<PopulationBase> pops,
 			    model, conn, name + "_in", SynapseMatrixType::DENSE_INDIVIDUALG,
 			    delay, {0.0}, {tau, rev_pot},
 			    initConnectivity<
-			        InitSparseConnectivitySnippet::Uninitialised>());
+			        InitSparseConnectivitySnippet::Uninitialised>(),
+			    true);
 		}
 		else {
 			T tau = T(pops[conn.pid_tar()].parameters().parameters()[3]);
@@ -489,7 +546,8 @@ list_connect_pre(const std::vector<PopulationBase> pops,
 			    model, conn, name + "_in", SynapseMatrixType::DENSE_INDIVIDUALG,
 			    delay, {0.0}, {tau},
 			    initConnectivity<
-			        InitSparseConnectivitySnippet::Uninitialised>());
+			        InitSparseConnectivitySnippet::Uninitialised>(),
+			    false);
 		}
 	}
 	return std::make_tuple(synex, synin, std::move(conns_full));
@@ -968,18 +1026,50 @@ void do_run_templ(NetworkBase &network, Real duration, ModelSpecInternal &model,
 	for (size_t i = 0; i < network.connections().size(); i++) {
 		auto &conn = network.connections()[i];
 		if (conn.connector().synapse()->learning()) {
-			slm.pullStateFromDevice("conn_" + std::to_string(i));
-			T *weights = *(
-			    static_cast<T **>(slm.getSymbol("gconn_" + std::to_string(i))));
+			Real delay = conn.connector().synapse()->parameters()[1];
+			bool cond_based =
+			    populations[conn.pid_tar()].type().conductance_based;
+
 			std::vector<LocalConnection> weight_store;
-			size_t src_size = populations[conn.pid_src()].size();
-			size_t tar_size = populations[conn.pid_tar()].size();
-			for (size_t srcnid = 0; srcnid < src_size; srcnid++) {
-				for (size_t tarnid = 0; tarnid < tar_size; tarnid++) {
-					weight_store.push_back(LocalConnection(
-					    srcnid, tarnid, weights[tar_size * srcnid + tarnid],
-					    0));  // TODO
+			if (std::find(list_connected_ids.begin(), list_connected_ids.end(),
+			              i) != list_connected_ids.end()) {
+				try {
+					slm.pullStateFromDevice("conn_" + std::to_string(i) +
+					                        "_ex");
+					T *weights = *(static_cast<T **>(
+					    slm.getSymbol("gconn_" + std::to_string(i) + "_ex")));
+					convert_learned_weights(populations[conn.pid_src()].size(),
+					                        populations[conn.pid_tar()].size(),
+					                        weight_store, weights, delay,
+					                        false);
 				}
+				catch (...) {
+				}
+				try {
+
+					slm.pullStateFromDevice("conn_" + std::to_string(i) +
+					                        "_in");
+					T *weights = *(static_cast<T **>(
+					    slm.getSymbol("gconn_" + std::to_string(i) + "_in")));
+					convert_learned_weights(populations[conn.pid_src()].size(),
+					                        populations[conn.pid_tar()].size(),
+					                        weight_store, weights, delay,
+					                        cond_based);
+				}
+				catch (...) {
+				}
+			}
+			else {
+				slm.pullStateFromDevice("conn_" + std::to_string(i));
+				T *weights = *(static_cast<T **>(
+				    slm.getSymbol("gconn_" + std::to_string(i))));
+				cond_based =
+				    (cond_based &&
+				     (conn.connector().synapse()->parameters()[0] < 0));
+				convert_learned_weights(populations[conn.pid_src()].size(),
+				                        populations[conn.pid_tar()].size(),
+				                        weight_store, weights, delay,
+				                        cond_based);
 			}
 			conn.connector()._store_learned_weights(std::move(weight_store));
 		}
@@ -989,6 +1079,21 @@ void do_run_templ(NetworkBase &network, Real duration, ModelSpecInternal &model,
 	                 std::chrono::duration<Real>(sim_fin_t - built_t).count(),
 	                 std::chrono::duration<Real>(built_t - start_t).count(),
 	                 std::chrono::duration<Real>(end_t - sim_fin_t).count()});
+}
+template <typename T>
+void convert_learned_weights(size_t src_size, size_t tar_size,
+                             std::vector<LocalConnection> &weight_store,
+                             T *weights, Real delay, bool inhib_cond)
+{
+	for (size_t srcnid = 0; srcnid < src_size; srcnid++) {
+		for (size_t tarnid = 0; tarnid < tar_size; tarnid++) {
+			weight_store.push_back(LocalConnection(
+			    srcnid, tarnid,
+			    inhib_cond ? -weights[tar_size * srcnid + tarnid]
+			               : weights[tar_size * srcnid + tarnid],
+			    delay));
+		}
+	}
 }
 
 void GeNN::do_run(NetworkBase &network, Real duration) const
