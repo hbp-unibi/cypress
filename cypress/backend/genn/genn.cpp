@@ -33,6 +33,7 @@
 #include <cypress/core/exceptions.hpp>
 #include <cypress/core/network_base_objects.hpp>
 #include <cypress/core/neurons.hpp>
+#include <cypress/util/filesystem.hpp>
 #include <cypress/util/logger.hpp>
 
 #include <cypress/backend/genn/genn_models.hpp>
@@ -1109,12 +1110,18 @@ void GeNN::do_run(NetworkBase &network, Real duration) const
 	model.setTimePrecision(TimePrecision::DEFAULT);
 	model.setDT(m_timestep);  // Timestep in ms
 	model.setMergePostsynapticModels(true);
-	model.setName("cypressnet");  // TODO random net
+
+	std::string name = "genn_XXXXXX";
+	filesystem::tmpfile(name);
+	model.setName(name);
 	if (m_double) {
 		do_run_templ<double>(network, duration, model, m_timestep, m_gpu);
 	}
 	else {
 		do_run_templ<float>(network, duration, model, m_timestep, m_gpu);
 	}
+#ifndef NDEBUG
+	system(("rm -r " + name + "_CODE").c_str());
+#endif
 }
 }  // namespace cypress
