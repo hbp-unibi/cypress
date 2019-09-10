@@ -114,7 +114,7 @@ public:
 	          {"u", "scalar"},    //  0
 	          {"x", "scalar"},    // 1.0
 	          {"y", "scalar"},    // 0.0
-	          {"z", "scalar"}});  // 0.0
+	          {"z", "scalar", VarAccess::READ_WRITE}});  // 0.0
 
 	SET_SIM_CODE(
 	    "scalar deltaST = $(t) - $(sT_pre);\n"
@@ -130,7 +130,7 @@ public:
 	    "}\n"
 	    "$(y) += $(x) * $(u);\n"
 	    "$(addToInSyn, $(g) * $(x) * $(u));\n"
-	    "$(updatelinsyn);\n");
+	    /*"$(updatelinsyn);\n"*/);
 
 	SET_NEEDS_PRE_SPIKE_TIME(true);
 };

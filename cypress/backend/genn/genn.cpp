@@ -26,6 +26,7 @@
 #include <genn/genn/modelSpecInternal.h>
 #include <genn/third_party/path.h>
 
+#include <chrono>
 #include <fstream>
 
 #include <cypress/backend/genn/genn.hpp>
@@ -307,16 +308,19 @@ SynapseGroup *create_synapse_group(
 		    vars, {}, connector);
 	}
 	else if (syn_name == "TsodyksMarkramMechanism") {
+		throw ExecutionError("SynapseModel " + syn_name +
+		                     "is not supported on this backend");
 		auto &params = conn.connector().synapse()->parameters();
 		return model.addSynapsePopulation<GeNNModels::TsodyksMarkramSynapse,
 		                                  PostsynapticModel>(
-		    name, type, delay, "pop_" + std::to_string(conn.pid_src()),
+		    name, SynapseMatrixType::SPARSE_INDIVIDUALG, delay,
+		    "pop_" + std::to_string(conn.pid_src()),
 		    "pop_" + std::to_string(conn.pid_tar()), {},
 		    {
 		        params[2],  // U
 		        params[3],  // tauRec
 		        params[4],  // tauFacil
-		        0.0,        // tauPsc, not existent in original model TODO
+		        1.0,        // tauPsc, not existent in original model TODO
 		        weight[0],  // weight/g
 		        0.0,        // u
 		        1.0,        // x
@@ -387,23 +391,17 @@ SynapseGroup *connect(const std::vector<PopulationBase> &pops,
 		    connector);
 	}
 	else {
-		if (!conn.connector().synapse()->learning()) {  // TODO
-			T tau;
-			if (weight >= 0) {
-				tau = T(pops[conn.pid_tar()].parameters().parameters()[2]);
-			}
-			else {
-				tau = T(pops[conn.pid_tar()].parameters().parameters()[3]);
-			}
-
-			return model.addSynapsePopulation<WeightUpdateModels::StaticPulse,
-			                                  PostsynapticModels::ExpCurr>(
-			    name, type, delay, "pop_" + std::to_string(conn.pid_src()),
-			    "pop_" + std::to_string(conn.pid_tar()), {}, {weight}, {tau},
-			    {}, connector);
+		T tau;
+		if (weight >= 0) {
+			tau = T(pops[conn.pid_tar()].parameters().parameters()[2]);
 		}
+		else {
+			tau = T(pops[conn.pid_tar()].parameters().parameters()[3]);
+		}
+
+		return create_synapse_group<PostsynapticModels::ExpCurr, 1>(
+		    model, conn, name, type, delay, {weight}, {tau}, connector);
 	}
-	throw ExecutionError("Learning synapses are currently not supported");
 }
 
 /**
@@ -451,20 +449,26 @@ list_connect_pre(const std::vector<PopulationBase> pops,
 		if (cond_based) {
 			T rev_pot = T(pops[conn.pid_tar()].parameters().parameters()[8]);
 			T tau = T(pops[conn.pid_tar()].parameters().parameters()[2]);
-			synex = model.addSynapsePopulation<WeightUpdateModels::StaticPulse,
+			/*synex =
+			   model.addSynapsePopulation<WeightUpdateModels::StaticPulse,
 			                                   PostsynapticModels::ExpCond>(
 			    name + "_ex", SynapseMatrixType::DENSE_INDIVIDUALG, delay,
 			    "pop_" + std::to_string(conn.pid_src()),
 			    "pop_" + std::to_string(conn.pid_tar()), {}, {0.0},
-			    {tau, rev_pot}, {});
+			    {tau, rev_pot}, {});*/
+			synex = create_synapse_group<PostsynapticModels::ExpCond, 1>(
+			    model, conn, name + "_ex", SynapseMatrixType::DENSE_INDIVIDUALG,
+			    delay, {0.0}, {tau, rev_pot},
+			    initConnectivity<
+			        InitSparseConnectivitySnippet::Uninitialised>());
 		}
 		else {
 			T tau = T(pops[conn.pid_tar()].parameters().parameters()[2]);
-			synex = model.addSynapsePopulation<WeightUpdateModels::StaticPulse,
-			                                   PostsynapticModels::ExpCurr>(
-			    name + "_ex", SynapseMatrixType::DENSE_INDIVIDUALG, delay,
-			    "pop_" + std::to_string(conn.pid_src()),
-			    "pop_" + std::to_string(conn.pid_tar()), {}, {0.0}, {tau}, {});
+			synex = create_synapse_group<PostsynapticModels::ExpCurr, 1>(
+			    model, conn, name + "_ex", SynapseMatrixType::DENSE_INDIVIDUALG,
+			    delay, {0.0}, {tau},
+			    initConnectivity<
+			        InitSparseConnectivitySnippet::Uninitialised>());
 		}
 	}
 
@@ -473,20 +477,19 @@ list_connect_pre(const std::vector<PopulationBase> pops,
 		if (cond_based) {
 			T rev_pot = T(pops[conn.pid_tar()].parameters().parameters()[9]);
 			T tau = T(pops[conn.pid_tar()].parameters().parameters()[3]);
-			synin = model.addSynapsePopulation<WeightUpdateModels::StaticPulse,
-			                                   PostsynapticModels::ExpCond>(
-			    name + "_in", SynapseMatrixType::DENSE_INDIVIDUALG, delay,
-			    "pop_" + std::to_string(conn.pid_src()),
-			    "pop_" + std::to_string(conn.pid_tar()), {}, {0.0},
-			    {tau, rev_pot}, {});
+			synin = create_synapse_group<PostsynapticModels::ExpCond, 1>(
+			    model, conn, name + "_in", SynapseMatrixType::DENSE_INDIVIDUALG,
+			    delay, {0.0}, {tau, rev_pot},
+			    initConnectivity<
+			        InitSparseConnectivitySnippet::Uninitialised>());
 		}
 		else {
 			T tau = T(pops[conn.pid_tar()].parameters().parameters()[3]);
-			synin = model.addSynapsePopulation<WeightUpdateModels::StaticPulse,
-			                                   PostsynapticModels::ExpCurr>(
-			    name + "_in", SynapseMatrixType::DENSE_INDIVIDUALG, delay,
-			    "pop_" + std::to_string(conn.pid_src()),
-			    "pop_" + std::to_string(conn.pid_tar()), {}, {0.0}, {tau}, {});
+			synin = create_synapse_group<PostsynapticModels::ExpCurr, 1>(
+			    model, conn, name + "_in", SynapseMatrixType::DENSE_INDIVIDUALG,
+			    delay, {0.0}, {tau},
+			    initConnectivity<
+			        InitSparseConnectivitySnippet::Uninitialised>());
 		}
 	}
 	return std::make_tuple(synex, synin, std::move(conns_full));
@@ -510,32 +513,29 @@ void list_connect_post(
                std::shared_ptr<std::vector<LocalConnection>>> &tuple,
     GeNNModels::SharedLibraryModel_<T> &slm, size_t size_tar, bool cond_based)
 {
-	T *weights_in, *weights_ex;
 	if (std::get<0>(tuple)) {
-		weights_ex = *(static_cast<T **>(slm.getSymbol("g" + name + "_ex")));
-	}
-
-	if (std::get<1>(tuple)) {
-		weights_in = *(static_cast<T **>(slm.getSymbol("g" + name + "_in")));
-	}
-
-	for (auto &i : *(std::get<2>(tuple))) {
-		if (i.inhibitory()) {
-			weights_in[size_tar * i.src + i.tar] =
-			    cond_based ? -T(i.SynapseParameters[0])
-			               : T(i.SynapseParameters[0]);
+		T *weights_ex = *(static_cast<T **>(slm.getSymbol("g" + name + "_ex")));
+		for (auto &i : *(std::get<2>(tuple))) {
+			if (i.excitatory()) {
+				weights_ex[size_tar * i.src + i.tar] =
+				    T(i.SynapseParameters[0]);
+			}
 		}
-		else {
-			weights_ex[size_tar * i.src + i.tar] = T(i.SynapseParameters[0]);
-		}
-	}
-
-	if (std::get<0>(tuple)) {
 		((PushFunction)slm.getSymbol("pushg" + name + "_exToDevice"))(false);
 	}
+
 	if (std::get<1>(tuple)) {
+		T *weights_in = *(static_cast<T **>(slm.getSymbol("g" + name + "_in")));
+		for (auto &i : *(std::get<2>(tuple))) {
+			if (i.inhibitory()) {
+				weights_in[size_tar * i.src + i.tar] =
+				    cond_based ? -T(i.SynapseParameters[0])
+				               : T(i.SynapseParameters[0]);
+			}
+		}
 		((PushFunction)slm.getSymbol("pushg" + name + "_inToDevice"))(false);
 	}
+
 	std::get<2>(tuple)->clear();
 }
 
@@ -802,6 +802,7 @@ template <typename T>
 void do_run_templ(NetworkBase &network, Real duration, ModelSpecInternal &model,
                   T timestep, bool gpu)
 {
+	auto start_t = std::chrono::steady_clock::now();
 	// Create Populations
 	auto &populations = network.populations();
 	std::vector<NeuronGroup *> neuron_groups;
@@ -867,6 +868,7 @@ void do_run_templ(NetworkBase &network, Real duration, ModelSpecInternal &model,
 	auto v_data = prepare_v_storage(populations, size_t(duration / timestep),
 	                                record_full_v, record_part_v);
 
+	auto built_t = std::chrono::steady_clock::now();
 	// Run the simulation and pull all recorded variables
 	while (*time < T(duration)) {
 		slm.stepTime();
@@ -911,6 +913,8 @@ void do_run_templ(NetworkBase &network, Real duration, ModelSpecInternal &model,
 			}
 		}
 	}
+
+	auto sim_fin_t = std::chrono::steady_clock::now();
 	// Convert spike data
 	for (auto id : record_full_spike) {
 		auto &pop = populations[id];
@@ -980,8 +984,11 @@ void do_run_templ(NetworkBase &network, Real duration, ModelSpecInternal &model,
 			conn.connector()._store_learned_weights(std::move(weight_store));
 		}
 	}
-
-	// TODO runtime
+	auto end_t = std::chrono::steady_clock::now();
+	network.runtime({std::chrono::duration<Real>(end_t - start_t).count(),
+	                 std::chrono::duration<Real>(sim_fin_t - built_t).count(),
+	                 std::chrono::duration<Real>(built_t - start_t).count(),
+	                 std::chrono::duration<Real>(end_t - sim_fin_t).count()});
 }
 
 void GeNN::do_run(NetworkBase &network, Real duration) const

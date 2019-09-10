@@ -1592,7 +1592,7 @@ void PyNN::do_run(NetworkBase &source, Real duration) const
 	std::string import = get_import(m_imports, m_simulator);
 	init_logger();
 
-	auto start = std::chrono::system_clock::now();
+	auto start = std::chrono::steady_clock::now();
 	// Bug when importing NEST
 	if (import == "pyNN.nest") {
 		auto a = py::list();
@@ -1731,7 +1731,7 @@ void PyNN::do_run(NetworkBase &source, Real duration) const
 		duration_rounded = duration;
 	}
 
-	auto buildconn = std::chrono::system_clock::now();
+	auto buildconn = std::chrono::steady_clock::now();
 	try {
 		pynn.attr("run")(duration_rounded);
 	}
@@ -1744,7 +1744,7 @@ void PyNN::do_run(NetworkBase &source, Real duration) const
 		throw ExecutionError(e.what());
 	}
 
-	auto execrun = std::chrono::system_clock::now();
+	auto execrun = std::chrono::steady_clock::now();
 
 	// fetch data
 	if (m_normalised_simulator == "nest") {
@@ -1781,7 +1781,7 @@ void PyNN::do_run(NetworkBase &source, Real duration) const
 	}
 	pynn.attr("end")();
 
-	auto finished = std::chrono::system_clock::now();
+	auto finished = std::chrono::steady_clock::now();
 
 	source.runtime({std::chrono::duration<Real>(finished - start).count(),
 	                std::chrono::duration<Real>(execrun - buildconn).count(),
