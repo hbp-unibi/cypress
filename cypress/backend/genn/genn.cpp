@@ -620,7 +620,7 @@ GeNNModels::SharedLibraryModel_<T> build_and_make(bool gpu,
 		prefs.optimizeCode = true;
 #endif
 		auto bck = CodeGenerator::CUDA::Optimiser::createBackend(
-		    model, filesystem::path("test_netw/"), 0, prefs);
+		    model, ::filesystem::path("test_netw/"), 0, prefs);
 		auto moduleNames = CodeGenerator::generateAll(model, bck, path, false);
 		std::ofstream makefile(path + "Makefile");
 		CodeGenerator::generateMakefile(makefile, bck, moduleNames);
