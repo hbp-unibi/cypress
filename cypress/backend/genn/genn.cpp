@@ -996,7 +996,7 @@ void GeNN::do_run(NetworkBase &network, Real duration) const
 	}
 	model.setTimePrecision(TimePrecision::DEFAULT);
 	model.setDT(m_timestep);  // Timestep in ms
-	// model.setMergePostsynapticModels(true); // Currently disabled, bug #255
+	model.setMergePostsynapticModels(true);
 	model.setName("cypressnet");  // TODO random net
 	if (m_double) {
 		do_run_templ<double>(network, duration, model, m_timestep, m_gpu);
