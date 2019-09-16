@@ -620,7 +620,7 @@ GeNNModels::SharedLibraryModel_<T> build_and_make(bool gpu,
 		prefs.optimizeCode = true;
 #endif
 		auto bck = CodeGenerator::CUDA::Optimiser::createBackend(
-		    model, ::filesystem::path("test_netw/"), 0, prefs);
+		    model, ::filesystem::path(path), 0, prefs);
 		auto moduleNames = CodeGenerator::generateAll(model, bck, path, false);
 		std::ofstream makefile(path + "Makefile");
 		CodeGenerator::generateMakefile(makefile, bck, moduleNames);
@@ -652,7 +652,7 @@ GeNNModels::SharedLibraryModel_<T> build_and_make(bool gpu,
 
 	// Open the compiled Library as dynamically loaded library
 	auto slm = GeNNModels::SharedLibraryModel_<T>();
-	bool open = slm.open("./", "cypressnet");
+	bool open = slm.open("./", model.getName());
 	if (!open) {
 		throw ExecutionError(
 		    "Could not open Shared Library Model of GeNN network. Make sure "
