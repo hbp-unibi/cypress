@@ -210,7 +210,11 @@ NMPI::NMPI(const std::string &backend, int &argc, const char *argv[],
 	parts = split(backend_str, '=');
 	if (parts[0] == "nmpm1" || parts[0] == "BrainScaleS" ||
 	    parts[0] == "brainscales") {
-		init_bs(parts[0], argc, argv, Json::parse(parts[1]), files, scan_args);
+		Json setup;
+		if (parts.size() > 1) {
+			setup = Json::parse(parts[1]);
+		}
+		init_bs(parts[0], argc, argv, setup, files, scan_args);
 	}
 	else {
 		auto ptr = std::make_unique<PyNN>(backend_str);
