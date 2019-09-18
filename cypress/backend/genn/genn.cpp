@@ -1120,7 +1120,7 @@ void GeNN::do_run(NetworkBase &network, Real duration) const
 	else {
 		do_run_templ<float>(network, duration, model, m_timestep, m_gpu);
 	}
-#ifndef NDEBUG
+#ifdef NDEBUG
 	system(("rm -r " + name + "_CODE").c_str());
 #endif
 }
