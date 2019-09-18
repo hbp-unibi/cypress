@@ -647,7 +647,7 @@ GeNNModels::SharedLibraryModel_<T> build_and_make(bool gpu,
 #ifndef NDEBUG
 	system(("make -j 4 -C " + path).c_str());
 #else
-	system(("make -j 4 -C " + path + " &>/dev/null").c_str());
+	system(("make -j 4 -C " + path + " >/dev/null 2>&1").c_str());
 #endif
 
 	// Open the compiled Library as dynamically loaded library
