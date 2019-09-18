@@ -33,7 +33,7 @@
 #include <cypress/backend/brainscales/brainscales_lib.hpp>
 #include <cypress/backend/brainscales/slurm.hpp>
 #include <cypress/backend/nest/nest.hpp>
-#include <cypress/backend/genn/genn.hpp>
+#include <cypress/backend/genn/genn_lib.hpp>
 #include <cypress/backend/nmpi/nmpi.hpp>
 #include <cypress/backend/serialize/to_json.hpp>
 
@@ -475,7 +475,8 @@ std::unique_ptr<Backend> NetworkBase::make_backend(std::string backend_id,
 		return std::make_unique<NEST>(setup);
 	}
 	else if (elems[0] == "genn") {
-		return std::make_unique<GeNN>(setup);
+		return std::unique_ptr<Backend>(
+		    GENN_Lib::instance().create_genn_backend(setup));
 	}
 	else if (elems[0] == "json") {
 		elems.erase(elems.begin());

@@ -82,3 +82,15 @@ public:
 	// void load_pop(const NeuronGroup& neuron);
 };
 }  // namespace cypress
+
+extern "C" {
+/**
+ * @brief Expose constructor for program dynamically loading this lib
+ *
+ * @return pointer to GeNN object
+ */
+cypress::Backend *make_genn_backend(const cypress::Json &setup)
+{
+	return new cypress::GeNN(setup);
+}
+}

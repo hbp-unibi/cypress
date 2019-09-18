@@ -28,7 +28,7 @@ ExternalProject_Add(genn_ext
         GIT_TAG               master
         CONFIGURE_COMMAND     sed -i "s/private/protected/g" <SOURCE_DIR>/pygenn/genn_wrapper/include/SharedLibraryModel.h
         CMAKE_COMMAND         ""
-        BUILD_COMMAND         make -j -C <SOURCE_DIR>
+        BUILD_COMMAND         CXXFLAGS+=-fPIC make -j -C <SOURCE_DIR>
         INSTALL_COMMAND 	  ""
         UPDATE_COMMAND        ""
         EXCLUDE_FROM_ALL      TRUE
@@ -46,7 +46,7 @@ include_directories(${GENN_INCLUDE_DIRS})
 
 if((DEFINED ENV{CUDA_PATH}) OR (EXISTS ${SOURCE_DIR}/lib/libgenn_cuda_backend.a))
     include_directories(${CUDA_INCLUDE_DIRS} ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES})
-    target_compile_definitions(cypress PRIVATE CUDA_PATH_DEFINED)
+    target_compile_definitions(gennbck PRIVATE CUDA_PATH_DEFINED)
     set(GENN_LIBRARIES
         ${SOURCE_DIR}/lib/libgenn_cuda_backend.a
         ${SOURCE_DIR}/lib/libgenn.a

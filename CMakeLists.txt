@@ -115,8 +115,7 @@ add_library(cypress
 	cypress/backend/resources
 	cypress/backend/brainscales/brainscales_lib
 	cypress/backend/brainscales/slurm
-	cypress/backend/genn/genn
-	cypress/backend/genn/genn_models
+	cypress/backend/genn/genn_lib
 	cypress/backend/nest/nest
 	cypress/backend/nest/sli
 	cypress/backend/nmpi/nmpi
@@ -161,8 +160,6 @@ add_library(cypress
 	cypress/util/to_dot
 )
 
-include(genn_external)
-add_dependencies(cypress genn_ext)
 set_target_properties(cypress PROPERTIES POSITION_INDEPENDENT_CODE ON)
 message(STATUS "Downloading BrainScaleS library")
 file(DOWNLOAD https://github.com/hbp-unibi/BS2Cypress/raw/master/bin/libBS2CYPRESS.so
@@ -171,10 +168,25 @@ file(DOWNLOAD https://github.com/hbp-unibi/BS2Cypress/raw/master/bin/libBS2CYPRE
 target_compile_definitions(cypress PRIVATE BS_LIBRARY_PATH="${CMAKE_BINARY_DIR}/libBS2CYPRESS.so")
 target_compile_definitions(cypress PRIVATE BS_LIBRARY_INSTALL_PATH="${CMAKE_INSTALL_PREFIX}/lib/libBS2CYPRESS.so")
 
+## Json parser
 add_executable(cypress_from_json cypress/backend/serialize/json_exec)
 add_dependencies(cypress_from_json cypress)
 target_link_libraries(cypress_from_json cypress)
 target_compile_definitions(cypress PRIVATE JSON_EXEC_PATH="${CMAKE_BINARY_DIR}/cypress_from_json")
+
+## GeNN backend module
+add_library(gennbck SHARED
+	cypress/backend/genn/genn
+	cypress/backend/genn/genn_models
+)
+include(genn_external)
+add_dependencies(gennbck genn_ext)
+target_compile_definitions(cypress PRIVATE GENN_LIBRARY_PATH="${CMAKE_BINARY_DIR}/libgennbck.so")
+target_compile_definitions(cypress PRIVATE GENN_LIBRARY_INSTALL_PATH="${CMAKE_INSTALL_PREFIX}/lib/libgennbck.so")
+target_link_libraries(gennbck PRIVATE
+            ${GENN_LIBRARIES}
+)
+            
 
 if(STATIC_LINKING)
 	set_target_properties(cypress PROPERTIES POSITION_INDEPENDENT_CODE TRUE)
@@ -182,7 +194,6 @@ if(STATIC_LINKING)
             pybind11::embed
             PRIVATE
             ${PYTHON_LIBRARY}
-            ${GENN_LIBRARIES}
             dl
             -pthread
             )
@@ -214,6 +225,9 @@ if (BUILD_TEST_EXAMPLES)
         DESTINATION share/cmake/Cypress/
         RENAME CypressConfig.cmake
     )
+    install(FILES ${CMAKE_BINARY_DIR}/libBS2CYPRESS.so
+        DESTINATION lib)
+    
     install(FILES ${CMAKE_BINARY_DIR}/libBS2CYPRESS.so
         DESTINATION lib)
 
