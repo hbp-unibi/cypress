@@ -28,7 +28,7 @@ ExternalProject_Add(genn_ext
         GIT_TAG               master
         CONFIGURE_COMMAND     sed -i "s/private/protected/g" <SOURCE_DIR>/pygenn/genn_wrapper/include/SharedLibraryModel.h
         CMAKE_COMMAND         ""
-        BUILD_COMMAND         CXXFLAGS+=-fPIC make -j -C <SOURCE_DIR>
+        BUILD_COMMAND         CXXFLAGS=-fPIC make -j -C <SOURCE_DIR>
         INSTALL_COMMAND 	  ""
         UPDATE_COMMAND        ""
         EXCLUDE_FROM_ALL      TRUE
