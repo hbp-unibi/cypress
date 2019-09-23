@@ -196,7 +196,7 @@ InitSparseConnectivitySnippet::Init genn_connector(
 {
 	list_connected = false;
 	if (full_pops) {
-		type = SynapseMatrixType::BITMASK_GLOBALG;
+		type = SynapseMatrixType::SPARSE_GLOBALG;
 		if (name == "AllToAllConnector") {
 			if (allow_self_connections) {
 				type = SynapseMatrixType::DENSE_GLOBALG;
@@ -210,14 +210,8 @@ InitSparseConnectivitySnippet::Init genn_connector(
 			}
 		}
 		else if (name == "OneToOneConnector") {
-			type = SynapseMatrixType::SPARSE_GLOBALG;
 			return initConnectivity<InitSparseConnectivitySnippet::OneToOne>();
 		}
-		/*else if (conn.connector().name() == "FixedFanInConnector") {
-		    *connector =
-		        initConnectivity<InitSparseConnectivitySnippet::OneToOne>();
-		}
-		*/
 		else if (name == "FixedFanOutConnector") {
 			if (allow_self_connections) {
 				return initConnectivity<
@@ -233,6 +227,7 @@ InitSparseConnectivitySnippet::Init genn_connector(
 		}
 		else if (name == "RandomConnector") {
 			if (additional_parameter == 1.0 && allow_self_connections) {
+				// AllToAll Case
 				type = SynapseMatrixType::DENSE_GLOBALG;
 				return initConnectivity<
 				    InitSparseConnectivitySnippet::Uninitialised>();
@@ -272,11 +267,10 @@ SynapseGroup *create_synapse_group(
 		    connector);
 	}
 	else {
-		SynapseMatrixType type2;
-		if (type == SynapseMatrixType::DENSE_INDIVIDUALG) {
-			type2 = SynapseMatrixType::DENSE_INDIVIDUALG;
-		}
-		else {
+		// Need individual G for learning synapses
+		SynapseMatrixType type2 = SynapseMatrixType::DENSE_INDIVIDUALG;
+		if (type == SynapseMatrixType::SPARSE_GLOBALG) {
+			// This is the SparseInit case
 			type2 = SynapseMatrixType::SPARSE_INDIVIDUALG;
 		}
 		if (syn_name == "SpikePairRuleAdditive") {
@@ -285,31 +279,39 @@ SynapseGroup *create_synapse_group(
 				return model.addSynapsePopulation<
 				    GeNNModels::SpikePairRuleAdditive, PostsynapticModel>(
 				    name, type2, delay, "pop_" + std::to_string(conn.pid_src()),
-				    "pop_" + std::to_string(conn.pid_tar()), {},
+				    "pop_" + std::to_string(conn.pid_tar()),
 				    {
-				        weight[0],   // weight
 				        params[4],   // Aplus
 				        params[5],   // AMinus
 				        -params[7],  // WMin
 				        -params[6],  // WMax
+				        params[2],   // tauPlus
+				        params[3],   // tauMinus
 				    },
-				    {0.0, params[2]},  // PreVar init, tauPlus
-				    {0.0, params[3]},  // PostVar init, tauMinus
+				    {
+				        weight[0],  // weight
+				    },
+				    {0.0},  // PreVar init
+				    {0.0},  // PostVar init
 				    vars, {}, connector);
 			}
 			return model.addSynapsePopulation<GeNNModels::SpikePairRuleAdditive,
 			                                  PostsynapticModel>(
 			    name, type2, delay, "pop_" + std::to_string(conn.pid_src()),
-			    "pop_" + std::to_string(conn.pid_tar()), {},
+			    "pop_" + std::to_string(conn.pid_tar()),
 			    {
-			        weight[0],  // weight
 			        params[4],  // Aplus
 			        params[5],  // AMinus
-			        params[6],  // WMin
-			        params[7],  // WMax
+			        params[7],  // WMin
+			        params[6],  // WMax
+			        params[2],  // tauPlus
+			        params[3],  // tauMinus
 			    },
-			    {0.0, params[2]},  // PreVar init, tauPlus
-			    {0.0, params[3]},  // PostVar init, tauMinus
+			    {
+			        weight[0],  // weight
+			    },
+			    {0.0},  // PreVar init
+			    {0.0},  // PostVar init
 			    vars, {}, connector);
 		}
 		else if (syn_name == "SpikePairRuleMultiplicative") {
@@ -318,37 +320,45 @@ SynapseGroup *create_synapse_group(
 				return model.addSynapsePopulation<
 				    GeNNModels::SpikePairRuleMultiplicative, PostsynapticModel>(
 				    name, type2, delay, "pop_" + std::to_string(conn.pid_src()),
-				    "pop_" + std::to_string(conn.pid_tar()), {},
+				    "pop_" + std::to_string(conn.pid_tar()),
 				    {
-				        weight[0],   // weight
 				        params[4],   // Aplus
 				        params[5],   // AMinus
 				        -params[7],  // WMin
 				        -params[6],  // WMax
+				        params[2],   // tauPlus
+				        params[3],   // tauMinus
 				    },
-				    {0.0, params[2]},  // PreVar init, tauPlus
-				    {0.0, params[3]},  // PostVar init, tauMinus
+				    {
+				        weight[0],  // weight
+				    },
+				    {0.0},  // PreVar init
+				    {0.0},  // PostVar init
 				    vars, {}, connector);
 			}
 			return model.addSynapsePopulation<
 			    GeNNModels::SpikePairRuleMultiplicative, PostsynapticModel>(
 			    name, type2, delay, "pop_" + std::to_string(conn.pid_src()),
-			    "pop_" + std::to_string(conn.pid_tar()), {},
+			    "pop_" + std::to_string(conn.pid_tar()),
 			    {
-			        weight[0],  // weight
 			        params[4],  // Aplus
 			        params[5],  // AMinus
-			        params[6],  // WMin
-			        params[7],  // WMax
+			        params[7],  // WMin
+			        params[6],  // WMax
+			        params[2],  // tauPlus
+			        params[3],  // tauMinus
 			    },
-			    {0.0, params[2]},  // PreVar init, tauPlus
-			    {0.0, params[3]},  // PostVar init, tauMinus
+			    {
+			        weight[0],  // weight
+			    },
+			    {0.0},  // PreVar init
+			    {0.0},  // PostVar init
 			    vars, {}, connector);
 		}
 		else if (syn_name == "TsodyksMarkramMechanism") {
 			throw ExecutionError("SynapseModel " + syn_name +
 			                     "is not supported on this backend");
-			auto &params = conn.connector().synapse()->parameters();
+			/*auto &params = conn.connector().synapse()->parameters();
 			return model.addSynapsePopulation<GeNNModels::TsodyksMarkramSynapse,
 			                                  PostsynapticModel>(
 			    name, type2, delay, "pop_" + std::to_string(conn.pid_src()),
@@ -366,7 +376,7 @@ SynapseGroup *create_synapse_group(
 			    },
 			    {},  // PreVar init
 			    {},  // PostVar init
-			    vars, {}, connector);
+			    vars, {}, connector);*/
 		}
 	}
 	throw ExecutionError("SynapseModel " + syn_name +

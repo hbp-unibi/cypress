@@ -99,7 +99,7 @@ IMPLEMENT_SNIPPET(FixedNumberPostWithReplacement);
  * The simulation code for all synapse models is adapted from pynn_genn
  * repository
  */
-
+/*
 class TsodyksMarkramSynapse : public WeightUpdateModels::Base {
 public:
 	DECLARE_WEIGHT_UPDATE_MODEL(TsodyksMarkramSynapse, 0, 9, 0, 0);
@@ -110,47 +110,49 @@ public:
 	          {"tauFacil", "scalar"},  // time constant for facilitation [ms]
 	          {"tauPsc",
 	           "scalar"},  // decay time constant of postsynaptic current [ms]
-	          {"g", "scalar"},    // weight
-	          {"u", "scalar"},    //  0
-	          {"x", "scalar"},    // 1.0
-	          {"y", "scalar"},    // 0.0
-	          {"z", "scalar", VarAccess::READ_WRITE}});  // 0.0
+	          {"g", "scalar"},                           // weight
+	          {"u", "scalar"},                           //  0
+	          {"x", "scalar"},                           // 1.0
+	          {"y", "scalar"},                           // 0.0
+	          {"z", "scalar"}});  // 0.0
 
 	SET_SIM_CODE(
-	    "scalar deltaST = $(t) - $(sT_pre);\n"
-	    "$(z) *= exp( -deltaST / $(tauRec) );\n"
-	    "$(z) += $(y) * ( exp( -deltaST / $(tauPsc) ) -\n"
-	    "exp( -deltaST / $(tauRec) ) ) / ( ( $(tauPsc) / $(tauRec) ) - 1 );\n"
-	    "$(y) *= exp( -deltaST / $(tauPsc) );\n"
-	    "$(x) = 1 - $(y) - $(z);\n"
-	    "$(u) *= exp( -deltaST / $(tauFacil) );\n"
-	    "$(u) += $(U) * ( 1 - $(u) );\n"
-	    "if ( $(u) > $(U) ) {\n"
-	    "$(u) = $(U);\n"
+	    "const scalar deltaST = $(t) - $(sT_pre);"
+	    "$(z) *= exp(-deltaST / $(tauRec));"
+	    "$(z) += $(y) * (exp(-deltaST / $(tauPsc)) - exp(-deltaST / "
+	    "$(tauRec))) / (($(tauPsc) / $(tauRec)) - 1.0);"
+	    "$(y) *= exp(-deltaST / $(tauPsc));"
+	    "$(x) = 1.0 - $(y) - $(z);"
+	    "$(u) *= exp(-deltaST / $(tauFacil));"
+	    "$(u) += $(U) * (1.0 - $(u));"
+	    "if ($(u) > $(U)) {"
+	    "   $(u) = $(U);"
 	    "}\n"
 	    "$(y) += $(x) * $(u);\n"
-	    "$(addToInSyn, $(g) * $(x) * $(u));\n"
-	    /*"$(updatelinsyn);\n"*/);
+	    "$(addToInSyn, $(g) * $(x) * $(u));\n");
 
 	SET_NEEDS_PRE_SPIKE_TIME(true);
 };
-IMPLEMENT_SNIPPET(TsodyksMarkramSynapse);
+IMPLEMENT_SNIPPET(TsodyksMarkramSynapse);*/ // TODO Broken!
 
 class SpikePairRuleAdditive : public WeightUpdateModels::Base {
-	DECLARE_WEIGHT_UPDATE_MODEL(SpikePairRuleAdditive, 0, 5, 2, 2);
+	DECLARE_WEIGHT_UPDATE_MODEL(SpikePairRuleAdditive, 6, 1, 1, 1);
 	SET_VARS({
-	    {"g", "scalar", VarAccess::READ_WRITE},  // 0 - Weight
-	    {"Aplus", "scalar"},                     // 1 - Rate of potentiation
-	    {"Aminus", "scalar"},                    // 2 - Rate of depression
-	    {"Wmin", "scalar"},                      // 3 - Minimum weight
-	    {"Wmax", "scalar"}                       // 4 - Maximum weight
+	    {"g", "scalar", VarAccess::READ_WRITE}  // 0 - Weight
 	});
-	SET_PRE_VARS({{"preTrace", "scalar"},  // 0 - Internal, set to 0
-	              {"tauPlus",
-	               "scalar"}});  // 1 - Potentiation time constant (ms)
-	SET_POST_VARS({{"postTrace", "scalar"},  // 0 - Internal, set to 0
-	               {"tauMinus",
-	                "scalar"}});  // 1 - Depression time constant (ms)
+    
+    SET_PARAM_NAMES({
+	    "Aplus",                     // 0 - Rate of potentiation
+	    "Aminus",                    // 1 - Rate of depression
+	    "Wmin",                      // 2 - Minimum weight
+	    "Wmax",                      // 3 - Maximum weight
+        "tauPlus",                   // 4 - Potentiation time constant (ms)
+        "tauMinus",                  // 5 - Depression time constant (ms)
+    }
+    );
+    
+	SET_PRE_VARS({{"preTrace", "scalar"}});     // 0 - Internal, set to 0});
+	SET_POST_VARS({{"postTrace", "scalar"}});  // 0 - Internal, set to 0
 
 	SET_SIM_CODE(
 	    "$(addToInSyn, $(g));\n"
@@ -184,20 +186,22 @@ class SpikePairRuleAdditive : public WeightUpdateModels::Base {
 IMPLEMENT_SNIPPET(SpikePairRuleAdditive);
 
 class SpikePairRuleMultiplicative : public WeightUpdateModels::Base {
-	DECLARE_WEIGHT_UPDATE_MODEL(SpikePairRuleMultiplicative, 0, 5, 2, 2);
+	DECLARE_WEIGHT_UPDATE_MODEL(SpikePairRuleMultiplicative, 6, 1, 1, 1);
 	SET_VARS({
 	    {"g", "scalar"},                            // 0 - Weight
-	    {"Aplus", "scalar", VarAccess::READ_ONLY},  // 1 -Potentiation Rate
-	    {"Aminus", "scalar"},                       // 2 - Rate of depression
-	    {"Wmin", "scalar"},                         // 3 - Minimum weight
-	    {"Wmax", "scalar"}                          // 4 - Maximum weight
 	});
-	SET_PRE_VARS({{"preTrace", "scalar"},  // 0 - Internal, set to 0
-	              {"tauPlus",
-	               "scalar"}});  // 1 - Potentiation time constant (ms)
-	SET_POST_VARS({{"postTrace", "scalar"},  // 0 - Internal, set to 0
-	               {"tauMinus",
-	                "scalar"}});  // 1 - Depression time constant (ms)
+	SET_PRE_VARS({{"preTrace", "scalar"}}); // 0 - Internal, set to 0
+	SET_POST_VARS({{"postTrace", "scalar"}});  // 0 - Internal, set to 0
+	                
+    SET_PARAM_NAMES({
+	    "Aplus",                     // 0 - Rate of potentiation
+	    "Aminus",                    // 1 - Rate of depression
+	    "Wmin",                      // 2 - Minimum weight
+	    "Wmax",                      // 3 - Maximum weight
+        "tauPlus",                   // 4 - Potentiation time constant (ms)
+        "tauMinus",                  // 5 - Depression time constant (ms)
+    }
+    );
 
 	SET_SIM_CODE(
 	    "$(addToInSyn, $(g));\n"
