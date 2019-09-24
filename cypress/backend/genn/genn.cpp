@@ -19,12 +19,12 @@
 #ifdef CUDA_PATH_DEFINED
 #include <genn/backends/cuda/optimiser.h>
 #endif
-#include <sharedLibraryModel.h>
 #include <genn/backends/single_threaded_cpu/backend.h>
 #include <genn/genn/code_generator/generateAll.h>
 #include <genn/genn/code_generator/generateMakefile.h>
 #include <genn/genn/modelSpecInternal.h>
 #include <genn/third_party/path.h>
+#include <sharedLibraryModel.h>
 
 #include <chrono>
 #include <fstream>
@@ -965,7 +965,9 @@ void do_run_templ(NetworkBase &network, Real duration, ModelSpecInternal &model,
 		for (auto id : record_part_spike) {
 			slm.pullSpikesFromDevice("pop_" + std::to_string(id));
 			for (unsigned int nid = 0; nid < *(spike_cnt_ptrs[id]); nid++) {
-				if (populations[id][nid].signals().is_recording(0)) {
+				if (populations[id][(spike_ptrs[id])[nid]]
+				        .signals()
+				        .is_recording(0)) {
 					spike_data[id][(spike_ptrs[id])[nid]].push_back(
 					    Real(*time));
 				}
