@@ -18,7 +18,7 @@
 
 #pragma once
 
-#include <SharedLibraryModel.h>
+#include <sharedLibraryModel.h>
 #include <genn/genn/modelSpecInternal.h>
 #include <genn/genn/weightUpdateModels.h>
 

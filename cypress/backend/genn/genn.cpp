@@ -19,7 +19,7 @@
 #ifdef CUDA_PATH_DEFINED
 #include <genn/backends/cuda/optimiser.h>
 #endif
-#include <SharedLibraryModel.h>
+#include <sharedLibraryModel.h>
 #include <genn/backends/single_threaded_cpu/backend.h>
 #include <genn/genn/code_generator/generateAll.h>
 #include <genn/genn/code_generator/generateMakefile.h>

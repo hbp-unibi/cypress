@@ -26,7 +26,7 @@ endif()
 ExternalProject_Add(genn_ext
         GIT_REPOSITORY        "https://github.com/genn-team/genn.git"
         GIT_TAG               master
-        CONFIGURE_COMMAND     sed -i "s/private/protected/g" <SOURCE_DIR>/pygenn/genn_wrapper/include/SharedLibraryModel.h
+        CONFIGURE_COMMAND     ""
         CMAKE_COMMAND         ""
         BUILD_COMMAND         CXXFLAGS=-fPIC make -j -C <SOURCE_DIR>
         INSTALL_COMMAND 	  ""
@@ -40,7 +40,7 @@ set(GENN_INCLUDE_DIRS
     ${SOURCE_DIR}/include/
     ${SOURCE_DIR}/include/genn/genn
     ${SOURCE_DIR}/include/genn/third_party/
-    ${SOURCE_DIR}/pygenn/genn_wrapper/include/
+    ${SOURCE_DIR}/userproject/include/
 )
 include_directories(${GENN_INCLUDE_DIRS})
 
