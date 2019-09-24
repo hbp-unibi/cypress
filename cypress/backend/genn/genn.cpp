@@ -934,10 +934,12 @@ void do_run_templ(NetworkBase &network, Real duration, ModelSpecInternal &model,
 	                populations, slm);
 
 	auto spike_data = prepare_spike_storage(populations);
-	auto v_data = prepare_v_storage(populations, size_t(duration / timestep),
-	                                record_full_v, record_part_v);
+	auto v_data =
+	    prepare_v_storage(populations, size_t(std::ceil(duration / timestep)),
+	                      record_full_v, record_part_v);
 
 	auto built_t = std::chrono::steady_clock::now();
+	size_t counter = 0;
 	// Run the simulation and pull all recorded variables
 	while (*time < T(duration)) {
 		slm.stepTime();
@@ -951,12 +953,11 @@ void do_run_templ(NetworkBase &network, Real duration, ModelSpecInternal &model,
 		}
 
 		// Fully recorded voltage
-		size_t time_slot = size_t(std::round(*time / timestep)) - 1;
 		for (auto id : record_full_v) {
 			slm.pullVarFromDevice("pop_" + std::to_string(id), "V");
 			for (size_t nid = 0; nid < populations[id].size(); nid++) {
-				(*v_data[id][nid])(time_slot, 0) = Real(*time);
-				(*v_data[id][nid])(time_slot, 1) = Real(v_ptrs[id][nid]);
+				(*v_data[id][nid])(counter, 0) = Real(*time);
+				(*v_data[id][nid])(counter, 1) = Real(v_ptrs[id][nid]);
 			}
 		}
 
@@ -976,11 +977,12 @@ void do_run_templ(NetworkBase &network, Real duration, ModelSpecInternal &model,
 			slm.pullVarFromDevice("pop_" + std::to_string(id), "V");
 			for (size_t nid = 0; nid < populations[id].size(); nid++) {
 				if (populations[id][nid].signals().is_recording(1)) {
-					(*v_data[id][nid])(time_slot, 0) = Real(*time);
-					(*v_data[id][nid])(time_slot, 1) = Real(v_ptrs[id][nid]);
+					(*v_data[id][nid])(counter, 0) = Real(*time);
+					(*v_data[id][nid])(counter, 1) = Real(v_ptrs[id][nid]);
 				}
 			}
 		}
+		counter++;
 	}
 
 	auto sim_fin_t = std::chrono::steady_clock::now();
