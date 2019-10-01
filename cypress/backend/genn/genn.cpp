@@ -731,6 +731,25 @@ void setup_spike_sources(const std::vector<PopulationBase> &populations,
 	}
 }
 
+template <typename T>
+/**
+ * @brief Teardown of spike data for spike source arrays
+ *
+ * @param populations cypress populations
+ * @param slm loaded GeNN model
+ */
+void teardown_spike_sources(const std::vector<PopulationBase> &populations,
+                            GeNNModels::SharedLibraryModel_<T> &slm)
+{
+	// Set up spike times of spike source arrays
+	for (size_t i = 0; i < populations.size(); i++) {
+		const auto &pop = populations[i];
+		if (&pop.type() == &SpikeSourceArray::inst()) {
+			slm.freeExtraGlobalParam("pop_" + std::to_string(i), "spikeTimes");
+		}
+	}
+}
+
 /**
  * @brief Resolve all pointers to access GeNN data
  *
@@ -1089,6 +1108,8 @@ void do_run_templ(NetworkBase &network, Real duration, ModelSpecInternal &model,
 			conn.connector()._store_learned_weights(std::move(weight_store));
 		}
 	}
+
+	teardown_spike_sources(populations, slm);
 	auto end_t = std::chrono::steady_clock::now();
 	network.runtime({std::chrono::duration<Real>(end_t - start_t).count(),
 	                 std::chrono::duration<Real>(sim_fin_t - built_t).count(),
