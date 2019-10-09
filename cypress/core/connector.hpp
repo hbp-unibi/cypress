@@ -957,8 +957,9 @@ private:
 	std::vector<LocalConnection> m_connections;
 	void check_synapse()
 	{
-		if (m_synapse->parameter_names().size() !=
-		    m_connections[0].SynapseParameters.size()) {
+		if (m_connections.size() > 0 &&
+		    m_synapse->parameter_names().size() !=
+		        m_connections[0].SynapseParameters.size()) {
 			throw CypressException(
 			    "Please provide an instance of the synapse type in the from "
 			    "list connector!");
