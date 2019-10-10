@@ -1,13 +1,13 @@
 /*! \mainpage Cypress
 
-Please refer to the <a href="https://github.com/hbp-unibi/cypress/blob/master/README.md">README </a> before getting started. Please also consider the examples at <a href="https://github.com/hbp-unibi/cypress/tree/master/examples"> Github </a>. When starting your own project, please begin with the <a href="https://github.com/hbp-unibi/cypress_example"> example project </a> which demonstrated how to include cypress as external project. 
+Please refer to the <a href="https://github.com/hbp-unibi/cypress/blob/master/README.md">README </a> before getting started. Please also consider the examples at <a href="https://github.com/hbp-unibi/cypress/tree/master/examples"> Github </a>. When starting your own project, please begin with the <a href="https://github.com/hbp-unibi/cypress_example"> example project </a> which demonstrates how to include cypress as an external project. 
 
-This page (at the moment) can be used to search for extended function of cypress that is not covered in the Readme or in examples. This mainpage contains some more details about how to setup the hardware locally.
+This page (at the moment) can be used to search for extended functionality of cypress that is not covered in the Readme or in the examples. This mainpage contains some more details about how to setup the hardware locally.
 
-Note: all config parameters are provided via 'simulator={\"option\" : value, \"option2\" : value2}'.
+Note: all config parameters are provided via 'simulator={\"option\" : value, \"option2\" : value2}' (in all examples via the cli).
 
 \section NEST
-Install using the <a href="https://github.com/hbp-unibi/cypress_example/blob/master/virtualenvs.sh">Setup script</a>. It will install everything to `~/venvs/nest`. Activate the environment via `source ~/venvs/nest`.
+Install using the <a href="https://github.com/hbp-unibi/cypress_example/blob/master/virtualenvs.sh">Setup script</a>. It will install everything to `~/venvs/nest`. Activate the environment via `source ~/venvs/nest/bin/activate`.
 
 Runtime configuration options are e.g. 
  - `threads` : int, where int has to be replaced by the number of threads you want to use
@@ -16,14 +16,15 @@ Runtime configuration options are e.g.
 
 \section Spikey
 
-For software installation to standard directory `~/venvs/spikey/` refer to <a href="https://github.com/hbp-unibi/cypress_example/blob/master/virtualenvs.sh">Setup script</a>. Uncomment the last code part by removing  the : " and ". If you do not want to install nest, do not forget to comment out the middle part of the script. Afterwards, execute the script to install the Spikey software. If you stumble upon some errors about missing packages, please refer to the <a href="https://electronicvisions.github.io/hbp-sp9-guidebook/pm/spikey/appendix.html#setup-software">guidebook</a>. 
+For software installation to standard directory `~/venvs/spikey/` refer to <a href="https://github.com/hbp-unibi/cypress_example/blob/master/virtualenvs.sh">Setup script</a>. Uncomment the last code part by removing  the : " and ". If you do not want to install nest, do not forget to comment out the middle part of the script. Afterwards, execute the script to install the Spikey software. If you stumble upon some errors about missing packages, please refer to the <a href="https://electronicvisions.github.io/hbp-sp9-guidebook/pm/spikey/appendix.html#setup-software">guidebook</a>. After installation, activate the virtual environment via `source ~/venvs/spikey/bin/activate` before working with Spikey.
 
-The hardware system is connected via usb cable. Please use an active USB hub or and y-cable to connect Spikey to two USB connectors. Spikey uses a bit more current then it is specified in the USB specification.
+The hardware system is connected via usb cable. Please use an active USB hub or and y-cable to connect Spikey to two USB connectors. Spikey uses a bit more current then it is specified in the USB specification. On linux you will need to add the following UDEV rule to your system (google UDEV and your distro to learn how to do that) : `SUBSYSTEMS=="usb", ATTRS{idVendor}=="04b4", ATTRS{idProduct}=="1003", MODE:="0666" `
 
 When running simulations, there are some hardware limitations that have to be kept in mind.
  - A population can only have either excitatory or inhibitory outgoing connections
- - Positive weights are in between 0.001 and 0.015 in 0.001 steps
- - Negative weights are in between -0.001 and -0.06 (?)
+ - Positive weights are in between 0.001 and 0.015 in 0.001 steps (4 bit)
+ - Negative weights are in between -0.004 and -0.06 in 0.004 steps (4 bit)
+ - E_rev_E is set to 0mV, E_rev_I can be chosen between -80 and -55 mV. The same goes for reversal, reset and threshold potential.
  - Spikey consists of two chips. Neurons on on chip can not communicate inside and outside of the same chip
  - The hardware is analogue. Therefore you should expect deviations from the simulation.
 
@@ -44,9 +45,9 @@ For installation, please use the same procedure as for the Spikey system, except
 
 Issues might relate to overloaded cores, not finished cores, or dropped packages. There are two options to work around these issues:
  - Reducing the `timestep` to 0.1ms
- - Reducing the `source_neurons_per_core` or `source_neurons_per_core` to values below 255
+ - Reducing the `source_neurons_per_core` or `neurons_per_core` to values below 255
 
-Another issue is related to fixed overhead of projections/connections. If you encounter a situation where the system is running out of memory before running, although the network should map to the hardware (less neurons than number of cores times 255, where SpiNN3 has 16*4 and SpiNN5 16*49 cores for simulation neurons), you can try to merge your connections in a single FromListConnector. 
+Another issue is related to a fixed overhead of projections/connections. If you encounter a situation where the system is running out of memory before actually running the simulation, although the network should map to the hardware (less neurons than number of cores times 255, where SpiNN3 has 16*4 and SpiNN5 16*49 cores for simulation of neurons), you can try to merge your connections in a single FromListConnector. Note also, that every high-level population is mapped to at least on core, and there is at most one population per core, such that you cannot have more populations than cores.
 
 
 */
