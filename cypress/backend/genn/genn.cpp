@@ -776,6 +776,11 @@ void resolve_ptrs(std::vector<unsigned int *> &spike_ptrs,
 {
 	for (size_t i = 0; i < populations.size(); i++) {
 		const auto &pop = populations[i];
+		if (&pop.type() == &SpikeSourceArray::inst()) {
+			spike_ptrs.emplace_back(nullptr);
+			spike_cnt_ptrs.emplace_back(nullptr);
+			continue;
+		}
 		if (pop.homogeneous_record()) {
 			if (pop.signals().is_recording(0)) {
 				spike_cnt_ptrs.emplace_back((*(static_cast<unsigned int **>(
@@ -884,6 +889,49 @@ auto prepare_v_storage(const std::vector<PopulationBase> &populations,
 	}
 
 	return v_data;
+}
+
+inline std::vector<Real> remove_spikes_after(std::vector<Real> spikes,
+                                             Real time)
+{
+	auto it = std::upper_bound(spikes.begin(), spikes.end(), time);
+	spikes.erase(it, spikes.end());
+	return spikes;
+}
+
+inline bool any_record(PopulationBase &pop, size_t ind)
+{
+	for (const auto &n : pop) {
+		if (n.signals().is_recording(ind)) {
+			return true;
+		}
+	}
+	return false;
+}
+
+void record_spike_source(NetworkBase &netw, Real duration)
+{
+	for (auto pop : netw.populations()) {
+		if (&pop.type() == &SpikeSourceArray::inst()) {
+			if (pop.homogeneous_parameters() &&
+			    ((pop.homogeneous_record() && pop.signals().is_recording(0)) ||
+			     any_record(pop, 0))) {
+				pop.signals().data(
+				    0, std::make_shared<Matrix<Real>>(remove_spikes_after(
+				           pop.parameters().parameters(), duration)));
+			}
+			else if (any_record(pop, 0)) {
+				for (auto n : pop) {
+					if (n.signals().is_recording(0)) {
+						n.signals().data(
+						    0,
+						    std::make_shared<Matrix<Real>>(remove_spikes_after(
+						        n.parameters().parameters(), duration)));
+					}
+				}
+			}
+		}
+	}
 }
 
 template <typename T>
@@ -1110,6 +1158,7 @@ void do_run_templ(NetworkBase &network, Real duration, ModelSpecInternal &model,
 	}
 
 	teardown_spike_sources(populations, slm);
+	record_spike_source(network, duration);
 	auto end_t = std::chrono::steady_clock::now();
 	network.runtime({std::chrono::duration<Real>(end_t - start_t).count(),
 	                 std::chrono::duration<Real>(sim_fin_t - built_t).count(),
