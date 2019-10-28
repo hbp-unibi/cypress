@@ -155,7 +155,7 @@ public:
 	Matrix(const std::vector<T> &init) : Matrix(init.size(), 1)
 	{
 		for (size_t i = 0; i < init.size(); i++) {
-			(*this)(i, 1) = init[i];
+			(*this)(i, 0) = init[i];
 		}
 	}
 
