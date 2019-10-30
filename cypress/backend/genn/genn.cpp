@@ -750,6 +750,9 @@ void teardown_spike_sources(const std::vector<PopulationBase> &populations,
 	}
 }
 
+typedef unsigned int *(*CurrentSpikeFunction)();
+typedef unsigned int &(*CurrentSpikeCountFunction)();
+
 /**
  * @brief Resolve all pointers to access GeNN data
  *
@@ -764,8 +767,8 @@ void teardown_spike_sources(const std::vector<PopulationBase> &populations,
  * @param slm loaded GeNN model
  */
 template <typename T>
-void resolve_ptrs(std::vector<unsigned int *> &spike_ptrs,
-                  std::vector<unsigned int *> &spike_cnt_ptrs,
+void resolve_ptrs(std::vector<CurrentSpikeFunction> &spike_ptrs,
+                  std::vector<CurrentSpikeCountFunction> &spike_cnt_ptrs,
                   std::vector<T *> &v_ptrs,
                   std::vector<size_t> &record_full_spike,
                   std::vector<size_t> &record_full_v,
@@ -783,10 +786,11 @@ void resolve_ptrs(std::vector<unsigned int *> &spike_ptrs,
 		}
 		if (pop.homogeneous_record()) {
 			if (pop.signals().is_recording(0)) {
-				spike_cnt_ptrs.emplace_back((*(static_cast<unsigned int **>(
-				    slm.getSymbol("glbSpkCntpop_" + std::to_string(i))))));
-				spike_ptrs.emplace_back((*(static_cast<unsigned int **>(
-				    slm.getSymbol("glbSpkpop_" + std::to_string(i))))));
+				spike_cnt_ptrs.emplace_back(
+				    (CurrentSpikeCountFunction)(slm.getSymbol(
+				        "getpop_" + std::to_string(i) + "CurrentSpikeCount")));
+				spike_ptrs.emplace_back((CurrentSpikeFunction)(slm.getSymbol(
+				    "getpop_" + std::to_string(i) + "CurrentSpikes")));
 				record_full_spike.emplace_back(pop.pid());
 			}
 			else {
@@ -810,11 +814,13 @@ void resolve_ptrs(std::vector<unsigned int *> &spike_ptrs,
 				if (neuron.signals().is_recording(0)) {
 					record_part_spike.emplace_back(neuron.pid());
 
-					spike_cnt_ptrs[neuron.pid()] =
-					    ((*(static_cast<unsigned int **>(slm.getSymbol(
-					        "glbSpkCntpop_" + std::to_string(i))))));
-					spike_ptrs[neuron.pid()] = ((*(static_cast<unsigned int **>(
-					    slm.getSymbol("glbSpkpop_" + std::to_string(i))))));
+					spike_cnt_ptrs[neuron.pid()] = (CurrentSpikeCountFunction)(
+					    slm.getSymbol("getpop_" + std::to_string(i) +
+					                  "CurrentSpikeCount"));
+
+					spike_ptrs[neuron.pid()] =
+					    (CurrentSpikeFunction)(slm.getSymbol(
+					        "getpop_" + std::to_string(i) + "CurrentSpikes"));
 					break;
 				}
 			}
@@ -990,7 +996,8 @@ void do_run_templ(NetworkBase &network, Real duration, ModelSpecInternal &model,
 	slm.initializeSparse();
 
 	// Get Pointers to observables
-	std::vector<unsigned int *> spike_ptrs, spike_cnt_ptrs;
+	std::vector<CurrentSpikeFunction> spike_ptrs;
+	std::vector<CurrentSpikeCountFunction> spike_cnt_ptrs;
 	std::vector<T *> v_ptrs;
 
 	// Store which populations are recorded
@@ -1013,9 +1020,9 @@ void do_run_templ(NetworkBase &network, Real duration, ModelSpecInternal &model,
 
 		// Fully recorded spikes
 		for (auto id : record_full_spike) {
-			slm.pullSpikesFromDevice("pop_" + std::to_string(id));
-			for (unsigned int nid = 0; nid < *(spike_cnt_ptrs[id]); nid++) {
-				spike_data[id][(spike_ptrs[id])[nid]].push_back(Real(*time));
+			slm.pullCurrentSpikesFromDevice("pop_" + std::to_string(id));
+			for (unsigned int nid = 0; nid < spike_cnt_ptrs[id](); nid++) {
+				spike_data[id][(spike_ptrs[id]())[nid]].push_back(Real(*time));
 			}
 		}
 
@@ -1030,13 +1037,11 @@ void do_run_templ(NetworkBase &network, Real duration, ModelSpecInternal &model,
 
 		// Partially recorded spikes
 		for (auto id : record_part_spike) {
-			slm.pullSpikesFromDevice("pop_" + std::to_string(id));
-			for (unsigned int nid = 0; nid < *(spike_cnt_ptrs[id]); nid++) {
-				if (populations[id][(spike_ptrs[id])[nid]]
-				        .signals()
-				        .is_recording(0)) {
-					spike_data[id][(spike_ptrs[id])[nid]].push_back(
-					    Real(*time));
+			slm.pullCurrentSpikesFromDevice("pop_" + std::to_string(id));
+			for (unsigned int nid = 0; nid < spike_cnt_ptrs[id](); nid++) {
+				unsigned int n = (spike_ptrs[id]())[nid];
+				if (populations[id][n].signals().is_recording(0)) {
+					spike_data[id][n].push_back(Real(*time));
 				}
 			}
 		}
