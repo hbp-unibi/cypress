@@ -267,6 +267,18 @@ public:
 	    : NeuronParameters(PopulationDataView::from_sequence(list))
 	{
 	}
+	
+	/**
+	 * Constructor allowing to build a SpikeSourceArrayParameters instance
+	 * containing the parameters for multiple neurons.
+	 *
+	 * @param list is a vector of other SpikeSourceArrayParameters instances which
+	 * should be incorporated into the new SpikeSourceArrayParameters instance.
+	 */
+	NeuronParametersBase(std::vector<Impl> list)
+	    : NeuronParameters(PopulationDataView::from_sequence(list))
+	{
+	}
 };
 
 /**
