@@ -146,7 +146,7 @@ public:
 			assert(init[0].size() == init[i].size());
 		}
 		for (size_t i = 0; i < init.size(); i++) {
-			for (size_t j = 0; j < init[0]; j++) {
+			for (size_t j = 0; j < init[0].size(); j++) {
 				(*this)(i, j) = init[i][j];
 			}
 		}
