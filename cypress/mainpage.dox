@@ -13,6 +13,10 @@ Runtime configuration options are e.g.
  - `threads` : int, where int has to be replaced by the number of threads you want to use
  - `spike_precision`: "off_grid",  allow more precise spike times
  - `timestep` : float, value for the accuracy of the simulation, defaults to 0.1ms
+ 
+NEST actually comes with two backends, one via Python (using pyNN --> `pynn.nest`) and one using the SLI interpreter (`nest`). Both backends should provide similar results, depending on your network the Python or the SLI backend will be faster.
+
+NOTE: Spike values that are smaller than your timestep will be ignored! To be safe, use the simulators only after a few ms!
 
 \section Spikey
 
@@ -39,7 +43,7 @@ Keep an eye at the logs, if the system reports that spike buffers are almost ful
 
 \section SpiNNaker
 
-SpiNNaker is connected via LAN. I recommend to use a usb-lan dongle if no lan port is free on your system. Please set a manual IP address like 192.168.240.99 and a sub-mask 255.255.255.0. The small SpiNN3/large SpiNN5 boards will have the IP 192.168.240.253/192.168.240.1.
+SpiNNaker is connected via LAN. I recommend to use a usb-lan dongle if no lan port is free on your system. Please set a manual IP address like 192.168.240.99 and a sub-mask 255.255.255.0. The small SpiNN3/large SpiNN5 boards will have the IP 192.168.240.253/192.168.240.1. This IP must be set in `~/.spynnaker.cfg` (created after first try to simulate something on SpiNNaker) as `machineName`, as well as the `version` (3 or 5).
 
 For installation, please use the same procedure as for the Spikey system, except you uncomment the first part of the script. See also <a href="https://spinnakermanchester.github.io/">SpiNNaker docu</a>
 
