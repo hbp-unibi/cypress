@@ -509,7 +509,7 @@ void NetworkBase::run(const Backend &backend, Real duration)
 {
 	// Automatically deduce the duration if none was given
 	if (duration <= 0) {
-		duration = this->duration() + 1000.0;
+		duration = std::round(this->duration() + 1000.0);
 	}
 
 	// Run the network through the transformation machinery, make sure all

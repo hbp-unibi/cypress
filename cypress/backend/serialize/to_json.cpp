@@ -324,9 +324,11 @@ void ToJson::create_pop_from_json(const Json &pop_json, Network &netw)
 	std::string name = pop_json["type"].get<std::string>();
 	std::vector<Real> parameters;
 	bool inhomogeneous = false;
-	if (pop_json["parameters"][0].size() > 1) {
+	if (pop_json["parameters"][0].is_array()) {
 		// inhomogeneous parameters
-		parameters = pop_json["parameters"][0].get<std::vector<Real>>();
+        if(pop_json["parameters"][0].size() > 0){
+            parameters = pop_json["parameters"][0].get<std::vector<Real>>();
+        }
 		inhomogeneous = true;
 	}
 	else {

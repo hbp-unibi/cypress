@@ -15,9 +15,9 @@
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 # Download a matplotlib library
-message(STATUS "Downloading https://raw.githubusercontent.com/cjenzen/matplotlib-cpp/master/matplotlibcpp.h")
+message(STATUS "Downloading https://raw.githubusercontent.com/costrau/matplotlib-cpp/master/matplotlibcpp.h")
 file(DOWNLOAD
-	https://raw.githubusercontent.com/cjenzen/matplotlib-cpp/master/matplotlibcpp.h
+	https://raw.githubusercontent.com/costrau/matplotlib-cpp/master/matplotlibcpp.h
 	${CMAKE_BINARY_DIR}/include/cypress/matplotlibcpp.hpp
 )
 
