@@ -27,16 +27,14 @@
 #include <sharedLibraryModel.h>
 
 #include <chrono>
-#include <fstream>
-
 #include <cypress/backend/genn/genn.hpp>
+#include <cypress/backend/genn/genn_models.hpp>
 #include <cypress/core/exceptions.hpp>
 #include <cypress/core/network_base_objects.hpp>
 #include <cypress/core/neurons.hpp>
 #include <cypress/util/filesystem.hpp>
 #include <cypress/util/logger.hpp>
-
-#include <cypress/backend/genn/genn_models.hpp>
+#include <fstream>
 
 #define UNPACK7(v) v[0], v[1], v[2], v[3], v[4], v[5], v[6]
 
@@ -302,8 +300,8 @@ SynapseGroup *create_synapse_group(
 			    {
 			        params[4],  // Aplus
 			        params[5],  // AMinus
-			        params[7],  // WMin
-			        params[6],  // WMax
+			        params[6],  // WMin
+			        params[7],  // WMax
 			        params[2],  // tauPlus
 			        params[3],  // tauMinus
 			    },
@@ -343,8 +341,8 @@ SynapseGroup *create_synapse_group(
 			    {
 			        params[4],  // Aplus
 			        params[5],  // AMinus
-			        params[7],  // WMin
-			        params[6],  // WMax
+			        params[6],  // WMin
+			        params[7],  // WMax
 			        params[2],  // tauPlus
 			        params[3],  // tauMinus
 			    },
@@ -1153,10 +1151,18 @@ void do_run_templ(NetworkBase &network, Real duration, ModelSpecInternal &model,
 				cond_based =
 				    (cond_based &&
 				     (conn.connector().synapse()->parameters()[0] < 0));
-				convert_learned_weights(populations[conn.pid_src()].size(),
-				                        populations[conn.pid_tar()].size(),
-				                        weight_store, weights, delay,
-				                        cond_based);
+				unsigned int *rowlengths = *(static_cast<unsigned int **>(
+				    slm.getSymbol("rowLengthconn_" + std::to_string(i))));
+				unsigned int *indices = *(static_cast<unsigned int **>(
+				    slm.getSymbol("indconn_" + std::to_string(i))));
+
+				const unsigned int *maxRowLenght =
+				    (static_cast<const unsigned int *>(slm.getSymbol(
+				        "maxRowLengthconn_" + std::to_string(i))));
+				convert_learned_weights_sparse(
+				    populations[conn.pid_src()].size(),
+				    populations[conn.pid_tar()].size(), weight_store, weights,
+				    delay, cond_based, indices, rowlengths, maxRowLenght);
 			}
 			conn.connector()._store_learned_weights(std::move(weight_store));
 		}
@@ -1182,6 +1188,25 @@ void convert_learned_weights(size_t src_size, size_t tar_size,
 			    inhib_cond ? -weights[tar_size * srcnid + tarnid]
 			               : weights[tar_size * srcnid + tarnid],
 			    delay));
+		}
+	}
+}
+
+template <typename T>
+void convert_learned_weights_sparse(size_t src_size, size_t,
+                                    std::vector<LocalConnection> &weight_store,
+                                    T *weights, Real delay, bool inhib_cond,
+                                    unsigned int *indices,
+                                    unsigned int *rowlengths,
+                                    const unsigned int *maxRowLenght)
+{
+	for (size_t srcnid = 0; srcnid < src_size; srcnid++) {
+		auto current_row_length = rowlengths[srcnid];
+		for (size_t i = 0; i < current_row_length; i++) {
+			auto tarnid = indices[i];
+			auto weight = weights[(*maxRowLenght) * srcnid + i];
+			weight_store.push_back(LocalConnection(
+			    srcnid, tarnid, inhib_cond ? -weight : weight, delay));
 		}
 	}
 }
