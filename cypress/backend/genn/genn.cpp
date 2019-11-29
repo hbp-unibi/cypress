@@ -1151,18 +1151,27 @@ void do_run_templ(NetworkBase &network, Real duration, ModelSpecInternal &model,
 				cond_based =
 				    (cond_based &&
 				     (conn.connector().synapse()->parameters()[0] < 0));
-				unsigned int *rowlengths = *(static_cast<unsigned int **>(
-				    slm.getSymbol("rowLengthconn_" + std::to_string(i))));
-				unsigned int *indices = *(static_cast<unsigned int **>(
-				    slm.getSymbol("indconn_" + std::to_string(i))));
+				try {
+					unsigned int *rowlengths = *(static_cast<unsigned int **>(
+					    slm.getSymbol("rowLengthconn_" + std::to_string(i))));
+					unsigned int *indices = *(static_cast<unsigned int **>(
+					    slm.getSymbol("indconn_" + std::to_string(i))));
 
-				const unsigned int *maxRowLenght =
-				    (static_cast<const unsigned int *>(slm.getSymbol(
-				        "maxRowLengthconn_" + std::to_string(i))));
-				convert_learned_weights_sparse(
-				    populations[conn.pid_src()].size(),
-				    populations[conn.pid_tar()].size(), weight_store, weights,
-				    delay, cond_based, indices, rowlengths, maxRowLenght);
+					const unsigned int *maxRowLenght =
+					    (static_cast<const unsigned int *>(slm.getSymbol(
+					        "maxRowLengthconn_" + std::to_string(i))));
+					convert_learned_weights_sparse(
+					    populations[conn.pid_src()].size(),
+					    populations[conn.pid_tar()].size(), weight_store,
+					    weights, delay, cond_based, indices, rowlengths,
+					    maxRowLenght);
+				}
+				catch (...) {
+					convert_learned_weights(populations[conn.pid_src()].size(),
+					                        populations[conn.pid_tar()].size(),
+					                        weight_store, weights, delay,
+					                        cond_based);
+				}
 			}
 			conn.connector()._store_learned_weights(std::move(weight_store));
 		}
