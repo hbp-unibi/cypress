@@ -1709,8 +1709,9 @@ void PyNN::do_run(NetworkBase &source, Real duration) const
 		                     "multiples of the "
 		                     "timestep");
 		timestep = py::cast<Real>(pynn.attr("get_time_step")());
-		if (m_normalised_simulator == "nmmc1") {  // timestep to milliseconds
-			timestep = timestep / 1000.0;
+		if (m_normalised_simulator == "nmmc1") {
+			// timestep to milliseconds
+			timestep = timestep * 1000.0;
 		}
 	}
 
