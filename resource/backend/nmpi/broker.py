@@ -235,7 +235,7 @@ if not "collab_id" in config:
 
 # Prompt the username
 if not "username" in config:
-    config["username"] = eval(input("Username: "))
+    config["username"] = str(input("Username: "))
 
 # Create the client instance
 token = config["token"] if "token" in config else None
