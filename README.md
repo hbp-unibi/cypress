@@ -21,12 +21,12 @@ Cypress requires a C++14 compliant compiler such as GCC 4.9 and CMake in version
 sudo dnf install glibc-static libstdc++-static
 ```
 
-Furthermore Python in version 2.7 and `pip` must be installed, as well as the PyPi package `pyNN`. You can install the latter using
+The library ships with a simulator that supports all basic requirements (GeNN, see [github.io](http://genn-team.github.io/genn/) ). If you want to run simulations on NEST or SpiNNaker, you will need Python in version 2.7 and `pip` must be installed, as well as the PyPi package `pyNN`. You can install the latter using
 ```bash
-sudo pip install pyNN
+(sudo) pip install pyNN
 ```
 
-In order to run network simulations you also need to install NEST or PyNN with an appropriate simulator backend (for example sPyNNaker). See http://www.nest-simulator.org/ for information on how to install NEST.
+In order to run network simulations you also need to install NEST or PyNN with an appropriate simulator backend (for example sPyNNaker). See [NEST Docu](http://www.nest-simulator.org/) or [SpiNNaker Docu](https://spinnakermanchester.github.io/) for information on how to install these simulator backends. More detailed information is stated at our doxygen page [here](https://hbp-unibi.github.io/cypress/index.html).
 
 Once the above requirements are fulfilled, simply run
 ```bash
@@ -124,32 +124,21 @@ Simply call ``` create_dot(netw, "graph_label")``` to create a simplified visual
 ### Supported Backends
 
 Currently we support the following backends:
- * `pynn.nest` is using the NESt simulator via PyNN (see http://www.nest-simulator.org/ for installation instructions) 
- * `nest` **experimental** implementation of NEST SLI 
- * `spinnaker` uses the digital SpiNNaker architecture (see https://spinnakermanchester.github.io/)
- * `nmpm1` is using the BrainScaleS system (https://brainscales.kip.uni-heidelberg.de/) and its executable system specification `ESS`
- * `spikey`, the predecessor of BrainScaleS (https://www.kip.uni-heidelberg.de/vision/research/spikey/)
+ * `genn` makes use of the Gpu-Enhanced Neuronal Network Simulation environment [GeNN](http://genn-team.github.io/genn/)
+ * `pynn.nest` is using the NEST simulator via PyNN (see [nest](http://www.nest-simulator.org/) for installation instructions) 
+ * `nest` **experimental** implementation of NEST SLI with reduced set of supported features
+ * `spinnaker` uses the digital SpiNNaker architecture via its pyNN interface (see [SpiNNaker](https://spinnakermanchester.github.io/))
+ * `nmpm1` is using the BrainScaleS system [BrainScaleS](https://brainscales.kip.uni-heidelberg.de/) and its executable system specification `ESS`
+ * `spikey`, the predecessor of BrainScaleS [Spikey](https://www.kip.uni-heidelberg.de/vision/research/spikey/)
 
 Futhermore, backends available through the Neuromorphic Platform Service nmpi can be used via `nmpi.backend`. If you have access to the Heidelberg server environment, jobs can be executed from the entry server or one of the computation nodes by using `slurm.x`, with which resources are automatically allocated. 
 To parallelize simulators, `json.x` serializes a network to json and executes an independent process with simulator `x`, reading the network infrastructure from the generate json. 
 
 Backend specific performance and setup knobs
 ------------
-There are several optimization knobs you can use to tune the simulation. These can be used by amending the backend string, e.g. ```spinnaker='{"option" : value, "option2" : value2, ...}'```. This is used for backend specific options expected from ```pynn.setup(...)```, but also for some additional option which are listed here.
+There are several optimization knobs you can use to tune the simulation. These can be used by amending the backend string, e.g. ```spinnaker='{"option" : value, "option2" : value2, ...}'```. This is used for backend specific options expected from ```pynn.setup(...)```, but also for some additional options which are listed [here](https://hbp-unibi.github.io/cypress/index.html).
 
-### BrainScaleS and ESS
- * `neuron_size` Number of neuron circuits combined to one neuron. Possible values: 2,4,6,...; Default: 4
- * `big_capacitor`  Using big capacitors on HICANNs. Possible values: true, false; Default: false
- * `bandwidth`  Consider the firing rate of input neurons and only use the partial maximal bandwidth. The smaller the value, the less neurons are mapped to a single HICANN. Possible values: [0,1]; Default: None
- * `calib_path` Path to calibration files. Possible values: "path/to/calib" ; Default: Current default calib path
 
-Only on the hardware:
- * `hicann` and `wafer`:  Choose the Wafer and the HICANN for your network emulation. Possible values: Available HICANNs and Wafers, also list of HICANNs; Default: 367 and 33
- * `digital_weight`:  Directly set the digital weight instead of PyNN weights. Currently not supports ListConnectors with varying weights. Possible values: true, false; Default: false
-
-### SpiNNaker
- * `neurons_per_core` Sets the maximal number of neurons for the IaF neuron with conductance based synapses. Possible values: 1, ..., 255, ... ; Default: None (255?)
- * `timestep` Sets the timestep of the simulation. Default is 1.0, possible are also 0.1, 0.01. The latter slow down the simulation by a factor of 10,100.
  
 Using Cypress in your own project
 ------------
