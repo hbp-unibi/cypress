@@ -40,7 +40,7 @@ private:
 	void do_run(NetworkBase &network, Real duration) const override;
 
 	double m_timestep = 0.1;
-	bool m_gpu = true;
+	bool m_gpu = false;
 	bool m_double = false;
 
 public:
@@ -59,6 +59,9 @@ public:
 	 * @param setup is a JSON object which supports the following settings:
 	 *
 	 * {
+     *      "timestep" : 0.1
+     *      "gpu" : false
+     *      "double: false
 	 * }
 	 */
 	GeNN(const Json &setup = Json());
