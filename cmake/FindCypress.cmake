@@ -12,7 +12,7 @@ find_package_handle_standard_args(Cypress DEFAULT_MSG
                                   CYPRESS_LIBRARY CYPRESS_INCLUDE_DIR)
 
 mark_as_advanced(CYPRESS_INCLUDE_DIR CYPRESS_LIBRARY)
-SET(PYBIND11_PYTHON_VERSION "2.7")
+#SET(PYBIND11_PYTHON_VERSION "2.7")
 find_package(pybind11 REQUIRED)
 
 set(ONLY_CYPRESS ${CYPRESS_LIBRARY})

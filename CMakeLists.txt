@@ -23,15 +23,24 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR}/cmake)
 
 set(BUILD_TEST_EXAMPLES TRUE CACHE BOOL "Set to true for building examples and tests")
 
+# If Python Library is already found, continue, otherwise default to python3
+if(Python_VERSION_MAJOR)
+    find_package(PythonInterp Python_VERSION_MAJOR REQUIRED)
+    find_package(PythonLibs Python_VERSION_MAJOR REQUIRED)
+    SET(PYBIND11_PYTHON_VERSION Python_VERSION_MAJOR)
+else()
+    find_package(PythonInterp 3 REQUIRED)
+    find_package(PythonLibs 3 REQUIRED)
+    SET(PYBIND11_PYTHON_VERSION 3)
+endif()
+
 # Automatically download and compile Google-Test and the JSON library
 include(gtest_external)
 include(json_external)
 include(matplotlib_external)
 
-SET(PYBIND11_PYTHON_VERSION "2.7")
 set(PYBIND11_INSTALL TRUE CACHE BOOL "pybind11 install" FORCE INTERNAL)
 add_subdirectory(external/pybind11)
-find_package(PythonLibs 2.7 REQUIRED )
 
 # Enable C++14 support
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=gnu++14")

@@ -21,9 +21,6 @@ file(DOWNLOAD
 	${CMAKE_BINARY_DIR}/include/cypress/matplotlibcpp.hpp
 )
 
-find_package(PythonLibs 2.7 REQUIRED)
-find_package(PythonInterp 2.7 REQUIRED)
-
 execute_process(
     COMMAND "${PYTHON_EXECUTABLE}" -c
             "from __future__ import print_function\nimport numpy; print(numpy.get_include(), end='')"
