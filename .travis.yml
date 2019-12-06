@@ -125,6 +125,7 @@ matrix:
           branch: master
 
 install:
+    - sudo apt install python3 python3-pip
     - sudo pip3 install requests pyminifier numpy
     - pip3 install requests pyminifier numpy
 
