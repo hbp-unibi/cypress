@@ -24,7 +24,7 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR}/cmake)
 set(BUILD_TEST_EXAMPLES TRUE CACHE BOOL "Set to true for building examples and tests")
 
 # If Python Library is already found, continue, otherwise default to python3
-if(Python_VERSION_MAJOR)
+if(PYTHON_VERSION_MAJOR)
     find_package(PythonInterp Python_VERSION_MAJOR REQUIRED)
     find_package(PythonLibs Python_VERSION_MAJOR REQUIRED)
     SET(PYBIND11_PYTHON_VERSION Python_VERSION_MAJOR)
