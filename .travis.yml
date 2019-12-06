@@ -111,7 +111,7 @@ matrix:
           branch: master
 
 install:
-    - pip install requests numpy
+    - pip install requests numpy cython
 
 before_install:
     - eval "${MATRIX_EVAL}"
@@ -120,6 +120,6 @@ script:
   - mkdir build_gcc 
   - cd build_gcc 
   - cmake .. -DSTATIC_LINKING=FALSE
-  - make && make test ARGS=-V
+  - make -j && make test ARGS=-V
   - cmake .. -DSTATIC_LINKING=TRUE
-  - make && make test ARGS=-V
+  - make -j && make test ARGS=-V
