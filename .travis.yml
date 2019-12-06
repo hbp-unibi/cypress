@@ -125,7 +125,7 @@ matrix:
           branch: master
 
 install:
-    - pip3 install requests numpy
+    - pip install requests numpy
 
 before_install:
     - eval "${MATRIX_EVAL}"
