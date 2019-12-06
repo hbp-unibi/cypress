@@ -458,7 +458,7 @@ int PyNN::get_neo_version()
 	int main_n = std::stoi(main);
 	int submain_n = std::stoi(submain);
 
-	if (main_n != 0 || !((submain_n > 3) && (submain_n < 8))) {
+	if (main_n != 0 || !((submain_n > 3) && (submain_n < 9))) {
 		throw NotSupportedException("Neo version " + main + "." + submain +
 		                            " is not supported");
 	}
