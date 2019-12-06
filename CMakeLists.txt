@@ -24,15 +24,10 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR}/cmake)
 set(BUILD_TEST_EXAMPLES TRUE CACHE BOOL "Set to true for building examples and tests")
 
 # If Python Library is already found, continue, otherwise default to python3
-if(PYTHON_VERSION_MAJOR)
-    find_package(PythonInterp PYTHON_VERSION_MAJOR REQUIRED)
-    find_package(PythonLibs PYTHON_VERSION_MAJOR REQUIRED)
-    SET(PYBIND11_PYTHON_VERSION PYTHON_VERSION_MAJOR)
-else()
-    find_package(PythonInterp 3 REQUIRED)
-    find_package(PythonLibs 3 REQUIRED)
-    SET(PYBIND11_PYTHON_VERSION 3)
-endif()
+set(PYTHON_VERSION_MAJOR 3 CACHE STRING "Python version to use, e.g. 2/3")
+find_package(PythonInterp ${PYTHON_VERSION_MAJOR} REQUIRED)
+find_package(PythonLibs ${PYTHON_VERSION_MAJOR} REQUIRED)
+SET(PYBIND11_PYTHON_VERSION ${PYTHON_VERSION_MAJOR})
 
 # Automatically download and compile Google-Test and the JSON library
 include(gtest_external)
