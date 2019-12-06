@@ -25,9 +25,9 @@ set(BUILD_TEST_EXAMPLES TRUE CACHE BOOL "Set to true for building examples and t
 
 # If Python Library is already found, continue, otherwise default to python3
 if(PYTHON_VERSION_MAJOR)
-    find_package(PythonInterp Python_VERSION_MAJOR REQUIRED)
-    find_package(PythonLibs Python_VERSION_MAJOR REQUIRED)
-    SET(PYBIND11_PYTHON_VERSION Python_VERSION_MAJOR)
+    find_package(PythonInterp PYTHON_VERSION_MAJOR REQUIRED)
+    find_package(PythonLibs PYTHON_VERSION_MAJOR REQUIRED)
+    SET(PYBIND11_PYTHON_VERSION PYTHON_VERSION_MAJOR)
 else()
     find_package(PythonInterp 3 REQUIRED)
     find_package(PythonLibs 3 REQUIRED)
