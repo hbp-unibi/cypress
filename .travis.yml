@@ -1,11 +1,11 @@
-language: generic
+language: python
 python: 3.6
 sudo: required
+os: linux
+dist: trusty
 matrix:
   include:
-    - os: linux
-      dist: trusty
-      addons:
+    - addons:
         apt:
           sources:
             - ubuntu-toolchain-r-test
@@ -16,9 +16,7 @@ matrix:
         - sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-4.9 50
         - sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-4.9 50
 
-    - os: linux
-      dist: trusty
-      addons:
+    - addons:
         apt:
           sources:
             - ubuntu-toolchain-r-test
@@ -30,9 +28,7 @@ matrix:
         - sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-5 50
         - sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-5 50
 
-    - os: linux
-      dist: trusty
-      addons:
+    - addons:
         apt:
           sources:
             - ubuntu-toolchain-r-test
@@ -43,9 +39,7 @@ matrix:
         - sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-6 50
         - sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-6 50
 
-    - os: linux
-      dist: trusty
-      addons:
+    - addons:
         apt:
           sources:
             - ubuntu-toolchain-r-test
@@ -56,9 +50,7 @@ matrix:
         - sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-7 50
         - sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-7 50
 
-    - os: linux
-      dist: trusty
-      addons:
+    - addons:
         apt:
           sources:
             - ubuntu-toolchain-r-test
@@ -71,9 +63,7 @@ matrix:
         export CXX="clang++-3.8" CC="clang-3.8"
         sudo export CXX="clang++-3.8" CC="clang-3.8"
 
-    - os: linux
-      dist: trusty
-      addons:
+    - addons:
         apt:
           sources:
             - ubuntu-toolchain-r-test
@@ -86,9 +76,7 @@ matrix:
         export CXX="clang++-4.0" CC="clang-4.0"
         sudo export CXX="clang++-4.0" CC="clang-4.0"
 
-    - os: linux
-      dist: trusty
-      addons:
+    - addons:
         apt:
           sources:
             - ubuntu-toolchain-r-test
@@ -101,9 +89,7 @@ matrix:
         export CXX="clang++-5.0" CC="clang-5.0"
         sudo export CXX="clang++-5.0" CC="clang-5.0"
 
-    - os: linux
-      dist: trusty
-      addons:
+    - addons:
         apt:
           packages:
             - doxygen
