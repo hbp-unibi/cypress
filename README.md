@@ -165,6 +165,9 @@ A: Try building without static linking (comment line 52 in CMakeLists.txt) ```SE
 Q: On SpiNNaker, there is an issue: ```C++ exception with description "KeyError: "Unexpected key type: <type 'unicode'>" ```  
 A: Manually patch ```lib/python2.7/site-packages/SpiNNUtilities-1!4.0.1-py2.7.egg/spinn_utilities/ranged/abstract_dict.py ```: replace ```str ``` by ```basestring ``` in line 222
 
+Q: Building together with QT, you encounter a problem with cypress signals  
+A: Please include cypress before QT. QT defines a macro Signals, which is then trying to replace stuff in cypress headers...
+
 ## Authors
 
 This project has been initiated by Andreas Stöckel in 2016 while working
