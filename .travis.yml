@@ -131,6 +131,6 @@ script:
   - mkdir build_gcc 
   - cd build_gcc 
   - cmake .. -DSTATIC_LINKING=FALSE
-  - make -j && make test ARGS=-V
+  - make -j1 && make test ARGS=-V
   - cmake .. -DSTATIC_LINKING=TRUE
-  - make -j && make test ARGS=-V
+  - make -j1 && make test ARGS=-V
