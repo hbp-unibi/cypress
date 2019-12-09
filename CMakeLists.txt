@@ -202,7 +202,7 @@ if(STATIC_LINKING)
             -pthread
             )
 else()
-	target_link_libraries(cypress ${GENN_LIBRARIES} pthread pybind11::embed dl)
+	target_link_libraries(cypress pthread pybind11::embed dl)
 endif()
 
 # Check if cypress is built as a subproject
