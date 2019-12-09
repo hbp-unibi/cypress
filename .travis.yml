@@ -115,7 +115,7 @@ matrix:
         - doxygen doxygen.conf
       deploy:
         provider: pages
-        cleanup: false
+        skip_cleanup: true
         local_dir: build/doc/html/
         github_token: $GITHUB_TOKEN
         on:
