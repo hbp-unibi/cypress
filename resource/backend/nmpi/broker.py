@@ -103,7 +103,7 @@ def file_script(filename, tar_filename, execute):
         return ""
     with open(filename, 'rb') as fd:
         compressed = base64.b64encode(bz2.compress(fd.read()))
-    return ("extract('{}', {} , '{}')\n").format(
+    return ("extract('{}', {} , {})\n").format(
         tar_filename, oct(os.stat(filename)[stat.ST_MODE]), compressed)
 
 tmpdir = "cypress_" + tmpdirname(8)
