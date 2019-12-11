@@ -69,7 +69,7 @@ static int run_broker(const std::vector<std::string> &args,
 	params.emplace_back("--executable");
 	params.emplace_back(args[0]);
 
-	if (external_files.size() > 1) {
+	if (external_files.size() > 0) {
 		params.emplace_back("--files");
 		for (size_t i = 0; i < external_files.size(); i++) {
 			params.emplace_back(external_files[i]);
@@ -134,8 +134,6 @@ void NMPI::init(std::unique_ptr<Backend> pynn, int &argc, const char *argv[],
 		throw InvalidCommandLine(
 		    "Executable not specified in command line argument zero.");
 	}
-	external_files.emplace_back(args[0]);
-	external_file_ids.emplace_back(0);
 
 	// If scan_args is set, check whether the command line contains references
 	// to any files and add those to the file list
@@ -157,8 +155,14 @@ void NMPI::init(std::unique_ptr<Backend> pynn, int &argc, const char *argv[],
 	}
 
 	// Calculate the base directory
-	const std::string base =
-	    filesystem::longest_common_path(filesystem::dirs(external_files));
+	std::string base = "";
+	if (external_files.size() > 0) {
+		base =
+		    filesystem::longest_common_path(filesystem::dirs(external_files));
+	}
+	else {
+		base = filesystem::longest_common_path(filesystem::dirs({args[0]}));
+	}
 
 	// Add SERVER_ARG to the arguments
 	args.emplace_back(SERVER_ARG);
@@ -288,8 +292,6 @@ void NMPI::init_bs(const std::string &bs_backend, int &argc, const char *argv[],
 		throw InvalidCommandLine(
 		    "Executable not specified in command line argument zero.");
 	}
-	external_files.emplace_back(args[0]);
-	external_file_ids.emplace_back(0);
 
 	// If scan_args is set, check whether the command line contains references
 	// to any files and add those to the file list
@@ -334,7 +336,6 @@ void NMPI::init_bs(const std::string &bs_backend, int &argc, const char *argv[],
 
 	// Give control to the NMPI broker, relay its exit code
 	exit(run_broker(args, external_files, base, platform, wafer));
-	//
 }
 
 NMPI::~NMPI() = default;
