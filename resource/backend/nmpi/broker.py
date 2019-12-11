@@ -192,6 +192,8 @@ def cleanup():
 files = args.files + [args.executable]
 for filename in files:
     tar_filename = os.path.relpath(filename, args.base)
+    if(tar_filename.endswith("libBS2CYPRESS.so")):
+        tar_filename = "libBS2CYPRESS.so"
     if (tar_filename.startswith("..")):
         raise Exception(
             "Base directory must be a parent directory of all specified files!")
