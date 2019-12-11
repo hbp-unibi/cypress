@@ -152,7 +152,7 @@ def extract(filename, mode, data):
     filename = os.path.join(dir, filename)
     files.append(filename)
     mkdir_p(os.path.dirname(filename))
-    with open(filename, 'w') as fd:
+    with open(filename, 'wb') as fd:
         fd.write(bz2.decompress(base64.b64decode(data)))
     os.chmod(filename, mode)
 
