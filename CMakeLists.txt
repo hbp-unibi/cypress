@@ -197,7 +197,6 @@ if(STATIC_LINKING)
 	target_link_libraries(cypress PUBLIC
             pybind11::embed
             PRIVATE
-            ${PYTHON_LIBRARY}
             dl
             -pthread
             )
