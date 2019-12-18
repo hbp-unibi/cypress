@@ -163,7 +163,7 @@ void Slurm::do_run(NetworkBase &network, Real duration) const
 		auto ptr = getenv("SINGULARITY_CONTAINER");
 		// Set simulator dependent options for slurm
 		if (m_norm_simulator == "nmpm1") {
-			std::string hicann = "367";
+			std::string hicann = "297";
 			wafer = "33";
 			if (m_setup.find("hicann") != m_setup.end()) {
 				Json j_hicann = m_setup["hicann"];
