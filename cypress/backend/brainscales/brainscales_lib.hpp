@@ -51,13 +51,19 @@ private:
 	{
 		m_lib = dlopen("./libBS2CYPRESS.so", RTLD_LAZY);
 		if (m_lib == NULL) {
-            global_logger().debug("cypress",
-		                      "Installed bs lib will be used before "
-		                      "subproject executable");
+			global_logger().debug(
+			    "cypress",
+			    "Error loading ./libBS2CYPRESS.so: " + std::string(dlerror()));
+			global_logger().debug("cypress",
+			                      "Installed bs lib will be used before "
+			                      "subproject executable");
 			m_lib = dlopen("libBS2CYPRESS.so",
 			               RTLD_LAZY);  // if used in subproject
 			if (m_lib == NULL) {
-                m_lib = dlopen(BS_LIBRARY_PATH,
+				global_logger().debug("cypress",
+				                      "Error loading libBS2CYPRESS.so: " +
+				                          std::string(dlerror()));
+				m_lib = dlopen(BS_LIBRARY_PATH,
 				               RTLD_LAZY);  // in LD_LIBRARY_PATH
 				if (m_lib == NULL) {
 					throw std::runtime_error(
