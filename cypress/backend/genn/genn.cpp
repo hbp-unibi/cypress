@@ -775,39 +775,31 @@ void resolve_ptrs(std::vector<CurrentSpikeFunction> &spike_ptrs,
                   const std::vector<PopulationBase> &populations,
                   GeNNModels::SharedLibraryModel_<T> &slm)
 {
+	v_ptrs = std::vector<T *>(populations.size(), nullptr);
+	spike_ptrs = std::vector<CurrentSpikeFunction>(populations.size(), nullptr);
+	spike_cnt_ptrs =
+	    std::vector<CurrentSpikeCountFunction>(populations.size(), nullptr);
+
 	for (size_t i = 0; i < populations.size(); i++) {
 		const auto &pop = populations[i];
 		if (&pop.type() == &SpikeSourceArray::inst()) {
-			spike_ptrs.emplace_back(nullptr);
-			spike_cnt_ptrs.emplace_back(nullptr);
 			continue;
 		}
 		if (pop.homogeneous_record()) {
 			if (pop.signals().is_recording(0)) {
-				spike_cnt_ptrs.emplace_back(
-				    (CurrentSpikeCountFunction)(slm.getSymbol(
-				        "getpop_" + std::to_string(i) + "CurrentSpikeCount")));
-				spike_ptrs.emplace_back((CurrentSpikeFunction)(slm.getSymbol(
-				    "getpop_" + std::to_string(i) + "CurrentSpikes")));
+				spike_cnt_ptrs[i] = (CurrentSpikeCountFunction)(slm.getSymbol(
+				    "getpop_" + std::to_string(i) + "CurrentSpikeCount"));
+				spike_ptrs[i] = (CurrentSpikeFunction)(slm.getSymbol(
+				    "getpop_" + std::to_string(i) + "CurrentSpikes"));
 				record_full_spike.emplace_back(pop.pid());
 			}
-			else {
-				spike_ptrs.emplace_back(nullptr);
-				spike_cnt_ptrs.emplace_back(nullptr);
-			}
 			if (pop.signals().size() > 1 && pop.signals().is_recording(1)) {
-				v_ptrs.emplace_back(*(static_cast<T **>(
+				v_ptrs[i] = (*(static_cast<T **>(
 				    slm.getSymbol("Vpop_" + std::to_string(i)))));
 				record_full_v.emplace_back(pop.pid());
 			}
-			else {
-				v_ptrs.emplace_back(nullptr);
-			}
 		}
 		else {
-			spike_ptrs.emplace_back(nullptr);
-			spike_cnt_ptrs.emplace_back(nullptr);
-			v_ptrs.emplace_back(nullptr);
 			for (auto neuron : pop) {
 				if (neuron.signals().is_recording(0)) {
 					record_part_spike.emplace_back(neuron.pid());
