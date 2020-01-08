@@ -628,7 +628,7 @@ GeNNModels::SharedLibraryModel_<T> build_and_make(bool gpu,
 		prefs.optimizeCode = true;
 #endif
 		auto bck = CodeGenerator::CUDA::Optimiser::createBackend(
-		    model, ::filesystem::path(path), 0, prefs);
+		    model, ::filesystem::path(path), prefs);
 		auto moduleNames = CodeGenerator::generateAll(model, bck, path, false);
 		std::ofstream makefile(path + "Makefile");
 		CodeGenerator::generateMakefile(makefile, bck, moduleNames);
@@ -644,7 +644,7 @@ GeNNModels::SharedLibraryModel_<T> build_and_make(bool gpu,
 #else
 		prefs.optimizeCode = true;
 #endif
-		CodeGenerator::SingleThreadedCPU::Backend bck(0, model.getPrecision(),
+		CodeGenerator::SingleThreadedCPU::Backend bck(model.getPrecision(),
 		                                              prefs);
 
 		auto moduleNames = CodeGenerator::generateAll(model, bck, path, false);
@@ -1111,8 +1111,8 @@ void do_run_templ(NetworkBase &network, Real duration, ModelSpecInternal &model,
 			if (std::find(list_connected_ids.begin(), list_connected_ids.end(),
 			              i) != list_connected_ids.end()) {
 				try {
-					slm.pullStateFromDevice("conn_" + std::to_string(i) +
-					                        "_ex");
+					slm.pullVarFromDevice("conn_" + std::to_string(i) + "_ex",
+					                      "g");
 					T *weights = *(static_cast<T **>(
 					    slm.getSymbol("gconn_" + std::to_string(i) + "_ex")));
 					convert_learned_weights(populations[conn.pid_src()].size(),
@@ -1123,9 +1123,8 @@ void do_run_templ(NetworkBase &network, Real duration, ModelSpecInternal &model,
 				catch (...) {
 				}
 				try {
-
-					slm.pullStateFromDevice("conn_" + std::to_string(i) +
-					                        "_in");
+					slm.pullVarFromDevice("conn_" + std::to_string(i) + "_in",
+					                      "g");
 					T *weights = *(static_cast<T **>(
 					    slm.getSymbol("gconn_" + std::to_string(i) + "_in")));
 					convert_learned_weights(populations[conn.pid_src()].size(),
@@ -1137,7 +1136,8 @@ void do_run_templ(NetworkBase &network, Real duration, ModelSpecInternal &model,
 				}
 			}
 			else {
-				slm.pullStateFromDevice("conn_" + std::to_string(i));
+				slm.pullVarFromDevice("conn_" + std::to_string(i), "g");
+				slm.pullConnectivityFromDevice("conn_" + std::to_string(i));
 				T *weights = *(static_cast<T **>(
 				    slm.getSymbol("gconn_" + std::to_string(i))));
 				cond_based =

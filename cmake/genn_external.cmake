@@ -16,16 +16,14 @@
 
 include(ExternalProject)
 
-if(${CMAKE_VERSION} VERSION_LESS "3.10.0")
-    include(CheckLanguage)
-    check_language(CUDA)
-else()
-    find_package(CUDA)
-endif()
+
+include(CheckLanguage)
+check_language(CUDA)
+find_package(CUDA)
 
 ExternalProject_Add(genn_ext
         GIT_REPOSITORY        "https://github.com/genn-team/genn.git"
-        GIT_TAG               4.1.0
+        GIT_TAG               417e19e7e52d59ec88859f8fd191006d6fa11b91
         CONFIGURE_COMMAND     ""
         CMAKE_COMMAND         ""
         BUILD_COMMAND         CXXFLAGS=-fPIC make -j -C <SOURCE_DIR>
