@@ -23,7 +23,7 @@ find_package(CUDA)
 
 ExternalProject_Add(genn_ext
         GIT_REPOSITORY        "https://github.com/genn-team/genn.git"
-        GIT_TAG               417e19e7e52d59ec88859f8fd191006d6fa11b91
+        GIT_TAG               686cbd968ad7d267e856fe8f25adf04352bb64a3
         CONFIGURE_COMMAND     ""
         CMAKE_COMMAND         ""
         BUILD_COMMAND         CXXFLAGS=-fPIC make -j -C <SOURCE_DIR>

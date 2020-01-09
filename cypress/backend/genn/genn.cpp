@@ -22,8 +22,10 @@
 #include <genn/backends/single_threaded_cpu/backend.h>
 #include <genn/genn/code_generator/generateAll.h>
 #include <genn/genn/code_generator/generateMakefile.h>
+#include <genn/genn/logging.h>
 #include <genn/genn/modelSpecInternal.h>
 #include <genn/third_party/path.h>
+#include <plog/Appenders/ConsoleAppender.h>
 #include <sharedLibraryModel.h>
 
 #include <chrono>
@@ -606,6 +608,29 @@ void list_connect_post(
 	std::get<2>(tuple)->clear();
 }
 
+namespace {
+inline plog::Severity get_log_level()
+{
+	auto level = global_logger().min_level();
+	switch (level) {
+		case LogSeverity::FATAL_ERROR:
+			return plog::Severity::fatal;
+		case LogSeverity::ERROR:
+			return plog::Severity::error;
+		case LogSeverity::WARNING:
+			return plog::Severity::warning;
+		case LogSeverity::INFO:
+			return plog::Severity::info;
+		/*case  LogSeverity::debug:
+			return plog::Severity::DEBUG;*/
+		case LogSeverity::DEBUG:
+			return plog::Severity::verbose;
+		default:
+			return plog::Severity::none;
+	}
+}
+}  // namespace
+
 /**
  * @brief Build, compile and load the model
  *
@@ -614,8 +639,9 @@ void list_connect_post(
  * @return SharedLibraryModel_< float > object to access loaded model
  */
 template <typename T>
-GeNNModels::SharedLibraryModel_<T> build_and_make(bool gpu,
-                                                  ModelSpecInternal &model)
+GeNNModels::SharedLibraryModel_<T> build_and_make(
+    bool gpu, ModelSpecInternal &model,
+    plog::ConsoleAppender<plog::TxtFormatter> &logger)
 {
 	std::string path = "./" + model.getName() + "_CODE/";
 	mkdir(path.c_str(), 0777);
@@ -627,8 +653,9 @@ GeNNModels::SharedLibraryModel_<T> build_and_make(bool gpu,
 #else
 		prefs.optimizeCode = true;
 #endif
+		prefs.logLevel = get_log_level();
 		auto bck = CodeGenerator::CUDA::Optimiser::createBackend(
-		    model, ::filesystem::path(path), prefs);
+		    model, ::filesystem::path(path), prefs.logLevel, &logger, prefs);
 		auto moduleNames = CodeGenerator::generateAll(model, bck, path, false);
 		std::ofstream makefile(path + "Makefile");
 		CodeGenerator::generateMakefile(makefile, bck, moduleNames);
@@ -644,6 +671,7 @@ GeNNModels::SharedLibraryModel_<T> build_and_make(bool gpu,
 #else
 		prefs.optimizeCode = true;
 #endif
+		prefs.logLevel = get_log_level();
 		CodeGenerator::SingleThreadedCPU::Backend bck(model.getPrecision(),
 		                                              prefs);
 
@@ -934,6 +962,10 @@ template <typename T>
 void do_run_templ(NetworkBase &network, Real duration, ModelSpecInternal &model,
                   T timestep, bool gpu)
 {
+	plog::ConsoleAppender<plog::TxtFormatter> consoleAppender;
+	Logging::init(get_log_level(), get_log_level(), &consoleAppender,
+	              &consoleAppender);
+
 	auto start_t = std::chrono::steady_clock::now();
 	// Create Populations
 	auto &populations = network.populations();
@@ -966,7 +998,7 @@ void do_run_templ(NetworkBase &network, Real duration, ModelSpecInternal &model,
 
 	// Build the model and compile
 	model.finalize();
-	auto slm = build_and_make<T>(gpu, model);
+	auto slm = build_and_make<T>(gpu, model, consoleAppender);
 	slm.allocateMem();
 	slm.initialize();
 	T *time = static_cast<T *>(slm.getSymbol("t"));
