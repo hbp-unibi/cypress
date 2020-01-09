@@ -641,7 +641,7 @@ inline plog::Severity get_log_level()
 template <typename T>
 GeNNModels::SharedLibraryModel_<T> build_and_make(
     bool gpu, ModelSpecInternal &model,
-    plog::ConsoleAppender<plog::TxtFormatter> &logger)
+    plog::ConsoleAppender<plog::TxtFormatter> &logger, size_t num_pops)
 {
 	std::string path = "./" + model.getName() + "_CODE/";
 	mkdir(path.c_str(), 0777);
@@ -653,6 +653,9 @@ GeNNModels::SharedLibraryModel_<T> build_and_make(
 #else
 		prefs.optimizeCode = true;
 #endif
+		if (num_pops > 90) {
+			prefs.useConstantCacheForMergedStructs = false;
+		}
 		prefs.logLevel = get_log_level();
 		auto bck = CodeGenerator::CUDA::Optimiser::createBackend(
 		    model, ::filesystem::path(path), prefs.logLevel, &logger, prefs);
@@ -998,7 +1001,8 @@ void do_run_templ(NetworkBase &network, Real duration, ModelSpecInternal &model,
 
 	// Build the model and compile
 	model.finalize();
-	auto slm = build_and_make<T>(gpu, model, consoleAppender);
+	auto slm = build_and_make<T>(gpu, model, consoleAppender,
+	                             network.populations().size());
 	slm.allocateMem();
 	slm.initialize();
 	T *time = static_cast<T *>(slm.getSymbol("t"));
