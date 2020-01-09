@@ -52,6 +52,9 @@ GeNN::GeNN(const Json &setup)
 	if (setup.count("double") > 0) {
 		m_double = setup["double"].get<bool>();
 	}
+	if (setup.count("timing") > 0) {
+		m_timing = setup["timing"].get<bool>();
+	}
 	// TODO
 }
 std::unordered_set<const NeuronType *> GeNN::supported_neuron_types() const
@@ -963,7 +966,7 @@ void record_spike_source(NetworkBase &netw, Real duration)
 
 template <typename T>
 void do_run_templ(NetworkBase &network, Real duration, ModelSpecInternal &model,
-                  T timestep, bool gpu)
+                  T timestep, bool gpu, bool timing)
 {
 	plog::ConsoleAppender<plog::TxtFormatter> consoleAppender;
 	Logging::init(get_log_level(), get_log_level(), &consoleAppender,
@@ -1208,6 +1211,33 @@ void do_run_templ(NetworkBase &network, Real duration, ModelSpecInternal &model,
 	teardown_spike_sources(populations, slm);
 	record_spike_source(network, duration);
 	auto end_t = std::chrono::steady_clock::now();
+
+	if (timing) {
+		global_logger().info(
+		    "GeNN",
+		    "initTime: " +
+		        std::to_string(*(slm.template getScalar<double>("initTime"))));
+		global_logger().info(
+		    "GeNN", "initSparseTime: " +
+		                std::to_string(*(
+		                    slm.template getScalar<double>("initSparseTime"))));
+		global_logger().info(
+		    "GeNN", "neuronUpdateTime: " +
+		                std::to_string(*(slm.template getScalar<double>(
+		                    "neuronUpdateTime"))));
+		global_logger().info(
+		    "GeNN", "presynapticUpdateTime: " +
+		                std::to_string(*(slm.template getScalar<double>(
+		                    "presynapticUpdateTime"))));
+		global_logger().info(
+		    "GeNN", "postsynapticUpdateTime: " +
+		                std::to_string(*(slm.template getScalar<double>(
+		                    "postsynapticUpdateTime"))));
+		global_logger().info(
+		    "GeNN", "synapseDynamicsTime: " +
+		                std::to_string(*(slm.template getScalar<double>(
+		                    "synapseDynamicsTime"))));
+	}
 	network.runtime({std::chrono::duration<Real>(end_t - start_t).count(),
 	                 std::chrono::duration<Real>(sim_fin_t - built_t).count(),
 	                 std::chrono::duration<Real>(built_t - start_t).count(),
@@ -1258,6 +1288,9 @@ void GeNN::do_run(NetworkBase &network, Real duration) const
 	else {
 		model.setPrecision(FloatType::GENN_FLOAT);
 	}
+	if (m_timing) {
+		model.setTiming(true);
+	}
 	model.setTimePrecision(TimePrecision::DEFAULT);
 	model.setDT(m_timestep);  // Timestep in ms
 	model.setMergePostsynapticModels(true);
@@ -1266,10 +1299,12 @@ void GeNN::do_run(NetworkBase &network, Real duration) const
 	filesystem::tmpfile(name);
 	model.setName(name);
 	if (m_double) {
-		do_run_templ<double>(network, duration, model, m_timestep, m_gpu);
+		do_run_templ<double>(network, duration, model, m_timestep, m_gpu,
+		                     m_timing);
 	}
 	else {
-		do_run_templ<float>(network, duration, model, m_timestep, m_gpu);
+		do_run_templ<float>(network, duration, model, m_timestep, m_gpu,
+		                    m_timing);
 	}
 #ifdef NDEBUG
 	system(("rm -r " + name + "_CODE").c_str());

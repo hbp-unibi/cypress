@@ -42,6 +42,7 @@ private:
 	double m_timestep = 0.1;
 	bool m_gpu = false;
 	bool m_double = false;
+	bool m_timing = true;
 
 public:
 	/**
@@ -59,9 +60,10 @@ public:
 	 * @param setup is a JSON object which supports the following settings:
 	 *
 	 * {
-     *      "timestep" : 0.1
-     *      "gpu" : false
-     *      "double: false
+     *      "timestep" : 0.1,
+     *      "gpu" : false,
+     *      "double" : false,
+     *      "timing" : false
 	 * }
 	 */
 	GeNN(const Json &setup = Json());
