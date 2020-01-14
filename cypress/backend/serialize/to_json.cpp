@@ -15,9 +15,10 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#include <cypress/backend/serialize/to_json.hpp>
-
+#include <cstdlib>
+#include <cypress/backend/power/energenie.hpp>
 #include <cypress/backend/resources.hpp>
+#include <cypress/backend/serialize/to_json.hpp>
 #include <cypress/core/exceptions.hpp>
 #include <cypress/core/network.hpp>
 #include <cypress/core/network_base.hpp>
@@ -26,10 +27,9 @@
 #include <cypress/util/filesystem.hpp>
 #include <cypress/util/logger.hpp>
 #include <cypress/util/process.hpp>
-#include <thread>
-
-#include <cstdlib>
+#include <exception>
 #include <system_error>
+#include <thread>
 
 namespace cypress {
 namespace {
@@ -246,67 +246,120 @@ void ToJson::read_json(Json &result, NetworkBase &network) const
 	network.runtime(result["runtime"].get<NetworkRuntime>());
 }
 
+namespace {
+std::vector<std::string> split(const std::string &s, char delim)
+{
+	std::vector<std::string> elems;
+	std::stringstream ss(s);
+	std::string elem;
+	while (getline(ss, elem, delim)) {
+		elems.push_back(elem);
+	}
+	return elems;
+}
+}  // namespace
 void ToJson::do_run(NetworkBase &network, Real duration) const
 {
-	auto json_out = output_json(network, duration);
-
-	std::thread data_in(pipe_write_helper, m_path + ".json",
-	                    std::ref(json_out));
-	if (!m_save_json) {
-		if (mkfifo((m_path + ".json").c_str(), 0666) != 0) {
-			throw std::system_error(errno, std::system_category());
+	std::shared_ptr<energenie> powermngmt;
+	bool mng = false;
+	std::string sim = split(m_simulator, '=')[0];
+	if (sim == "spikey" || sim == "spinnaker") {
+		powermngmt = std::make_shared<energenie>();
+		if (powermngmt->connected()) {
+			mng = true;
 		}
-		if (mkfifo((m_path + "_res.json").c_str(), 0666) != 0) {
-			throw std::system_error(errno, std::system_category());
+		if (sim == "spinnaker")
+			sim = "nmmc1";
+	}
+	for (size_t trial = 0; trial < 3; trial++) {
+		auto json_out = output_json(network, duration);
+		std::thread data_in(pipe_write_helper, m_path + ".json",
+		                    std::ref(json_out));
+		if (!m_save_json) {
+			if (mkfifo((m_path + ".json").c_str(), 0666) != 0) {
+				throw std::system_error(errno, std::system_category());
+			}
+			if (mkfifo((m_path + "_res.json").c_str(), 0666) != 0) {
+				throw std::system_error(errno, std::system_category());
+			}
 		}
-	}
 
-	Process proc(exec_json_path::instance().path(), {m_path});
-	std::thread log_thread_beg, err_thread;
-	std::ofstream null;
-	if (m_no_output) {
-		log_thread_beg =
-		    std::thread(Process::generic_pipe, std::ref(proc.child_stdout()),
-		                std::ref(null));
-		err_thread = std::thread(Process::generic_pipe,
-		                         std::ref(proc.child_stderr()), std::ref(null));
-	}
-	else {
-		log_thread_beg =
-		    std::thread(Process::generic_pipe, std::ref(proc.child_stdout()),
-		                std::ref(std::cout));
-		err_thread =
-		    std::thread(Process::generic_pipe, std::ref(proc.child_stderr()),
-		                std::ref(std::cerr));
-	}
-	Json result;
-	if (!m_save_json) {
-		std::filebuf fb_res;
-		open_fifo_to_read(m_path + "_res.json", fb_res);
-		std::istream res_fifo(&fb_res);
-		result = Json::parse(res_fifo);
-		fb_res.close();
-	}
-	data_in.join();
-	err_thread.join();
-	log_thread_beg.join();
-	int res = proc.wait();
-	if (res < 0) {
-		throw ExecutionError(
-		    std::string("Simulator child process killed by signal " +
-		                std::to_string(-res)));
-	}
-	if (!m_save_json) {
-		remove((m_path + "_res.json").c_str());
-		remove((m_path + ".json").c_str());
-	}
-	else {
-		std::ifstream file_in;
-		file_in.open(m_path + "_res.json", std::ios::binary);
-		result = Json::parse(file_in);
-	}
+		if (mng && !powermngmt->state(sim) && powermngmt->switch_on(sim)) {
+			sleep(3);  // Sleep for three seconds
+		}
 
-	read_json(result, network);
+		Process proc(exec_json_path::instance().path(), {m_path});
+		std::thread log_thread_beg, err_thread;
+		std::ofstream null;
+		if (m_no_output) {
+			log_thread_beg =
+			    std::thread(Process::generic_pipe,
+			                std::ref(proc.child_stdout()), std::ref(null));
+			err_thread =
+			    std::thread(Process::generic_pipe,
+			                std::ref(proc.child_stderr()), std::ref(null));
+		}
+		else {
+			log_thread_beg =
+			    std::thread(Process::generic_pipe,
+			                std::ref(proc.child_stdout()), std::ref(std::cout));
+			err_thread =
+			    std::thread(Process::generic_pipe,
+			                std::ref(proc.child_stderr()), std::ref(std::cerr));
+		}
+		Json result;
+		if (!m_save_json) {
+			std::filebuf fb_res;
+			open_fifo_to_read(m_path + "_res.json", fb_res);
+			std::istream res_fifo(&fb_res);
+			result = Json::parse(res_fifo);
+			fb_res.close();
+		}
+		data_in.join();
+		err_thread.join();
+		log_thread_beg.join();
+		int res = proc.wait();
+		if (mng && res < 0 && trial < 2) {
+			if (powermngmt->switch_off(sim)) {
+				global_logger().warn(
+				    "PowerMngmt",
+				    "Error while executing the simulation, going "
+				    "to power-cycle the neuromorphic device and retry!");
+				sleep(2);
+				powermngmt->switch_on(sim);
+				sleep(2);
+				remove((m_path + "_res.json").c_str());
+				remove((m_path + ".json").c_str());
+				continue;
+			}
+		}
+		if (res < 0) {
+			throw ExecutionError(
+			    std::string("Simulator child process killed by signal " +
+			                std::to_string(-res)));
+		}
+		if (!m_save_json) {
+			remove((m_path + "_res.json").c_str());
+			remove((m_path + ".json").c_str());
+		}
+		else {
+			std::ifstream file_in;
+			file_in.open(m_path + "_res.json", std::ios::binary);
+			result = Json::parse(file_in);
+		}
+		try {
+			read_json(result, network);
+		}
+		catch (CypressException &e) {
+			if (mng && trial < 2) {
+				continue;
+			}
+			else {
+				throw CypressException(e.what());
+			}
+		}
+		return;
+	}
 }
 std::unordered_set<const NeuronType *> ToJson::supported_neuron_types() const
 {
@@ -326,9 +379,9 @@ void ToJson::create_pop_from_json(const Json &pop_json, Network &netw)
 	bool inhomogeneous = false;
 	if (pop_json["parameters"][0].is_array()) {
 		// inhomogeneous parameters
-        if(pop_json["parameters"][0].size() > 0){
-            parameters = pop_json["parameters"][0].get<std::vector<Real>>();
-        }
+		if (pop_json["parameters"][0].size() > 0) {
+			parameters = pop_json["parameters"][0].get<std::vector<Real>>();
+		}
 		inhomogeneous = true;
 	}
 	else {
