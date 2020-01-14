@@ -28,6 +28,7 @@
 #include <cypress/util/logger.hpp>
 #include <cypress/util/process.hpp>
 #include <exception>
+#include <sstream>
 #include <system_error>
 #include <thread>
 
