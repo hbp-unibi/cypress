@@ -47,16 +47,16 @@ if((DEFINED ENV{CUDA_PATH}) OR (EXISTS ${SOURCE_DIR}/lib/libgenn_cuda_backend.a)
     target_compile_definitions(gennbck PRIVATE CUDA_PATH_DEFINED)
     set(GENN_LIBRARIES
         ${SOURCE_DIR}/lib/libgenn_cuda_backend.a
-        ${SOURCE_DIR}/lib/libgenn.a
         ${SOURCE_DIR}/lib/libgenn_single_threaded_cpu_backend.a
+        ${SOURCE_DIR}/lib/libgenn.a
         -L${CUDA_TOOLKIT_ROOT_DIR}/lib64
         cuda
         cudart
     )
 else()
     set(GENN_LIBRARIES
-        ${SOURCE_DIR}/lib/libgenn.a
         ${SOURCE_DIR}/lib/libgenn_single_threaded_cpu_backend.a
+        ${SOURCE_DIR}/lib/libgenn.a
     )
 endif()
 
