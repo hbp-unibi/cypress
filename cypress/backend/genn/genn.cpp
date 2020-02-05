@@ -647,7 +647,7 @@ GeNNModels::SharedLibraryModel_<T> build_and_make(
 #ifdef CUDA_PATH_DEFINED
     plog::ConsoleAppender<plog::TxtFormatter> &logger, size_t num_pops)
 #else
-    plog::ConsoleAppender<plog::TxtFormatter> &, size_t )
+    plog::ConsoleAppender<plog::TxtFormatter> &, size_t)
 #endif
 {
 	std::string path = "./" + model.getName() + "_CODE/";
@@ -1180,7 +1180,11 @@ void do_run_templ(NetworkBase &network, Real duration, ModelSpecInternal &model,
 			}
 			else {
 				slm.pullVarFromDevice("conn_" + std::to_string(i), "g");
-				slm.pullConnectivityFromDevice("conn_" + std::to_string(i));
+				try {
+					slm.pullConnectivityFromDevice("conn_" + std::to_string(i));
+				}
+				catch (...) {
+				}
 				T *weights = *(static_cast<T **>(
 				    slm.getSymbol("gconn_" + std::to_string(i))));
 				cond_based =
