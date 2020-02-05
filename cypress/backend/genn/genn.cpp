@@ -644,7 +644,11 @@ inline plog::Severity get_log_level()
 template <typename T>
 GeNNModels::SharedLibraryModel_<T> build_and_make(
     bool gpu, ModelSpecInternal &model,
+#ifdef CUDA_PATH_DEFINED
     plog::ConsoleAppender<plog::TxtFormatter> &logger, size_t num_pops)
+#else
+    plog::ConsoleAppender<plog::TxtFormatter> &, size_t )
+#endif
 {
 	std::string path = "./" + model.getName() + "_CODE/";
 	mkdir(path.c_str(), 0777);
