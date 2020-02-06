@@ -173,8 +173,20 @@ void Slurm::do_run(NetworkBase &network, Real duration) const
 					hicann.erase(hicann.end() - 1);
 				}
 				if (j_hicann.is_array()) {
-					hicann.erase(hicann.begin());
-					hicann.erase(hicann.end() - 1);
+					if (j_hicann.size() == 0) {  // No manual placement
+						hicann = "";
+					}
+					else {
+						for (auto hic : j_hicann) {
+							if (hic.is_array()) {  // pop specific hicanns
+								hicann = "";
+							}
+						}
+						if (!(hicann == "")) {
+							hicann.erase(hicann.begin());
+							hicann.erase(hicann.end() - 1);
+						}
+					}
 				}
 			}
 			else {
@@ -200,17 +212,28 @@ void Slurm::do_run(NetworkBase &network, Real duration) const
 			        init_reticles = true;
 			    }
 			}*/
-
-			params = std::vector<std::string>({
-			    "-p",
-			    "experiment",
-			    "--wmod",
-			    wafer,
-			    "--hicann",
-			    hicann,
-			    "bash",
-			    "-c",
-			});
+			if (hicann == "") {
+				params = std::vector<std::string>({
+				    "-p",
+				    "experiment",
+				    "--wmod",
+				    wafer,
+				    "bash",
+				    "-c",
+				});
+			}
+			else {
+				params = std::vector<std::string>({
+				    "-p",
+				    "experiment",
+				    "--wmod",
+				    wafer,
+				    "--hicann",
+				    hicann,
+				    "bash",
+				    "-c",
+				});
+			}
 		}
 		else if (m_norm_simulator == "spikey") {
 			size_t station = 538;
@@ -254,10 +277,10 @@ void Slurm::do_run(NetworkBase &network, Real duration) const
 		}
 
 		script.append(m_json_path + " " + m_path);
-        if(!m_json){
-            script.append(" 1");
-        }
-        script.append(";ls >/dev/null;wait");
+		if (!m_json) {
+			script.append(" 1");
+		}
+		script.append(";ls >/dev/null;wait");
 
 		// Synchronize files on servers (Heidelberg setup...)
 		system("ls > /dev/null");
