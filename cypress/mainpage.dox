@@ -74,7 +74,7 @@ The BrainScaleS interface library  <a href="https://github.com/hbp-unibi/BS2Cypr
  - `ess` Use the simulation of the hardware system instead of the hardware. Possible values: true, false. Default: false
 
 Only on the hardware:
- - `hicann` and `wafer`:  Choose the Wafer and the HICANN for your network emulation. Possible values: Available HICANNs and Wafers, also list of HICANNs; Default: 297 and 33
+ - `hicann` and `wafer`:  Choose the Wafer and the HICANN for your network emulation. Possible values: Available HICANNs and Wafers, also list of HICANNs; Default: 297 and 33. Also possible is a list of lists of HICANNs, e.g. [[296,297],[320,321,340,341],[322,342]], which will map the first population to HICANNs 296,297, the second population to HICANNs [320,321,340,341], ..., in the order of their creation in the high level code.
  - `digital_weight`:  Directly set the digital weight instead of PyNN weights. Currently not supports ListConnectors with varying weights. Possible values: true, false; Default: false
 
 
