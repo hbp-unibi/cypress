@@ -42,7 +42,7 @@ private:
 	double m_timestep = 0.1;
 	bool m_gpu = false;
 	bool m_double = false;
-	bool m_timing = true;
+	bool m_timing = false;
 
 public:
 	/**
