@@ -41,6 +41,28 @@
 #define UNPACK7(v) v[0], v[1], v[2], v[3], v[4], v[5], v[6]
 
 namespace cypress {
+
+struct network_storage {
+	std::vector<NeuronGroup *> neuron_groups;
+	std::vector<SynapseGroup *> synapse_groups;
+	std::vector<std::tuple<SynapseGroup *, SynapseGroup *,
+	                       std::shared_ptr<std::vector<LocalConnection>>>>
+	    synapse_groups_list;
+
+	std::vector<size_t> list_connected_ids;
+	std::shared_ptr<ModelSpecInternal> model;
+	bool already_compiled = false;
+
+	void reset()
+	{
+		neuron_groups.clear();
+		synapse_groups.clear();
+		synapse_groups_list.clear();
+		list_connected_ids.clear();
+		model = std::make_shared<ModelSpecInternal>();
+		already_compiled = false;
+	}
+};
 GeNN::GeNN(const Json &setup)
 {
 	if (setup.count("timestep") > 0) {
@@ -55,6 +77,12 @@ GeNN::GeNN(const Json &setup)
 	if (setup.count("timing") > 0) {
 		m_timing = setup["timing"].get<bool>();
 	}
+	if (setup.count("keep_compile") > 0) {
+		m_keep_compile = setup["keep_compile"].get<bool>();
+	}
+
+	m_storage = std::make_shared<network_storage>();
+	m_storage->model = std::make_shared<ModelSpecInternal>();
 	// TODO
 }
 std::unordered_set<const NeuronType *> GeNN::supported_neuron_types() const
@@ -645,56 +673,63 @@ template <typename T>
 GeNNModels::SharedLibraryModel_<T> build_and_make(
     bool gpu, ModelSpecInternal &model,
 #ifdef CUDA_PATH_DEFINED
-    plog::ConsoleAppender<plog::TxtFormatter> &logger, size_t num_pops)
+    plog::ConsoleAppender<plog::TxtFormatter> &logger, size_t num_pops,
+    bool compile = true)
 #else
     plog::ConsoleAppender<plog::TxtFormatter> &, size_t)
 #endif
 {
 	std::string path = "./" + model.getName() + "_CODE/";
-	mkdir(path.c_str(), 0777);
-	if (gpu) {
+	if (compile) {
+		mkdir(path.c_str(), 0777);
+		if (gpu) {
 #ifdef CUDA_PATH_DEFINED
-		CodeGenerator::CUDA::Preferences prefs;
+			CodeGenerator::CUDA::Preferences prefs;
 #ifndef NDEBUG
-		prefs.debugCode = true;
+			prefs.debugCode = true;
 #else
-		prefs.optimizeCode = true;
+			prefs.optimizeCode = true;
 #endif
-		if (num_pops > 90) {
-			prefs.useConstantCacheForMergedStructs = false;
+			if (num_pops > 90) {
+				prefs.useConstantCacheForMergedStructs = false;
+			}
+			prefs.logLevel = get_log_level();
+			auto bck = CodeGenerator::CUDA::Optimiser::createBackend(
+			    model, ::filesystem::path(path), prefs.logLevel, &logger,
+			    prefs);
+			auto moduleNames =
+			    CodeGenerator::generateAll(model, bck, path, false);
+			std::ofstream makefile(path + "Makefile");
+			CodeGenerator::generateMakefile(makefile, bck, moduleNames);
+			makefile.close();
+#else
+			throw ExecutionError(
+			    "GeNN has not been compiled with GPU support!");
+#endif
 		}
-		prefs.logLevel = get_log_level();
-		auto bck = CodeGenerator::CUDA::Optimiser::createBackend(
-		    model, ::filesystem::path(path), prefs.logLevel, &logger, prefs);
-		auto moduleNames = CodeGenerator::generateAll(model, bck, path, false);
-		std::ofstream makefile(path + "Makefile");
-		CodeGenerator::generateMakefile(makefile, bck, moduleNames);
-		makefile.close();
-#else
-		throw ExecutionError("GeNN has not been compiled with GPU support!");
-#endif
-	}
-	else {
-		CodeGenerator::SingleThreadedCPU::Preferences prefs;
+		else {
+			CodeGenerator::SingleThreadedCPU::Preferences prefs;
 #ifndef NDEBUG
-		prefs.debugCode = true;
+			prefs.debugCode = true;
 #else
-		prefs.optimizeCode = true;
+			prefs.optimizeCode = true;
 #endif
-		prefs.logLevel = get_log_level();
-		CodeGenerator::SingleThreadedCPU::Backend bck(model.getPrecision(),
-		                                              prefs);
+			prefs.logLevel = get_log_level();
+			CodeGenerator::SingleThreadedCPU::Backend bck(model.getPrecision(),
+			                                              prefs);
 
-		auto moduleNames = CodeGenerator::generateAll(model, bck, path, false);
-		std::ofstream makefile(path + "Makefile");
-		CodeGenerator::generateMakefile(makefile, bck, moduleNames);
-		makefile.close();
-	}
+			auto moduleNames =
+			    CodeGenerator::generateAll(model, bck, path, false);
+			std::ofstream makefile(path + "Makefile");
+			CodeGenerator::generateMakefile(makefile, bck, moduleNames);
+			makefile.close();
+		}
 #ifndef NDEBUG
-	system(("make -j 4 -C " + path).c_str());
+		system(("make -j 4 -C " + path).c_str());
 #else
-	system(("make -j 4 -C " + path + " >/dev/null 2>&1").c_str());
+		system(("make -j 4 -C " + path + " >/dev/null 2>&1").c_str());
 #endif
+	}
 
 	// Open the compiled Library as dynamically loaded library
 	auto slm = GeNNModels::SharedLibraryModel_<T>();
@@ -970,46 +1005,68 @@ void record_spike_source(NetworkBase &netw, Real duration)
 
 template <typename T>
 void do_run_templ(NetworkBase &network, Real duration, ModelSpecInternal &model,
-                  T timestep, bool gpu, bool timing)
+                  T timestep, bool gpu, bool timing, bool keep_compile,
+                  network_storage &store)
 {
 	plog::ConsoleAppender<plog::TxtFormatter> consoleAppender;
 	Logging::init(get_log_level(), get_log_level(), &consoleAppender,
 	              &consoleAppender);
+	auto &neuron_groups = store.neuron_groups;
+	auto &synapse_groups = store.synapse_groups;
+	auto &synapse_groups_list = store.synapse_groups_list;
+	auto &list_connected_ids = store.list_connected_ids;
+	auto &populations = network.populations();
+	auto &connections = network.connections();
+	bool execute_all =
+	    !(store.already_compiled &&
+	      keep_compile);  // only false if keep_compile and already_compiled
 
 	auto start_t = std::chrono::steady_clock::now();
-	// Create Populations
-	auto &populations = network.populations();
-	std::vector<NeuronGroup *> neuron_groups;
-	for (size_t i = 0; i < populations.size(); i++) {
-		neuron_groups.emplace_back(create_neuron_group<T>(
-		    populations[i], model, ("pop_" + std::to_string(i))));
+	if (execute_all) {
+		// Create Populations
+		for (size_t i = 0; i < populations.size(); i++) {
+			neuron_groups.emplace_back(create_neuron_group<T>(
+			    populations[i], model, ("pop_" + std::to_string(i))));
+		}
+	}
+	else {
+		// Sanity Checks
+		if ((neuron_groups.size() != populations.size()) ||
+		    (synapse_groups.size() != connections.size())) {
+			throw cypress::ExecutionError(
+			    "Unexpected network dimenstion! If only changing "
+			    "weights make sure to use the same network!");
+		}
 	}
 
-	// Create connections
-	std::vector<SynapseGroup *> synapse_groups;
-	std::vector<std::tuple<SynapseGroup *, SynapseGroup *,
-	                       std::shared_ptr<std::vector<LocalConnection>>>>
-	    synapse_groups_list;
-	std::vector<size_t> list_connected_ids;
-	auto &connections = network.connections();
-	for (size_t i = 0; i < connections.size(); i++) {
-		bool list_connected;
-		synapse_groups.emplace_back(
-		    connect<T>(populations, model, connections[i],
-		               "conn_" + std::to_string(i), timestep, list_connected));
+	if (execute_all) {
+		// Create connections
+		for (size_t i = 0; i < connections.size(); i++) {
+			bool list_connected;
+			synapse_groups.emplace_back(connect<T>(
+			    populations, model, connections[i], "conn_" + std::to_string(i),
+			    timestep, list_connected));
 
-		if (list_connected) {
-			synapse_groups_list.emplace_back(
-			    list_connect_pre<T>(populations, model, connections[i],
-			                        "conn_" + std::to_string(i), timestep));
-			list_connected_ids.emplace_back(i);
+			if (list_connected) {
+				synapse_groups_list.emplace_back(
+				    list_connect_pre<T>(populations, model, connections[i],
+				                        "conn_" + std::to_string(i), timestep));
+				list_connected_ids.emplace_back(i);
+			}
+		}
+	}
+	else {
+		for (size_t i = 0; i < list_connected_ids.size(); i++) {
+			auto conns_full = std::make_shared<std::vector<LocalConnection>>();
+			connections[list_connected_ids[i]].connect(*conns_full);
+			std::get<2>(synapse_groups_list[i]) = conns_full;
 		}
 	}
 
 	// Build the model and compile
 	model.finalize();
 	auto slm = build_and_make<T>(gpu, model, consoleAppender,
-	                             network.populations().size());
+	                             network.populations().size(), execute_all);
 	slm.allocateMem();
 	slm.initialize();
 	T *time = static_cast<T *>(slm.getSymbol("t"));
@@ -1219,6 +1276,7 @@ void do_run_templ(NetworkBase &network, Real duration, ModelSpecInternal &model,
 	teardown_spike_sources(populations, slm);
 	record_spike_source(network, duration);
 	auto end_t = std::chrono::steady_clock::now();
+	store.already_compiled = true;
 
 	if (timing) {
 		global_logger().info(
@@ -1289,33 +1347,40 @@ void convert_learned_weights_sparse(size_t src_size, size_t,
 void GeNN::do_run(NetworkBase &network, Real duration) const
 {
 	// General Setup
-	ModelSpecInternal model;
-	if (m_double) {
-		model.setPrecision(FloatType::GENN_DOUBLE);
+	if (!m_keep_compile) {
+		m_storage->reset();
 	}
-	else {
-		model.setPrecision(FloatType::GENN_FLOAT);
-	}
+	auto &model = *(m_storage->model);
 	if (m_timing) {
 		model.setTiming(true);
 	}
-	model.setTimePrecision(TimePrecision::DEFAULT);
-	model.setDT(m_timestep);  // Timestep in ms
-	model.setMergePostsynapticModels(true);
 
-	std::string name = "genn_XXXXXX";
-	filesystem::tmpfile(name);
-	model.setName(name);
+	if (!(m_storage->already_compiled && m_keep_compile)) {
+		if (m_double) {
+			model.setPrecision(FloatType::GENN_DOUBLE);
+		}
+		else {
+			model.setPrecision(FloatType::GENN_FLOAT);
+		}
+		model.setTimePrecision(TimePrecision::DEFAULT);
+		model.setDT(m_timestep);  // Timestep in ms
+		model.setMergePostsynapticModels(true);
+		std::string name = "genn_XXXXXX";
+		filesystem::tmpfile(name);
+		model.setName(name);
+	}
 	if (m_double) {
 		do_run_templ<double>(network, duration, model, m_timestep, m_gpu,
-		                     m_timing);
+		                     m_timing, m_keep_compile, *m_storage);
 	}
 	else {
 		do_run_templ<float>(network, duration, model, m_timestep, m_gpu,
-		                    m_timing);
+		                    m_timing, m_keep_compile, *m_storage);
 	}
 #ifdef NDEBUG
-	system(("rm -r " + name + "_CODE").c_str());
+	if (!m_keep_compile) {
+		system(("rm -r " + model.getName() + "_CODE").c_str());
+	}
 #endif
 }
 }  // namespace cypress

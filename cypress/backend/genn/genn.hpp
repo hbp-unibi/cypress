@@ -34,6 +34,8 @@
 #include <cypress/util/json.hpp>
 
 namespace cypress {
+//Forward declaration
+struct network_storage;
 
 class GeNN : public Backend {
 private:
@@ -43,6 +45,8 @@ private:
 	bool m_gpu = false;
 	bool m_double = false;
 	bool m_timing = false;
+    bool m_keep_compile = false;
+    std::shared_ptr<network_storage> m_storage;
 
 public:
 	/**
@@ -63,7 +67,8 @@ public:
      *      "timestep" : 0.1,
      *      "gpu" : false,
      *      "double" : false,
-     *      "timing" : false
+     *      "timing" : false,
+     *      "keep_compile": false
 	 * }
 	 */
 	GeNN(const Json &setup = Json());
