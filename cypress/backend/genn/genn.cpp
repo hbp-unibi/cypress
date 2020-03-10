@@ -674,10 +674,10 @@ GeNNModels::SharedLibraryModel_<T> build_and_make(
     bool gpu, ModelSpecInternal &model,
 #ifdef CUDA_PATH_DEFINED
     plog::ConsoleAppender<plog::TxtFormatter> &logger, size_t num_pops,
-    bool compile = true)
 #else
-    plog::ConsoleAppender<plog::TxtFormatter> &, size_t)
+    plog::ConsoleAppender<plog::TxtFormatter> &, size_t,
 #endif
+    bool compile = true)
 {
 	std::string path = "./" + model.getName() + "_CODE/";
 	if (compile) {
