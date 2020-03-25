@@ -1003,14 +1003,18 @@ void record_spike_source(NetworkBase &netw, Real duration)
 	}
 }
 
+namespace {
+plog::ConsoleAppender<plog::TxtFormatter> consoleAppender;
+}
+
 template <typename T>
 void do_run_templ(NetworkBase &network, Real duration, ModelSpecInternal &model,
                   T timestep, bool gpu, bool timing, bool keep_compile,
                   network_storage &store)
 {
-	plog::ConsoleAppender<plog::TxtFormatter> consoleAppender;
 	Logging::init(get_log_level(), get_log_level(), &consoleAppender,
 	              &consoleAppender);
+
 	auto &neuron_groups = store.neuron_groups;
 	auto &synapse_groups = store.synapse_groups;
 	auto &synapse_groups_list = store.synapse_groups_list;
