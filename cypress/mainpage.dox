@@ -23,6 +23,8 @@ Runtime configuration options are e.g.
  - `threads` : int, where int has to be replaced by the number of threads you want to use
  - `spike_precision`: "off_grid",  allow more precise spike times
  - `timestep` : float, value for the accuracy of the simulation, defaults to 0.1ms
+ - `timing` : Does extensive timing measurements, might slow-down simulation
+ - `keep_compile`: If the backend instance is kept, and only weights of list connectors and input spikes are changed, we can reuse the genn compiled code, will speed-up execution
  
 NEST actually comes with two backends, one via Python (using pyNN --> `pynn.nest`) and one using the SLI interpreter (`nest`). Both backends should provide similar results, depending on your network the Python or the SLI backend will be faster.
 
@@ -72,6 +74,8 @@ The BrainScaleS interface library  <a href="https://github.com/hbp-unibi/BS2Cypr
  - `calib_path` Path to calibration files. Possible values: "path/to/calib" ; Default: Current default calib path
  - `synapse_loss` Allow the loss of synapses while mapping to the hardware system. Possible values are true (allowing loss), false (failure on loss). Default : false
  - `ess` Use the simulation of the hardware system instead of the hardware. Possible values: true, false. Default: false
+ - `keep_mapping` : True for in the loop simulations, where only low-level weights or input spikes are changed and you want to keep the mapping
+ - `full_list_connect` : True if the list connection should be all to all, inhibitory and excitatory, with only those synpases != 0 defined by the list connector. Required for in the loop simulations and training, where inhibitory connections might become excitatory (or vice versa) and you want to reuse the mapping 
 
 Only on the hardware:
  - `hicann` and `wafer`:  Choose the Wafer and the HICANN for your network emulation. Possible values: Available HICANNs and Wafers, also list of HICANNs; Default: 297 and 33. Also possible is a list of lists of HICANNs, e.g. [[296,297],[320,321,340,341],[322,342]], which will map the first population to HICANNs 296,297, the second population to HICANNs [320,321,340,341], ..., in the order of their creation in the high level code.
