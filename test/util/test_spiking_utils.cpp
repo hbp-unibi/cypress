@@ -15,12 +15,11 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+#include <cypress/util/neuron_parameters.hpp>
+#include <cypress/util/spiking_utils.hpp>
 #include <string>
 
 #include "gtest/gtest.h"
-
-#include <cypress/util/neuron_parameters.hpp>
-#include <cypress/util/spiking_utils.hpp>
 
 namespace cypress {
 TEST(SpikingUtils, detect_type)
@@ -169,6 +168,55 @@ TEST(SpikingUtils, spike_time_binning)
 
 	EXPECT_EQ(size_t(11), bins[2]);
 	EXPECT_EQ(size_t(11), bins[7]);
+}
+
+TEST(SpikingUtils, spike_time_binning_TTFS)
+{
+	std::vector<Real> spikes = {};
+	auto bins = SpikingUtils::spike_time_binning_TTFS(0, 1, 10, spikes);
+	EXPECT_EQ(size_t(10), bins.size());
+	for (auto i : bins) {
+		EXPECT_FLOAT_EQ(std::numeric_limits<Real>::max(), i);
+	}
+
+	for (size_t i = 0; i < 100; i++) {
+		spikes.push_back(i * 0.1);
+	}
+	bins = SpikingUtils::spike_time_binning_TTFS(0, 10, 10, spikes);
+	EXPECT_EQ(size_t(10), bins.size());
+	for (size_t i = 0; i < bins.size(); i++) {
+		EXPECT_FLOAT_EQ(Real(i) * 1.0, bins[i]);
+	}
+
+	bins = SpikingUtils::spike_time_binning_TTFS(1, 10, 9, spikes);
+	EXPECT_EQ(size_t(9), bins.size());
+	for (size_t i = 0; i < bins.size(); i++) {
+		EXPECT_FLOAT_EQ(1.0 + Real(i) * 1.0, bins[i]);
+	}
+	bins = SpikingUtils::spike_time_binning_TTFS(1, 9, 8, spikes);
+	EXPECT_EQ(size_t(8), bins.size());
+	for (size_t i = 0; i < bins.size(); i++) {
+		EXPECT_FLOAT_EQ(1.0 + Real(i) * 1.0, bins[i]);
+	}
+
+	bins = SpikingUtils::spike_time_binning_TTFS(1, 9, 16, spikes);
+	EXPECT_EQ(size_t(16), bins.size());
+	for (size_t i = 0; i < bins.size(); i++) {
+		EXPECT_FLOAT_EQ(1.0 + Real(i) * 0.5, bins[i]);
+	}
+
+	spikes = std::vector<Real>{3.421, 8.95};
+	bins = SpikingUtils::spike_time_binning_TTFS(1, 9, 8, spikes);
+	EXPECT_EQ(size_t(8), bins.size());
+
+	EXPECT_FLOAT_EQ(std::numeric_limits<Real>::max(), bins[0]);
+	EXPECT_FLOAT_EQ(std::numeric_limits<Real>::max(), bins[1]);
+	EXPECT_EQ(3.421, bins[2]);
+	EXPECT_FLOAT_EQ(std::numeric_limits<Real>::max(), bins[3]);
+	EXPECT_FLOAT_EQ(std::numeric_limits<Real>::max(), bins[4]);
+	EXPECT_FLOAT_EQ(std::numeric_limits<Real>::max(), bins[5]);
+	EXPECT_FLOAT_EQ(std::numeric_limits<Real>::max(), bins[6]);
+	EXPECT_EQ(8.95, bins[7]);
 }
 
 static const std::string test_json =

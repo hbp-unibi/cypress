@@ -17,7 +17,6 @@
  */
 
 #include <algorithm>
-
 #include <cypress/util/neuron_parameters.hpp>
 
 #include "spiking_utils.hpp"
@@ -120,5 +119,23 @@ int SpikingUtils::calc_num_spikes(const std::vector<cypress::Real> &spiketrain,
 		       std::lower_bound(spiketrain.begin(), spiketrain.end(),
 		                        start - 0.001);
 	}
+}
+
+std::vector<Real> SpikingUtils::spike_time_binning_TTFS(
+    const Real &start, const Real &stop, const size_t &n_bins,
+    const std::vector<cypress::Real> &spike_times)
+{
+	Real bin_size = (stop - start) / n_bins;
+	std::vector<Real> bin_first_spike(n_bins, std::numeric_limits<Real>::max());
+	for (Real spike : spike_times) {
+		if (spike >= stop || spike < start) {
+			continue;
+		}
+		size_t bin_idx = size_t((spike - start) / bin_size);
+		if (spike < bin_first_spike[bin_idx]) {
+			bin_first_spike[bin_idx] = spike;
+		}
+	}
+	return bin_first_spike;
 }
 }  // namespace cypress
