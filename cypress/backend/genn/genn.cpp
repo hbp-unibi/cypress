@@ -153,6 +153,16 @@ std::vector<size_t> inhomogeneous_indices(const PopulationBase &pop,
 	return indices;
 }
 
+inline bool any_record(const PopulationBase &pop, size_t ind)
+{
+	for (const auto &n : pop) {
+		if (n.signals().is_recording(ind)) {
+			return true;
+		}
+	}
+	return false;
+}
+
 /**
  * @brief Creates a GeNN neuron group for given population
  *
@@ -170,22 +180,46 @@ NeuronGroup *create_neuron_group(const PopulationBase &pop,
 			auto temp = map_params_to_genn<T>(pop.parameters(), ind_condlif);
 			NeuronModels::LIF::ParamValues params(UNPACK7(temp));
 			NeuronModels::LIF::VarValues inits(pop.parameters()[5], 0.0);
-			return model.addNeuronPopulation<NeuronModels::LIF>(
+			auto gpop = model.addNeuronPopulation<NeuronModels::LIF>(
 			    name, pop.size(), params, inits);
+			if ((pop.homogeneous_record() && pop.signals().is_recording(0)) ||
+			    any_record(pop, 0)) {
+				gpop->setSpikeLocation(VarLocation::HOST_DEVICE);
+			}
+			if ((pop.homogeneous_record() && pop.signals().is_recording(1)) ||
+			    any_record(pop, 1)) {
+				gpop->setVarLocation("V", VarLocation::HOST_DEVICE);
+			}
+			return gpop;
 		}
 		else if (&pop.type() == &IfCurrExp::inst()) {
 			auto temp = map_params_to_genn<T>(pop.parameters(), ind_currlif);
 			NeuronModels::LIF::ParamValues params(UNPACK7(temp));
 			NeuronModels::LIF::VarValues inits(pop.parameters()[5], 0.0);
-			return model.addNeuronPopulation<NeuronModels::LIF>(
+			auto gpop = model.addNeuronPopulation<NeuronModels::LIF>(
 			    name, pop.size(), params, inits);
+			if ((pop.homogeneous_record() && pop.signals().is_recording(0)) ||
+			    any_record(pop, 0)) {
+				gpop->setSpikeLocation(VarLocation::HOST_DEVICE);
+			}
+			if ((pop.homogeneous_record() && pop.signals().is_recording(1)) ||
+			    any_record(pop, 1)) {
+				gpop->setVarLocation("V", VarLocation::HOST_DEVICE);
+			}
+			return gpop;
 		}
 		else if (&pop.type() == &SpikeSourceArray::inst()) {
 			NeuronModels::SpikeSourceArray::ParamValues params;
 			NeuronModels::SpikeSourceArray::VarValues inits(
 			    0, pop.parameters().parameters().size());
-			return model.addNeuronPopulation<NeuronModels::SpikeSourceArray>(
-			    name, pop.size(), params, inits);
+			auto gpop =
+			    model.addNeuronPopulation<NeuronModels::SpikeSourceArray>(
+			        name, pop.size(), params, inits);
+			gpop->setExtraGlobalParamLocation("spikeTimes",
+			                                  VarLocation::HOST_DEVICE);
+			gpop->setVarLocation("startSpike", VarLocation::HOST_DEVICE);
+			gpop->setVarLocation("endSpike", VarLocation::HOST_DEVICE);
+			return gpop;
 		}
 		throw ExecutionError(
 		    "Unexpected Neuron Type for the simulator GeNN! The neuron model "
@@ -196,8 +230,14 @@ NeuronGroup *create_neuron_group(const PopulationBase &pop,
 			NeuronModels::SpikeSourceArray::ParamValues params;
 			NeuronModels::SpikeSourceArray::VarValues inits(uninitialisedVar(),
 			                                                uninitialisedVar());
-			return model.addNeuronPopulation<NeuronModels::SpikeSourceArray>(
-			    name, pop.size(), params, inits);
+			auto gpop =
+			    model.addNeuronPopulation<NeuronModels::SpikeSourceArray>(
+			        name, pop.size(), params, inits);
+			gpop->setExtraGlobalParamLocation("spikeTimes",
+			                                  VarLocation::HOST_DEVICE);
+			gpop->setVarLocation("startSpike", VarLocation::HOST_DEVICE);
+			gpop->setVarLocation("endSpike", VarLocation::HOST_DEVICE);
+			return gpop;
 		}
 		throw ExecutionError(
 		    "Currently inhomogenous parameters are not supported!");
@@ -304,10 +344,11 @@ SynapseGroup *create_synapse_group(
 			// This is the SparseInit case
 			type2 = SynapseMatrixType::SPARSE_INDIVIDUALG;
 		}
+		SynapseGroup *ret;
 		if (syn_name == "SpikePairRuleAdditive") {
 			auto &params = conn.connector().synapse()->parameters();
 			if (cond_inhib) {
-				return model.addSynapsePopulation<
+				ret = model.addSynapsePopulation<
 				    GeNNModels::SpikePairRuleAdditive, PostsynapticModel>(
 				    name, type2, delay, "pop_" + std::to_string(conn.pid_src()),
 				    "pop_" + std::to_string(conn.pid_tar()),
@@ -326,29 +367,31 @@ SynapseGroup *create_synapse_group(
 				    {0.0},  // PostVar init
 				    vars, {}, connector);
 			}
-			return model.addSynapsePopulation<GeNNModels::SpikePairRuleAdditive,
-			                                  PostsynapticModel>(
-			    name, type2, delay, "pop_" + std::to_string(conn.pid_src()),
-			    "pop_" + std::to_string(conn.pid_tar()),
-			    {
-			        params[4],  // Aplus
-			        params[5],  // AMinus
-			        params[6],  // WMin
-			        params[7],  // WMax
-			        params[2],  // tauPlus
-			        params[3],  // tauMinus
-			    },
-			    {
-			        weight[0],  // weight
-			    },
-			    {0.0},  // PreVar init
-			    {0.0},  // PostVar init
-			    vars, {}, connector);
+			else {
+				ret = model.addSynapsePopulation<
+				    GeNNModels::SpikePairRuleAdditive, PostsynapticModel>(
+				    name, type2, delay, "pop_" + std::to_string(conn.pid_src()),
+				    "pop_" + std::to_string(conn.pid_tar()),
+				    {
+				        params[4],  // Aplus
+				        params[5],  // AMinus
+				        params[6],  // WMin
+				        params[7],  // WMax
+				        params[2],  // tauPlus
+				        params[3],  // tauMinus
+				    },
+				    {
+				        weight[0],  // weight
+				    },
+				    {0.0},  // PreVar init
+				    {0.0},  // PostVar init
+				    vars, {}, connector);
+			}
 		}
 		else if (syn_name == "SpikePairRuleMultiplicative") {
 			auto &params = conn.connector().synapse()->parameters();
 			if (cond_inhib) {
-				return model.addSynapsePopulation<
+				ret = model.addSynapsePopulation<
 				    GeNNModels::SpikePairRuleMultiplicative, PostsynapticModel>(
 				    name, type2, delay, "pop_" + std::to_string(conn.pid_src()),
 				    "pop_" + std::to_string(conn.pid_tar()),
@@ -367,24 +410,26 @@ SynapseGroup *create_synapse_group(
 				    {0.0},  // PostVar init
 				    vars, {}, connector);
 			}
-			return model.addSynapsePopulation<
-			    GeNNModels::SpikePairRuleMultiplicative, PostsynapticModel>(
-			    name, type2, delay, "pop_" + std::to_string(conn.pid_src()),
-			    "pop_" + std::to_string(conn.pid_tar()),
-			    {
-			        params[4],  // Aplus
-			        params[5],  // AMinus
-			        params[6],  // WMin
-			        params[7],  // WMax
-			        params[2],  // tauPlus
-			        params[3],  // tauMinus
-			    },
-			    {
-			        weight[0],  // weight
-			    },
-			    {0.0},  // PreVar init
-			    {0.0},  // PostVar init
-			    vars, {}, connector);
+			else {
+				ret = model.addSynapsePopulation<
+				    GeNNModels::SpikePairRuleMultiplicative, PostsynapticModel>(
+				    name, type2, delay, "pop_" + std::to_string(conn.pid_src()),
+				    "pop_" + std::to_string(conn.pid_tar()),
+				    {
+				        params[4],  // Aplus
+				        params[5],  // AMinus
+				        params[6],  // WMin
+				        params[7],  // WMax
+				        params[2],  // tauPlus
+				        params[3],  // tauMinus
+				    },
+				    {
+				        weight[0],  // weight
+				    },
+				    {0.0},  // PreVar init
+				    {0.0},  // PostVar init
+				    vars, {}, connector);
+			}
 		}
 		else if (syn_name == "TsodyksMarkramMechanism") {
 			throw ExecutionError("SynapseModel " + syn_name +
@@ -409,9 +454,13 @@ SynapseGroup *create_synapse_group(
 			    {},  // PostVar init
 			    vars, {}, connector);*/
 		}
+		else {
+			throw ExecutionError("SynapseModel " + syn_name +
+			                     "is not supported on this backend");
+		}
+		ret->setWUVarLocation("g", VarLocation::HOST_DEVICE);
+		return ret;
 	}
-	throw ExecutionError("SynapseModel " + syn_name +
-	                     "is not supported on this backend");
 }
 
 /**
@@ -568,6 +617,7 @@ list_connect_pre(const std::vector<PopulationBase> pops,
 			        InitSparseConnectivitySnippet::Uninitialised>(),
 			    false);
 		}
+		synex->setWUVarLocation("g", VarLocation::HOST_DEVICE);
 	}
 
 	// inhibitory
@@ -591,6 +641,7 @@ list_connect_pre(const std::vector<PopulationBase> pops,
 			        InitSparseConnectivitySnippet::Uninitialised>(),
 			    false);
 		}
+		synin->setWUVarLocation("g", VarLocation::HOST_DEVICE);
 	}
 	return std::make_tuple(synex, synin, std::move(conns_full));
 }
@@ -673,7 +724,7 @@ template <typename T>
 GeNNModels::SharedLibraryModel_<T> build_and_make(
     bool gpu, ModelSpecInternal &model,
 #ifdef CUDA_PATH_DEFINED
-    plog::ConsoleAppender<plog::TxtFormatter> &logger, size_t num_pops,
+    plog::ConsoleAppender<plog::TxtFormatter> &logger,
 #else
     plog::ConsoleAppender<plog::TxtFormatter> &, size_t,
 #endif
@@ -690,9 +741,8 @@ GeNNModels::SharedLibraryModel_<T> build_and_make(
 #else
 			prefs.optimizeCode = true;
 #endif
-			if (num_pops > 90) {
-				prefs.useConstantCacheForMergedStructs = false;
-			}
+			prefs.generateEmptyStatePushPull = false;
+			prefs.generateEmptyStatePushPull = false;
 			prefs.logLevel = get_log_level();
 			auto bck = CodeGenerator::CUDA::Optimiser::createBackend(
 			    model, ::filesystem::path(path), prefs.logLevel, &logger,
@@ -968,16 +1018,6 @@ inline std::vector<Real> remove_spikes_after(std::vector<Real> spikes,
 	return spikes;
 }
 
-inline bool any_record(PopulationBase &pop, size_t ind)
-{
-	for (const auto &n : pop) {
-		if (n.signals().is_recording(ind)) {
-			return true;
-		}
-	}
-	return false;
-}
-
 void record_spike_source(NetworkBase &netw, Real duration)
 {
 	for (auto pop : netw.populations()) {
@@ -1069,8 +1109,7 @@ void do_run_templ(NetworkBase &network, Real duration, ModelSpecInternal &model,
 
 	// Build the model and compile
 	model.finalize();
-	auto slm = build_and_make<T>(gpu, model, consoleAppender,
-	                             network.populations().size(), execute_all);
+	auto slm = build_and_make<T>(gpu, model, consoleAppender, execute_all);
 	slm.allocateMem();
 	slm.initialize();
 	T *time = static_cast<T *>(slm.getSymbol("t"));
@@ -1369,6 +1408,11 @@ void GeNN::do_run(NetworkBase &network, Real duration) const
 		model.setTimePrecision(TimePrecision::DEFAULT);
 		model.setDT(m_timestep);  // Timestep in ms
 		model.setMergePostsynapticModels(true);
+
+		// Keep as much data as possible only on the device (GPU)
+		model.setDefaultVarLocation(VarLocation::DEVICE);
+		model.setDefaultSparseConnectivityLocation(VarLocation::DEVICE);
+
 		std::string name = "genn_XXXXXX";
 		filesystem::tmpfile(name);
 		model.setName(name);
