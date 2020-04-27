@@ -1045,7 +1045,20 @@ void record_spike_source(NetworkBase &netw, Real duration)
 
 namespace {
 plog::ConsoleAppender<plog::TxtFormatter> consoleAppender;
+
+template <typename T>
+inline void progress_bar(T p)
+{
+	const int w = 50;
+	std::cerr << std::fixed << std::setprecision(2) << std::setw(6) << p * 100.0
+	          << "% [";
+	const int j = p * float(w);
+	for (int i = 0; i < w; i++) {
+		std::cerr << (i > j ? ' ' : (i == j ? '>' : '='));
+	}
+	std::cerr << "]\r";
 }
+}  // namespace
 
 template <typename T>
 void do_run_templ(NetworkBase &network, Real duration, ModelSpecInternal &model,
@@ -1149,6 +1162,9 @@ void do_run_templ(NetworkBase &network, Real duration, ModelSpecInternal &model,
 	size_t counter = 0;
 	// Run the simulation and pull all recorded variables
 	while (*time < T(duration)) {
+		if (counter % 50 == 0) {
+			progress_bar<T>(*time / T(duration));
+		}
 		slm.stepTime();
 
 		// Fully recorded spikes
@@ -1191,6 +1207,8 @@ void do_run_templ(NetworkBase &network, Real duration, ModelSpecInternal &model,
 		}
 		counter++;
 	}
+	progress_bar<T>(1.0);
+	std::cerr << std::endl;
 
 	auto sim_fin_t = std::chrono::steady_clock::now();
 	// Convert spike data
