@@ -30,6 +30,9 @@ const NeuronType &SpikingUtils::detect_type(std::string neuron_type_str)
 	else if (neuron_type_str == "IfFacetsHardware1") {
 		return IfFacetsHardware1::inst();
 	}
+	else if (neuron_type_str == "IF_curr_exp") {
+		return IfCurrExp::inst();
+	}
 	else if (neuron_type_str == "AdExp") {
 		return EifCondExpIsfaIsta::inst();
 	}
@@ -64,6 +67,10 @@ PopulationBase SpikingUtils::add_population(const std::string neuron_type_str,
 			return add_typed_population_no_record<EifCondExpIsfaIsta>(
 			    network, neuronParams, size);
 		}
+		else if (neuron_type_str == "IF_curr_exp") {
+			return add_typed_population_no_record<IfCurrExp>(
+			    network, neuronParams, size);
+		}
 	}
 	if (neuron_type_str == "IF_cond_exp") {
 		return add_typed_population<IfCondExp>(
@@ -78,6 +85,11 @@ PopulationBase SpikingUtils::add_population(const std::string neuron_type_str,
 		return add_typed_population<EifCondExpIsfaIsta>(
 		    network, neuronParams, size,
 		    EifCondExpIsfaIstaSignals({record_signal}));
+	}
+	else if (neuron_type_str == "IfCurrExp") {
+		return add_typed_population<IfCurrExp>(
+		    network, neuronParams, size,
+		    IfCurrExpSignals({record_signal}));
 	}
 
 	throw CypressException("Invalid neuron type \"" + neuron_type_str + "\"");
