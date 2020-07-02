@@ -750,7 +750,7 @@ GeNNModels::SharedLibraryModel_<T> build_and_make(
 			auto moduleNames =
 			    CodeGenerator::generateAll(model, bck, path, false);
 			std::ofstream makefile(path + "Makefile");
-			CodeGenerator::generateMakefile(makefile, bck, moduleNames);
+			CodeGenerator::generateMakefile(makefile, bck, std::get<0>(moduleNames));
 			makefile.close();
 #else
 			throw ExecutionError(
@@ -771,7 +771,7 @@ GeNNModels::SharedLibraryModel_<T> build_and_make(
 			auto moduleNames =
 			    CodeGenerator::generateAll(model, bck, path, false);
 			std::ofstream makefile(path + "Makefile");
-			CodeGenerator::generateMakefile(makefile, bck, moduleNames);
+			CodeGenerator::generateMakefile(makefile, bck, std::get<0>(moduleNames));
 			makefile.close();
 		}
 #ifndef NDEBUG
