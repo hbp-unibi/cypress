@@ -750,7 +750,8 @@ GeNNModels::SharedLibraryModel_<T> build_and_make(
 			auto moduleNames =
 			    CodeGenerator::generateAll(model, bck, path, false);
 			std::ofstream makefile(path + "Makefile");
-			CodeGenerator::generateMakefile(makefile, bck, std::get<0>(moduleNames));
+			CodeGenerator::generateMakefile(makefile, bck,
+			                                std::get<0>(moduleNames));
 			makefile.close();
 #else
 			throw ExecutionError(
@@ -771,7 +772,8 @@ GeNNModels::SharedLibraryModel_<T> build_and_make(
 			auto moduleNames =
 			    CodeGenerator::generateAll(model, bck, path, false);
 			std::ofstream makefile(path + "Makefile");
-			CodeGenerator::generateMakefile(makefile, bck, std::get<0>(moduleNames));
+			CodeGenerator::generateMakefile(makefile, bck,
+			                                std::get<0>(moduleNames));
 			makefile.close();
 		}
 #ifndef NDEBUG
@@ -1258,6 +1260,30 @@ void do_run_templ(NetworkBase &network, Real duration, ModelSpecInternal &model,
 				auto neuron_inst = pop[neuron];
 				neuron_inst.signals().data(1, std::move(v_data[id][neuron]));
 			}
+		}
+	}
+
+	for (auto pop : populations) {
+		bool record_condutance = false;
+		if (pop.signals().size() > 1) {
+			for (auto neuron : pop) {
+				if (neuron.signals().is_recording(2)) {
+					neuron.signals().data(2, std::make_shared<Matrix<Real>>(
+					                             2, 2, MatrixFlags::ZEROS));
+					record_condutance = true;
+				}
+				if (neuron.signals().size() > 2 &&
+				    neuron.signals().is_recording(3)) {
+					neuron.signals().data(3, std::make_shared<Matrix<Real>>(
+					                             2, 2, MatrixFlags::ZEROS));
+					record_condutance = true;
+				}
+			}
+		}
+		if (record_condutance) {
+			global_logger().warn(
+			    "GeNN",
+			    "Recording conductance not implemented. Inserted dummy data!");
 		}
 	}
 
