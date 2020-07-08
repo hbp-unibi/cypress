@@ -83,6 +83,9 @@ GeNN::GeNN(const Json &setup)
 
 	m_storage = std::make_shared<network_storage>();
 	m_storage->model = std::make_shared<ModelSpecInternal>();
+	if (global_logger().min_level() > LogSeverity::WARNING) {
+		m_disable_status = true;
+	}
 	// TODO
 }
 std::unordered_set<const NeuronType *> GeNN::supported_neuron_types() const
@@ -1065,7 +1068,7 @@ inline void progress_bar(T p)
 template <typename T>
 void do_run_templ(NetworkBase &network, Real duration, ModelSpecInternal &model,
                   T timestep, bool gpu, bool timing, bool keep_compile,
-                  network_storage &store)
+                  network_storage &store, bool disable_status)
 {
 	Logging::init(get_log_level(), get_log_level(), &consoleAppender,
 	              &consoleAppender);
@@ -1164,7 +1167,7 @@ void do_run_templ(NetworkBase &network, Real duration, ModelSpecInternal &model,
 	size_t counter = 0;
 	// Run the simulation and pull all recorded variables
 	while (*time < T(duration)) {
-		if (counter % 50 == 0) {
+		if ((!disable_status) && counter % 50 == 0) {
 			progress_bar<T>(*time / T(duration));
 		}
 		slm.stepTime();
@@ -1209,8 +1212,10 @@ void do_run_templ(NetworkBase &network, Real duration, ModelSpecInternal &model,
 		}
 		counter++;
 	}
-	progress_bar<T>(1.0);
-	std::cerr << std::endl;
+	if (!disable_status) {
+		progress_bar<T>(1.0);
+		std::cerr << std::endl;
+	}
 
 	auto sim_fin_t = std::chrono::steady_clock::now();
 	// Convert spike data
@@ -1463,11 +1468,13 @@ void GeNN::do_run(NetworkBase &network, Real duration) const
 	}
 	if (m_double) {
 		do_run_templ<double>(network, duration, model, m_timestep, m_gpu,
-		                     m_timing, m_keep_compile, *m_storage);
+		                     m_timing, m_keep_compile, *m_storage,
+		                     m_disable_status);
 	}
 	else {
 		do_run_templ<float>(network, duration, model, m_timestep, m_gpu,
-		                    m_timing, m_keep_compile, *m_storage);
+		                    m_timing, m_keep_compile, *m_storage,
+		                    m_disable_status);
 	}
 #ifdef NDEBUG
 	if (!m_keep_compile) {

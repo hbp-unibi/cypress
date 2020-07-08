@@ -46,6 +46,7 @@ private:
 	bool m_double = false;
 	bool m_timing = false;
     bool m_keep_compile = false;
+    bool m_disable_status = false;
     std::shared_ptr<network_storage> m_storage;
 
 public:
