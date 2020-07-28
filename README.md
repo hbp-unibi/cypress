@@ -1,5 +1,7 @@
 Cypress
 =======
+![Logo](https://raw.githubusercontent.com/hbp-sanncs/cypress/master/docs/cypress_logo.png)
+
 
 ![Synfire Chain Example](https://raw.githubusercontent.com/hbp-sanncs/cypress/master/docs/synfire_result_spikey.png)
 *Synfire chain example running on the Spikey neuromorphic hardware system*
