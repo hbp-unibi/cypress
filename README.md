@@ -2,9 +2,7 @@ Cypress
 =======
 ![Logo](https://raw.githubusercontent.com/hbp-sanncs/cypress/master/docs/cypress_logo.png)
 
-
-![Synfire Chain Example](https://raw.githubusercontent.com/hbp-sanncs/cypress/master/docs/synfire_result_spikey.png)
-*Synfire chain example running on the Spikey neuromorphic hardware system*
+[![Build Status](https://travis-ci.org/hbp-unibi/cypress.svg?branch=master)](https://travis-ci.org/hbp-unibi/cypress) [![Documentation](https://img.shields.io/badge/docs-doxygen-blue.svg)](https://hbp-unibi.github.io/cypress/index.html)
 
 Cypress is a C++ Spiking Neural Network Simulation Framework. It allows to describe
 and execute spiking neural networks on various simulation platforms directly in
@@ -13,7 +11,8 @@ on the Human Brain Project (HBP) neuromorphic hardware systems. Cypress also all
 to transparently execute the networks remotely on the HBP Neuromorphic Compute Platform,
 significantly shortening the time required when performing experiments.
 
-[![Build Status](https://travis-ci.org/hbp-unibi/cypress.svg?branch=master)](https://travis-ci.org/hbp-unibi/cypress) [![Documentation](https://img.shields.io/badge/docs-doxygen-blue.svg)](https://hbp-unibi.github.io/cypress/index.html)
+![Synfire Chain Example](https://raw.githubusercontent.com/hbp-sanncs/cypress/master/docs/synfire_result_spikey.png)
+*Synfire chain example running on the Spikey neuromorphic hardware system*
 
 Building the sources
 ------------
