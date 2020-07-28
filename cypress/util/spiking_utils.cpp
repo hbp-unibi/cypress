@@ -137,13 +137,13 @@ std::vector<Real> SpikingUtils::spike_time_binning_TTFS(
     const Real &start, const Real &stop, const size_t &n_bins,
     const std::vector<cypress::Real> &spike_times)
 {
-	Real bin_size = (stop - start) / n_bins;
+	Real bin_size = (stop - start) / Real(n_bins);
 	std::vector<Real> bin_first_spike(n_bins, std::numeric_limits<Real>::max());
 	for (Real spike : spike_times) {
 		if (spike >= stop || spike < start) {
 			continue;
 		}
-		size_t bin_idx = size_t((spike - start) / bin_size);
+		size_t bin_idx = size_t((spike - start) / Real(bin_size));
 		if (spike < bin_first_spike[bin_idx]) {
 			bin_first_spike[bin_idx] = spike;
 		}
