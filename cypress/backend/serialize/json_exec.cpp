@@ -37,10 +37,18 @@ int main(int argc, const char *argv[])
 		Json json;
 		if (argc == 3) {
 			file_in.open(std::string(argv[1]) + ".cbor", std::ios::binary);
+			if (!file_in.good()) {
+				throw std::runtime_error("Could not open network input file " +
+				                         std::string(argv[1]) + ".cbor!");
+			}
 			json = Json::from_cbor(file_in);
 		}
 		else {
 			file_in.open(std::string(argv[1]) + ".json", std::ios::binary);
+			if (!file_in.good()) {
+				throw std::runtime_error("Could not open network input file " +
+				                         std::string(argv[1]) + ".json!");
+			}
 			json = Json::parse(file_in);
 		}
 		file_in.close();
@@ -68,10 +76,18 @@ int main(int argc, const char *argv[])
 		std::ofstream file_out;
 		if (argc == 3) {
 			file_out.open(std::string(argv[1]) + "_res.cbor", std::ios::binary);
+			if (!file_out.good()) {
+				throw std::runtime_error("Could not open network input file " +
+				                         std::string(argv[1]) + "_res.cbor!");
+			}
 			Json::to_cbor(json, file_out);
 		}
 		else {
 			file_out.open(std::string(argv[1]) + "_res.json", std::ios::binary);
+			if (!file_out.good()) {
+				throw std::runtime_error("Could not open network input file " +
+				                         std::string(argv[1]) + "_res.json!");
+			}
 			file_out << json;
 		}
 	}
