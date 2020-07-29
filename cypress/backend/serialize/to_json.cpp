@@ -28,6 +28,7 @@
 #include <cypress/util/logger.hpp>
 #include <cypress/util/process.hpp>
 #include <exception>
+#include <mutex>
 #include <sstream>
 #include <system_error>
 #include <thread>
@@ -204,8 +205,13 @@ void open_fifo_to_read(std::string file_name, std::filebuf &res)
 /**
  * Helper function to write network description into a file
  */
-void pipe_write_helper(std::string file, Json &source)
+void pipe_write_helper(std::string file, Json &source, std::mutex &mut,
+                       bool fifo)
 {
+	if (fifo) {
+		// wait for subprocess to be started
+		mut.lock();
+	}
 	std::filebuf fb_in;
 	fb_in.open(file, std::ios::out);
 	std::ostream data_in(&fb_in);
@@ -216,6 +222,10 @@ void pipe_write_helper(std::string file, Json &source)
 	data_in << source;
 	fb_in.close();
 	source = {};
+	if (!fifo) {
+		// we are ready to write to disk
+		mut.unlock();
+	}
 }
 }  // namespace
 
@@ -273,9 +283,9 @@ void ToJson::do_run(NetworkBase &network, Real duration) const
 			sim = "nmmc1";
 	}
 	for (size_t trial = 0; trial < 3; trial++) {
+		std::mutex data_ready;
+		data_ready.lock();
 		auto json_out = output_json(network, duration);
-		std::thread data_in(pipe_write_helper, m_path + ".json",
-		                    std::ref(json_out));
 		if (!m_save_json) {
 			if (mkfifo((m_path + ".json").c_str(), 0666) != 0) {
 				throw std::system_error(errno, std::system_category());
@@ -285,10 +295,17 @@ void ToJson::do_run(NetworkBase &network, Real duration) const
 			}
 		}
 
+		std::thread data_in(pipe_write_helper, m_path + ".json",
+		                    std::ref(json_out), std::ref(data_ready),
+		                    !m_save_json);
+
 		if (mng && !powermngmt->state(sim) && powermngmt->switch_on(sim)) {
 			sleep(3);  // Sleep for three seconds
 		}
-
+		if (m_save_json) {
+			// wait for data to be written
+			data_ready.lock();
+		}
 		Process proc(exec_json_path::instance().path(), {m_path});
 		std::thread log_thread_beg, err_thread;
 		std::ofstream null;
@@ -308,6 +325,11 @@ void ToJson::do_run(NetworkBase &network, Real duration) const
 			    std::thread(Process::generic_pipe,
 			                std::ref(proc.child_stderr()), std::ref(std::cerr));
 		}
+		if (!m_save_json) {
+			// fifo is opened for reading now
+			data_ready.unlock();
+		}
+
 		Json result;
 		if (!m_save_json) {
 			std::filebuf fb_res;
