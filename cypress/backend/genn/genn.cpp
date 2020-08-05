@@ -729,7 +729,7 @@ GeNNModels::SharedLibraryModel_<T> build_and_make(
 #ifdef CUDA_PATH_DEFINED
     plog::ConsoleAppender<plog::TxtFormatter> &logger,
 #else
-    plog::ConsoleAppender<plog::TxtFormatter> &, size_t,
+    plog::ConsoleAppender<plog::TxtFormatter> &,
 #endif
     bool compile = true)
 {
