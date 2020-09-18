@@ -17,7 +17,7 @@
 # Download the JSON library
 message(STATUS "Download https://github.com/nlohmann/json/releases/download/v3.8.0/json.hpp")
 file(DOWNLOAD
-	https://github.com/nlohmann/json/releases/download/v3.8.0/json.hpp
+	https://github.com/nlohmann/json/releases/download/v3.9.1/json.hpp
 	${CMAKE_BINARY_DIR}/include/cypress/json.hpp
-	EXPECTED_HASH SHA256=be7bbfbc7c62c35aa6f27dfbdd950384f247dd9f2281b5930bdaa3a6ab95eef7
+	EXPECTED_HASH SHA256=7804b38146921d03374549c9e2a5e3acda097814c43caf2b96a0278e58df26e0
 )
