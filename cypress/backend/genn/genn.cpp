@@ -574,7 +574,7 @@ std::tuple<SynapseGroup *, SynapseGroup *,
            std::shared_ptr<std::vector<LocalConnection>>>
 list_connect_pre(const std::vector<PopulationBase> pops,
                  ModelSpecInternal &model, const ConnectionDescriptor &conn,
-                 std::string name, T timestep)
+                 std::string name, T timestep, bool full)
 {
 
 	if (conn.connector().name() == "FromListConnector" ||
@@ -600,7 +600,7 @@ list_connect_pre(const std::vector<PopulationBase> pops,
 	    (unsigned int)(conn.connector().synapse()->parameters()[1] / timestep);
 	SynapseGroup *synex = nullptr, *synin = nullptr;
 
-	if (conns_full->size() - num_inh > 0) {
+	if (conns_full->size() - num_inh > 0 || full) {
 		if (cond_based) {
 			T rev_pot = T(pops[conn.pid_tar()].parameters().parameters()[8]);
 			T tau = T(pops[conn.pid_tar()].parameters().parameters()[2]);
@@ -624,7 +624,7 @@ list_connect_pre(const std::vector<PopulationBase> pops,
 	}
 
 	// inhibitory
-	if (num_inh > 0) {
+	if (num_inh > 0 || full) {
 		if (cond_based) {
 			T rev_pot = T(pops[conn.pid_tar()].parameters().parameters()[9]);
 			T tau = T(pops[conn.pid_tar()].parameters().parameters()[3]);
@@ -1110,9 +1110,9 @@ void do_run_templ(NetworkBase &network, Real duration, ModelSpecInternal &model,
 			    timestep, list_connected));
 
 			if (list_connected) {
-				synapse_groups_list.emplace_back(
-				    list_connect_pre<T>(populations, model, connections[i],
-				                        "conn_" + std::to_string(i), timestep));
+				synapse_groups_list.emplace_back(list_connect_pre<T>(
+				    populations, model, connections[i],
+				    "conn_" + std::to_string(i), timestep, keep_compile));
 				list_connected_ids.emplace_back(i);
 			}
 		}
