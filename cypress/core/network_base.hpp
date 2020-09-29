@@ -94,6 +94,12 @@ struct NetworkRuntime {
 	 * driver.
 	 */
 	Real finalize;
+    
+    /**
+     * Theoretical runtime, where direct measurement is not possible.
+     * E.g.: simulation time * time_scale_factor
+     **/
+    Real sim_pure;
 };
 
 /**

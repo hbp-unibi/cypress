@@ -17,29 +17,17 @@
  */
 
 // Include first to avoid "_POSIX_C_SOURCE redefined" warning
+#include <pybind11/embed.h>
+#include <pybind11/numpy.h>
 #include <pybind11/pybind11.h>
-
-#include <algorithm>
-#include <cerrno>
-#include <fstream>
-#include <future>
-#include <sstream>
-#include <string>
-#include <system_error>
-#include <thread>
-#include <unordered_map>
-#include <unordered_set>
-#include <vector>
-
+#include <pybind11/pytypes.h>
+#include <pybind11/stl.h>  //Type conversions
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
 
-#include <pybind11/embed.h>
-#include <pybind11/numpy.h>
-#include <pybind11/pytypes.h>
-#include <pybind11/stl.h>  //Type conversions
-
+#include <algorithm>
+#include <cerrno>
 #include <cypress/backend/pynn/pynn.hpp>
 #include <cypress/backend/resources.hpp>
 #include <cypress/core/exceptions.hpp>
@@ -49,6 +37,15 @@
 #include <cypress/util/filesystem.hpp>
 #include <cypress/util/logger.hpp>
 #include <cypress/util/process.hpp>
+#include <fstream>
+#include <future>
+#include <sstream>
+#include <string>
+#include <system_error>
+#include <thread>
+#include <unordered_map>
+#include <unordered_set>
+#include <vector>
 
 namespace cypress {
 
@@ -1750,10 +1747,28 @@ void PyNN::do_run(NetworkBase &source, Real duration) const
 	else {
 		duration_rounded = duration;
 	}
+	double duration_pure = 0.0;
+	if (m_normalised_simulator == "nmmc1") {
+		auto util = py::module::import("spinn_front_end_common.utilities");
+		size_t time_scale = py::cast<size_t>(util.attr("globals_variables")
+		                                         .attr("get_simulator")()
+		                                         .attr("time_scale_factor"));
+		duration_pure = double(time_scale) * duration_rounded / 1000.0;
+	}
 
 	auto buildconn = std::chrono::steady_clock::now();
 	try {
-		pynn.attr("run")(duration_rounded);
+		if (m_normalised_simulator == "nest") {
+			pynn.attr("run")(0);
+			auto nest = py::module::import("nest");
+			auto run_0 = std::chrono::steady_clock::now();
+			nest.attr("Simulate")(duration_rounded);
+			auto run_1 = std::chrono::steady_clock::now();
+			duration_pure = std::chrono::duration<Real>(run_1 - run_0).count();
+		}
+		else {
+			pynn.attr("run")(duration_rounded);
+		}
 	}
 	catch (const pybind11::error_already_set &e) {
 		try {
@@ -1799,6 +1814,7 @@ void PyNN::do_run(NetworkBase &source, Real duration) const
 			    std::move(weights_exc));
 		}
 	}
+
 	pynn.attr("end")();
 
 	auto finished = std::chrono::steady_clock::now();
@@ -1806,7 +1822,8 @@ void PyNN::do_run(NetworkBase &source, Real duration) const
 	source.runtime({std::chrono::duration<Real>(finished - start).count(),
 	                std::chrono::duration<Real>(execrun - buildconn).count(),
 	                std::chrono::duration<Real>(buildconn - start).count(),
-	                std::chrono::duration<Real>(finished - execrun).count()});
+	                std::chrono::duration<Real>(finished - execrun).count(),
+	                duration_pure});
 
 	/*
 	// Remove the log file
@@ -2229,6 +2246,7 @@ void PyNN::spikey_run(NetworkBase &source, Real duration, py::module &pynn,
 	source.runtime({std::chrono::duration<Real>(finished - start).count(),
 	                std::chrono::duration<Real>(execrun - buildconn).count(),
 	                std::chrono::duration<Real>(buildconn - start).count(),
-	                std::chrono::duration<Real>(execrun - start).count()});
+	                std::chrono::duration<Real>(execrun - start).count(),
+	                duration * 1.0e-7});
 }
 }  // namespace cypress

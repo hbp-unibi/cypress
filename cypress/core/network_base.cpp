@@ -524,7 +524,7 @@ void NetworkBase::run(const Backend &backend, Real duration)
 	std::stringstream ss;
 	ss << "Done. Execution took " << rt.total << "s (simulation " << rt.sim
 	   << "s, initialization " << rt.initialize << "s, finalization "
-	   << rt.finalize << "s)";
+	   << rt.finalize << "s, Pure theoretical runtime " << rt.sim_pure << "s)";
 	logger().info("cypress", ss.str());
 }
 

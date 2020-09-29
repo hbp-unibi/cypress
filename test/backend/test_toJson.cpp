@@ -852,7 +852,7 @@ TEST(Matrix2Json, roundtrip)
 
 TEST(Runtime2Json, runtime2json)
 {
-	NetworkRuntime runtime{1, 2, 3, 4};
+	NetworkRuntime runtime{1, 2, 3, 4, 5};
 	Json json(runtime);
 	NetworkRuntime runtime2 = json.get<NetworkRuntime>();
 	Json json2(runtime2);
@@ -861,15 +861,18 @@ TEST(Runtime2Json, runtime2json)
 	EXPECT_FLOAT_EQ(runtime.sim, json["sim"]);
 	EXPECT_FLOAT_EQ(runtime.finalize, json["finalize"]);
 	EXPECT_FLOAT_EQ(runtime.initialize, json["initialize"]);
+	EXPECT_FLOAT_EQ(runtime.sim_pure, json["sim_pure"]);
 	EXPECT_FLOAT_EQ(runtime2.total, json2["total"]);
 	EXPECT_FLOAT_EQ(runtime2.sim, json2["sim"]);
 	EXPECT_FLOAT_EQ(runtime2.finalize, json2["finalize"]);
 	EXPECT_FLOAT_EQ(runtime2.initialize, json2["initialize"]);
+	EXPECT_FLOAT_EQ(runtime2.sim_pure, json2["sim_pure"]);
 
 	EXPECT_FLOAT_EQ(runtime2.total, runtime.total);
 	EXPECT_FLOAT_EQ(runtime2.sim, runtime.sim);
 	EXPECT_FLOAT_EQ(runtime2.finalize, runtime.finalize);
 	EXPECT_FLOAT_EQ(runtime2.initialize, runtime.initialize);
+	EXPECT_FLOAT_EQ(runtime2.sim_pure, runtime.sim_pure);
 	EXPECT_EQ(json, json2);
 }
 }  // namespace cypress

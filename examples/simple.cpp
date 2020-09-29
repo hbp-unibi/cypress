@@ -83,7 +83,7 @@ int main(int argc, const char *argv[])
 	std::cout << "---------" << std::endl;
 	std::cout << net.runtime().initialize << ", " << net.runtime().sim << ", "
 	          << net.runtime().finalize << ", " << net.runtime().total << ", "
-	          << std::endl;
+	          << net.runtime().sim_pure << std::endl;
 
 	// Print the spike times for each target neuron
 	std::vector<std::vector<Real>> spikes;
