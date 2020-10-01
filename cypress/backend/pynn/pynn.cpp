@@ -1374,30 +1374,30 @@ void PyNN::fetch_data_spinnaker(const std::vector<PopulationBase> &populations,
 				Matrix<double> datac = matrix_from_numpy<double>(data);
 
 				if (signals[j] == "spikes") {
+					size_t counter = 0;
 					for (size_t k = 0; k < populations[i].size(); k++) {
-						auto neuron = populations[i][k];
-						auto idx = neuron.type().signal_index("spikes");
-						size_t len = 0;
-						for (size_t l = 0; l < datac.rows(); l++) {
-							if (size_t(datac(l, 0)) == k) {
-								len++;
-							}
-						}
-
-						if (len == 0) {
+						if (size_t(datac(counter, 0)) != k) {
 							continue;
 						}
-						auto res = std::make_shared<Matrix<Real>>(len, 1);
-						size_t counter = 0;
-						for (size_t l = 0; l < datac.rows(); l++) {
-							if (size_t(datac(l, 0)) == k) {
-								assert(counter < len);
-								(*res)(counter, 0) = Real(datac(l, 1));
-								counter++;
+						size_t len = 0;
+						while (counter + len < datac.rows()) {
+							if (size_t(datac(counter + len, 0)) == k) {
+								len++;
+							}
+							else {
+								break;
 							}
 						}
+						auto res = std::make_shared<Matrix<Real>>(len, 1);
+						for (size_t l = 0; l < len; l++) {
+							(*res)(l, 0) = Real(datac(counter, 1));
+							counter++;
+						}
+						auto neuron = populations[i][k];
+						auto idx = neuron.type().signal_index("spikes");
 						neuron.signals().data(idx.value(), std::move(res));
 					}
+					assert(datac.rows() == counter);
 				}
 				else {
 					for (size_t k = 0; k < populations[i].size(); k++) {
