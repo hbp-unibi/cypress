@@ -41,7 +41,7 @@ private:
 	exec_json_path()
 	{
 		m_path = "./cypress_from_json";  // local
-		auto ret = execlp((m_path + " >/dev/null 2>&1").c_str(), "");
+		auto ret = execlp((m_path + " >/dev/null 2>&1").c_str(), "", NULL);
 		if (ret) {
 			global_logger().debug(
 			    "cypress",
