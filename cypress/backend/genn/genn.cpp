@@ -736,6 +736,8 @@ GeNNModels::SharedLibraryModel_<T> build_and_make(
 	std::string path = "./" + model.getName() + "_CODE/";
 	if (compile) {
 		mkdir(path.c_str(), 0777);
+		auto fs_path = ::filesystem::path(path);
+		auto share_path = ::filesystem::path(GENN_SHARE_PATH);
 		if (gpu) {
 #ifdef CUDA_PATH_DEFINED
 			CodeGenerator::CUDA::Preferences prefs;
@@ -748,10 +750,9 @@ GeNNModels::SharedLibraryModel_<T> build_and_make(
 			prefs.generateEmptyStatePushPull = false;
 			prefs.logLevel = get_log_level();
 			auto bck = CodeGenerator::CUDA::Optimiser::createBackend(
-			    model, ::filesystem::path(path), prefs.logLevel, &logger,
-			    prefs);
-			auto moduleNames =
-			    CodeGenerator::generateAll(model, bck, path, false);
+			    model, share_path, fs_path, prefs.logLevel, &logger, prefs);
+			auto moduleNames = CodeGenerator::generateAll(
+			    model, bck, share_path, fs_path, false);
 			std::ofstream makefile(path + "Makefile");
 			CodeGenerator::generateMakefile(makefile, bck,
 			                                std::get<0>(moduleNames));
@@ -771,9 +772,8 @@ GeNNModels::SharedLibraryModel_<T> build_and_make(
 			prefs.logLevel = get_log_level();
 			CodeGenerator::SingleThreadedCPU::Backend bck(model.getPrecision(),
 			                                              prefs);
-
-			auto moduleNames =
-			    CodeGenerator::generateAll(model, bck, path, false);
+			auto moduleNames = CodeGenerator::generateAll(
+			    model, bck, share_path, fs_path, false);
 			std::ofstream makefile(path + "Makefile");
 			CodeGenerator::generateMakefile(makefile, bck,
 			                                std::get<0>(moduleNames));
