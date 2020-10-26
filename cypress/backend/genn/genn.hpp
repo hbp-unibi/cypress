@@ -26,15 +26,14 @@
 
 #pragma once
 
+#include <cypress/core/backend.hpp>
+#include <cypress/util/json.hpp>
 #include <stdexcept>
 #include <string>
 #include <vector>
 
-#include <cypress/core/backend.hpp>
-#include <cypress/util/json.hpp>
-
 namespace cypress {
-//Forward declaration
+// Forward declaration
 struct network_storage;
 
 class GeNN : public Backend {
@@ -45,9 +44,10 @@ private:
 	bool m_gpu = false;
 	bool m_double = false;
 	bool m_timing = false;
-    bool m_keep_compile = false;
-    bool m_disable_status = false;
-    std::shared_ptr<network_storage> m_storage;
+	bool m_keep_compile = false;
+	bool m_disable_status = false;
+	std::shared_ptr<network_storage> m_storage;
+	size_t m_recording_buffer_size = 0;
 
 public:
 	/**
@@ -65,11 +65,12 @@ public:
 	 * @param setup is a JSON object which supports the following settings:
 	 *
 	 * {
-     *      "timestep" : 0.1,
-     *      "gpu" : false,
-     *      "double" : false,
-     *      "timing" : false,
-     *      "keep_compile": false
+	 *      "timestep" : 0.1,
+	 *      "gpu" : false,
+	 *      "double" : false,
+	 *      "timing" : false,
+	 *      "keep_compile": false,
+     *      "recording_buffer_size" : 0
 	 * }
 	 */
 	GeNN(const Json &setup = Json());

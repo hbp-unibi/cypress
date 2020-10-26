@@ -80,6 +80,9 @@ GeNN::GeNN(const Json &setup)
 	if (setup.count("keep_compile") > 0) {
 		m_keep_compile = setup["keep_compile"].get<bool>();
 	}
+	if (setup.count("recording_buffer_size") > 0) {
+		m_recording_buffer_size = setup["recording_buffer_size"].get<size_t>();
+	}
 
 	m_storage = std::make_shared<network_storage>();
 	m_storage->model = std::make_shared<ModelSpecInternal>();
@@ -900,13 +903,15 @@ void resolve_ptrs(std::vector<CurrentSpikeFunction> &spike_ptrs,
                   std::vector<size_t> &record_full_v,
                   std::vector<size_t> &record_part_spike,
                   std::vector<size_t> &record_part_v,
+                  std::vector<uint32_t *> &spike_record_ptrs,
                   const std::vector<PopulationBase> &populations,
-                  GeNNModels::SharedLibraryModel_<T> &slm)
+                  GeNNModels::SharedLibraryModel_<T> &slm, bool record_buf)
 {
 	v_ptrs = std::vector<T *>(populations.size(), nullptr);
 	spike_ptrs = std::vector<CurrentSpikeFunction>(populations.size(), nullptr);
 	spike_cnt_ptrs =
 	    std::vector<CurrentSpikeCountFunction>(populations.size(), nullptr);
+	spike_record_ptrs = std::vector<uint32_t *>(populations.size(), nullptr);
 
 	for (size_t i = 0; i < populations.size(); i++) {
 		const auto &pop = populations[i];
@@ -919,6 +924,10 @@ void resolve_ptrs(std::vector<CurrentSpikeFunction> &spike_ptrs,
 				    "getpop_" + std::to_string(i) + "CurrentSpikeCount"));
 				spike_ptrs[i] = (CurrentSpikeFunction)(slm.getSymbol(
 				    "getpop_" + std::to_string(i) + "CurrentSpikes"));
+				if (record_buf) {
+					spike_record_ptrs[i] = (*(static_cast<uint32_t **>(
+					    slm.getSymbol("recordSpkpop_" + std::to_string(i)))));
+				}
 				record_full_spike.emplace_back(pop.pid());
 			}
 			if (pop.signals().size() > 1 && pop.signals().is_recording(1)) {
@@ -939,6 +948,11 @@ void resolve_ptrs(std::vector<CurrentSpikeFunction> &spike_ptrs,
 					spike_ptrs[neuron.pid()] =
 					    (CurrentSpikeFunction)(slm.getSymbol(
 					        "getpop_" + std::to_string(i) + "CurrentSpikes"));
+					if (record_buf) {
+						spike_record_ptrs[i] =
+						    (*(static_cast<uint32_t **>(slm.getSymbol(
+						        "recordSpkpop_" + std::to_string(i)))));
+					}
 					break;
 				}
 			}
@@ -950,6 +964,30 @@ void resolve_ptrs(std::vector<CurrentSpikeFunction> &spike_ptrs,
 						    slm.getSymbol("Vpop_" + std::to_string(i)))));
 						break;
 					}
+				}
+			}
+		}
+	}
+}
+
+void set_buffer_recording(const std::vector<PopulationBase> &populations,
+                          std::vector<NeuronGroup *> nrn_grp)
+{
+	for (size_t i = 0; i < populations.size(); i++) {
+		const auto &pop = populations[i];
+		if (&pop.type() == &SpikeSourceArray::inst()) {
+			continue;
+		}
+		if (pop.homogeneous_record()) {
+			if (pop.signals().is_recording(0)) {
+				nrn_grp[i]->setSpikeRecordingEnabled(true);
+			}
+		}
+		else {
+			for (auto neuron : pop) {
+				if (neuron.signals().is_recording(0)) {
+					nrn_grp[i]->setSpikeRecordingEnabled(true);
+					break;
 				}
 			}
 		}
@@ -1048,6 +1086,51 @@ void record_spike_source(NetworkBase &netw, Real duration)
 	}
 }
 
+/**
+ * @brief Adapted from GeNNs userproject SpikeWriter, this function converts the
+ * spike buffer from GeNNs internal buffering method to a vector of spikes
+ *
+ * @param spikes The target container
+ * @param pop_size population size
+ * @param spkRecord pointer to GeNN spike buffer.
+ * @param numTimesteps this is recording_buffer_size
+ * @param dt timestep
+ * @param offset offset in several consecutive runs
+ */
+void convert_spike_buffer(std::vector<std::vector<Real>> &spikes,
+                          size_t pop_size, const uint32_t *spkRecord,
+                          unsigned int numTimesteps, double dt, double offset)
+{
+	const unsigned int timestepWords = (pop_size + 31) / 32;
+	for (unsigned int t = 0; t < numTimesteps; t++) {
+		// Convert timestep to time
+		const double time = offset + (t * dt);
+		// Loop through words representing timestep
+		for (unsigned int w = 0; w < timestepWords; w++) {
+			// Get word
+			uint32_t spikeWord = spkRecord[(t * timestepWords) + w];
+
+			// Calculate neuron id of highest bit of this word
+			unsigned int neuronID = (w * 32) + 31;
+
+			// While bits remain
+			while (spikeWord != 0) {
+				// Calculate leading zeros
+				const int numLZ = __builtin_clz((unsigned int)spikeWord);
+
+				// If all bits have now been processed, zero spike word
+				// Otherwise shift past the spike we have found
+				spikeWord = (numLZ == 31) ? 0 : (spikeWord << (numLZ + 1));
+
+				// Subtract number of leading zeros from neuron ID
+				neuronID -= numLZ;
+				spikes[neuronID].push_back(time);
+				neuronID--;
+			}
+		}
+	}
+}
+
 namespace {
 plog::ConsoleAppender<plog::TxtFormatter> consoleAppender;
 
@@ -1068,7 +1151,8 @@ inline void progress_bar(T p)
 template <typename T>
 void do_run_templ(NetworkBase &network, Real duration, ModelSpecInternal &model,
                   T timestep, bool gpu, bool timing, bool keep_compile,
-                  network_storage &store, bool disable_status)
+                  network_storage &store, bool disable_status,
+                  size_t recording_buffer_size)
 {
 	Logging::init(get_log_level(), get_log_level(), &consoleAppender,
 	              &consoleAppender);
@@ -1116,6 +1200,9 @@ void do_run_templ(NetworkBase &network, Real duration, ModelSpecInternal &model,
 				list_connected_ids.emplace_back(i);
 			}
 		}
+		if (recording_buffer_size > 0) {
+			set_buffer_recording(network.populations(), neuron_groups);
+		}
 	}
 	else {
 		for (size_t i = 0; i < list_connected_ids.size(); i++) {
@@ -1129,6 +1216,9 @@ void do_run_templ(NetworkBase &network, Real duration, ModelSpecInternal &model,
 	model.finalize();
 	auto slm = build_and_make<T>(gpu, model, consoleAppender, execute_all);
 	slm.allocateMem();
+	if (recording_buffer_size > 0) {
+		slm.allocateRecordingBuffers(recording_buffer_size);
+	}
 	slm.initialize();
 	T *time = static_cast<T *>(slm.getSymbol("t"));
 
@@ -1150,13 +1240,15 @@ void do_run_templ(NetworkBase &network, Real duration, ModelSpecInternal &model,
 	std::vector<CurrentSpikeFunction> spike_ptrs;
 	std::vector<CurrentSpikeCountFunction> spike_cnt_ptrs;
 	std::vector<T *> v_ptrs;
+	std::vector<uint32_t *> spike_rec_ptrs;
 
 	// Store which populations are recorded
 	std::vector<size_t> record_full_spike, record_full_v, record_part_spike,
 	    record_part_v;
 	resolve_ptrs<T>(spike_ptrs, spike_cnt_ptrs, v_ptrs, record_full_spike,
 	                record_full_v, record_part_spike, record_part_v,
-	                populations, slm);
+	                spike_rec_ptrs, populations, slm,
+	                recording_buffer_size > 0);
 
 	auto spike_data = prepare_spike_storage(populations);
 	auto v_data =
@@ -1172,11 +1264,37 @@ void do_run_templ(NetworkBase &network, Real duration, ModelSpecInternal &model,
 		}
 		slm.stepTime();
 
-		// Fully recorded spikes
-		for (auto id : record_full_spike) {
-			slm.pullCurrentSpikesFromDevice("pop_" + std::to_string(id));
-			for (unsigned int nid = 0; nid < spike_cnt_ptrs[id](); nid++) {
-				spike_data[id][(spike_ptrs[id]())[nid]].push_back(Real(*time));
+		if (recording_buffer_size == 0) {
+			// Fully recorded spikes
+			for (auto id : record_full_spike) {
+				slm.pullCurrentSpikesFromDevice("pop_" + std::to_string(id));
+				for (unsigned int nid = 0; nid < spike_cnt_ptrs[id](); nid++) {
+					spike_data[id][(spike_ptrs[id]())[nid]].push_back(
+					    Real(*time));
+				}
+			}
+			// Partially recorded spikes
+			for (auto id : record_part_spike) {
+				slm.pullCurrentSpikesFromDevice("pop_" + std::to_string(id));
+				for (unsigned int nid = 0; nid < spike_cnt_ptrs[id](); nid++) {
+					unsigned int n = (spike_ptrs[id]())[nid];
+					if (populations[id][n].signals().is_recording(0)) {
+						spike_data[id][n].push_back(Real(*time));
+					}
+				}
+			}
+		}
+		else {
+			if (((counter + 1) % recording_buffer_size) == 0) {
+				slm.pullRecordingBuffersFromDevice();
+				for (auto id : record_full_spike) {
+					convert_spike_buffer(
+					    spike_data[id], populations[id].size(),
+					    spike_rec_ptrs[id], recording_buffer_size, timestep,
+					    double(counter + 1 - recording_buffer_size) * timestep);
+				}
+				// TODO partial recording
+				// TODO call last time after simulation run
 			}
 		}
 
@@ -1186,17 +1304,6 @@ void do_run_templ(NetworkBase &network, Real duration, ModelSpecInternal &model,
 			for (size_t nid = 0; nid < populations[id].size(); nid++) {
 				(*v_data[id][nid])(counter, 0) = Real(*time);
 				(*v_data[id][nid])(counter, 1) = Real(v_ptrs[id][nid]);
-			}
-		}
-
-		// Partially recorded spikes
-		for (auto id : record_part_spike) {
-			slm.pullCurrentSpikesFromDevice("pop_" + std::to_string(id));
-			for (unsigned int nid = 0; nid < spike_cnt_ptrs[id](); nid++) {
-				unsigned int n = (spike_ptrs[id]())[nid];
-				if (populations[id][n].signals().is_recording(0)) {
-					spike_data[id][n].push_back(Real(*time));
-				}
 			}
 		}
 
@@ -1470,12 +1577,12 @@ void GeNN::do_run(NetworkBase &network, Real duration) const
 	if (m_double) {
 		do_run_templ<double>(network, duration, model, m_timestep, m_gpu,
 		                     m_timing, m_keep_compile, *m_storage,
-		                     m_disable_status);
+		                     m_disable_status, m_recording_buffer_size);
 	}
 	else {
 		do_run_templ<float>(network, duration, model, m_timestep, m_gpu,
 		                    m_timing, m_keep_compile, *m_storage,
-		                    m_disable_status);
+		                    m_disable_status, m_recording_buffer_size);
 	}
 #ifdef NDEBUG
 	if (!m_keep_compile) {
