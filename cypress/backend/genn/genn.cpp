@@ -1131,6 +1131,54 @@ void convert_spike_buffer(std::vector<std::vector<Real>> &spikes,
 	}
 }
 
+/**
+ * @brief Adapted from GeNNs userproject SpikeWriter, this function converts the
+ * spike buffer from GeNNs internal buffering method to a vector of spikes
+ * This method is meant for partial recording
+ *
+ * @param spikes The target container
+ * @param pop target population
+ * @param spkRecord pointer to GeNN spike buffer.
+ * @param numTimesteps this is recording_buffer_size
+ * @param dt timestep
+ * @param offset offset in several consecutive runs
+ */
+void convert_spike_buffer(std::vector<std::vector<Real>> &spikes,
+                          PopulationBase pop, const uint32_t *spkRecord,
+                          unsigned int numTimesteps, double dt, double offset)
+{
+	const unsigned int timestepWords = (pop.size() + 31) / 32;
+	for (unsigned int t = 0; t < numTimesteps; t++) {
+		// Convert timestep to time
+		const double time = offset + (t * dt);
+		// Loop through words representing timestep
+		for (unsigned int w = 0; w < timestepWords; w++) {
+			// Get word
+			uint32_t spikeWord = spkRecord[(t * timestepWords) + w];
+
+			// Calculate neuron id of highest bit of this word
+			unsigned int neuronID = (w * 32) + 31;
+
+			// While bits remain
+			while (spikeWord != 0) {
+				// Calculate leading zeros
+				const int numLZ = __builtin_clz((unsigned int)spikeWord);
+
+				// If all bits have now been processed, zero spike word
+				// Otherwise shift past the spike we have found
+				spikeWord = (numLZ == 31) ? 0 : (spikeWord << (numLZ + 1));
+
+				// Subtract number of leading zeros from neuron ID
+				neuronID -= numLZ;
+				if (pop[neuronID].signals().is_recording(0)) {
+					spikes[neuronID].push_back(time);
+				}
+				neuronID--;
+			}
+		}
+	}
+}
+
 namespace {
 plog::ConsoleAppender<plog::TxtFormatter> consoleAppender;
 
@@ -1293,8 +1341,12 @@ void do_run_templ(NetworkBase &network, Real duration, ModelSpecInternal &model,
 					    spike_rec_ptrs[id], recording_buffer_size, timestep,
 					    double(counter + 1 - recording_buffer_size) * timestep);
 				}
-				// TODO partial recording
-				// TODO call last time after simulation run
+				for (auto id : record_part_spike) {
+					convert_spike_buffer(
+					    spike_data[id], populations[id], spike_rec_ptrs[id],
+					    recording_buffer_size, timestep,
+					    double(counter + 1 - recording_buffer_size) * timestep);
+				}
 			}
 		}
 
@@ -1323,8 +1375,23 @@ void do_run_templ(NetworkBase &network, Real duration, ModelSpecInternal &model,
 		progress_bar<T>(1.0);
 		std::cerr << std::endl;
 	}
-
 	auto sim_fin_t = std::chrono::steady_clock::now();
+	if (recording_buffer_size != 0) {
+		size_t left_over = counter % recording_buffer_size;
+		if (left_over != 0) {
+			slm.pullRecordingBuffersFromDevice();
+			for (auto id : record_full_spike) {
+				convert_spike_buffer(spike_data[id], populations[id].size(),
+				                     spike_rec_ptrs[id], left_over, timestep,
+				                     double(counter - left_over) * timestep);
+			}
+			for (auto id : record_part_spike) {
+				convert_spike_buffer(spike_data[id], populations[id],
+				                     spike_rec_ptrs[id], left_over, timestep,
+				                     double(counter - left_over) * timestep);
+			}
+		}
+	}
 	// Convert spike data
 	for (auto id : record_full_spike) {
 		auto &pop = populations[id];
