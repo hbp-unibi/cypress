@@ -89,7 +89,6 @@ GeNN::GeNN(const Json &setup)
 	if (global_logger().min_level() > LogSeverity::WARNING) {
 		m_disable_status = true;
 	}
-	// TODO
 }
 std::unordered_set<const NeuronType *> GeNN::supported_neuron_types() const
 {
@@ -1194,6 +1193,22 @@ inline void progress_bar(T p)
 	}
 	std::cerr << "]\r";
 }
+
+template <typename T>
+void allocate_buffer_memory(GeNNModels::SharedLibraryModel_<T> &slm,
+                            size_t buffer_size)
+{
+	try {
+		slm.allocateRecordingBuffers(buffer_size);
+	}
+	catch (...) {
+		throw cypress::ExecutionError(
+		    "Backend is out of memory! Please restart the application and set a"
+		    " smaller (zero) recording_buffer_size! Currently size is at " +
+		    std::to_string(buffer_size));
+	}
+}
+
 }  // namespace
 
 template <typename T>
@@ -1265,7 +1280,7 @@ void do_run_templ(NetworkBase &network, Real duration, ModelSpecInternal &model,
 	auto slm = build_and_make<T>(gpu, model, consoleAppender, execute_all);
 	slm.allocateMem();
 	if (recording_buffer_size > 0) {
-		slm.allocateRecordingBuffers(recording_buffer_size);
+		allocate_buffer_memory(slm, recording_buffer_size);
 	}
 	slm.initialize();
 	T *time = static_cast<T *>(slm.getSymbol("t"));

@@ -47,7 +47,7 @@ private:
 	bool m_keep_compile = false;
 	bool m_disable_status = false;
 	std::shared_ptr<network_storage> m_storage;
-	size_t m_recording_buffer_size = 0;
+	size_t m_recording_buffer_size = 10000;
 
 public:
 	/**
@@ -70,7 +70,7 @@ public:
 	 *      "double" : false,
 	 *      "timing" : false,
 	 *      "keep_compile": false,
-     *      "recording_buffer_size" : 0
+     *      "recording_buffer_size" : 10000
 	 * }
 	 */
 	GeNN(const Json &setup = Json());
