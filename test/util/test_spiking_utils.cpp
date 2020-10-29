@@ -211,12 +211,12 @@ TEST(SpikingUtils, spike_time_binning_TTFS)
 
 	EXPECT_FLOAT_EQ(std::numeric_limits<Real>::max(), bins[0]);
 	EXPECT_FLOAT_EQ(std::numeric_limits<Real>::max(), bins[1]);
-	EXPECT_EQ(3.421, bins[2]);
+	EXPECT_EQ(3.421_R, bins[2]);
 	EXPECT_FLOAT_EQ(std::numeric_limits<Real>::max(), bins[3]);
 	EXPECT_FLOAT_EQ(std::numeric_limits<Real>::max(), bins[4]);
 	EXPECT_FLOAT_EQ(std::numeric_limits<Real>::max(), bins[5]);
 	EXPECT_FLOAT_EQ(std::numeric_limits<Real>::max(), bins[6]);
-	EXPECT_EQ(8.95, bins[7]);
+	EXPECT_EQ(8.95_R, bins[7]);
 }
 
 static const std::string test_json =

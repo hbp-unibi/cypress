@@ -271,7 +271,7 @@ TEST(ToJson, recs_to_json) {}
 
 TEST(ToJson, read_recordings_from_json)
 {
-	auto test = {3.0, 4.0, 5.0, 6.0, 78.0};
+	auto test = {Real(3.0), Real(4.0), Real(5.0), Real(6.0), Real(78.0)};
 	Network netw;
 	auto pop = netw.create_population<IfCondExp>(
 	    10, IfCondExpParameters(), IfCondExpSignals().record_spikes());
@@ -298,7 +298,7 @@ TEST(ToJson, read_recordings_from_json)
 
 TEST(ToJson, create_pop_from_json)
 {
-	auto test = {3.0, 4.0, 5.0, 6.0, 78.0};
+	auto test = {Real(3.0), Real(4.0), Real(5.0), Real(6.0), Real(78.0)};
 	Json json({{"type", "SpikeSourceArray"},
 	           {"size", 10},
 	           {"parameters", test},
@@ -361,7 +361,7 @@ TEST(ToJson, create_pop_from_json)
 TEST(ToJson, get_synapse)
 {
 	EXPECT_ANY_THROW(ToJson::get_synapse("dassd", {}));
-	auto params = {0.5, 1.0};
+	std::initializer_list<Real> params({0.5, 1.0});
 	std::shared_ptr<SynapseBase> syn =
 	    ToJson::get_synapse("StaticSynapse", params);
 	EXPECT_TRUE(syn->name() == "StaticSynapse");
@@ -441,9 +441,8 @@ TEST(ToJson, create_conn_from_json)
 	json["nid_tar0"] = 200;
 	json["nid_tar1"] = 210;
 	test_conn(json);
-	json["connections"] = Json({{0,1,0.1,1.0},
-                               {1,400,0.1,1.1},
-                                {2,201,0.1,1.1}});
+	json["connections"] =
+	    Json({{0, 1, 0.1, 1.0}, {1, 400, 0.1, 1.1}, {2, 201, 0.1, 1.1}});
 	json["syn_name"] = "StaticSynapse";
 	Network netw = Network();
 	auto pop = netw.create_population<IfCondExp>(
@@ -607,7 +606,7 @@ TEST(ToJson, roundtrip_conns)
 }
 TEST(ToJson, roundtrip_records)
 {
-	auto test = {3.0, 4.0, 5.0, 6.0, 78.0};
+	std::initializer_list<Real> test({3.0, 4.0, 5.0, 6.0, 78.0});
 	Network netw;
 	auto pop = netw.create_population<IfCondExp>(
 	    4, IfCondExpParameters(), IfCondExpSignals().record_spikes());

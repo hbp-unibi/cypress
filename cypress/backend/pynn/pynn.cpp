@@ -896,7 +896,7 @@ py::object PyNN::group_connect(const std::vector<PopulationBase> &populations,
 	}
 	Real delay = params[1];
 	if (timestep != 0) {
-		delay = std::max(round(delay / timestep), 1.0) * timestep;
+		delay = std::max(round(delay / timestep), Real(1.0)) * timestep;
 	}
 
 	double weight = current_based ? params[0] : fabs(params[0]);
@@ -1016,9 +1016,9 @@ std::tuple<py::object, py::object> PyNN::list_connect(
 			(*conns_exc)(counter_ex, 1) = i.tar;
 			(*conns_exc)(counter_ex, 2) = i.SynapseParameters[0];
 			if (timestep != 0) {
-				Real delay =
-				    std::max(round(i.SynapseParameters[1] / timestep), 1.0) *
-				    timestep;
+				Real delay = std::max(round(i.SynapseParameters[1] / timestep),
+				                      Real(1.0)) *
+				             timestep;
 				(*conns_exc)(counter_ex, 3) = delay;
 			}
 			else {
@@ -1039,9 +1039,9 @@ std::tuple<py::object, py::object> PyNN::list_connect(
 				(*conns_inh)(counter_in, 2) = i.SynapseParameters[0];
 			}
 			if (timestep != 0) {
-				Real delay =
-				    std::max(round(i.SynapseParameters[1] / timestep), 1.0) *
-				    timestep;
+				Real delay = std::max(round(i.SynapseParameters[1] / timestep),
+				                      Real(1.0)) *
+				             timestep;
 				(*conns_inh)(counter_in, 3) = delay;
 			}
 			else {
@@ -1742,18 +1742,19 @@ void PyNN::do_run(NetworkBase &source, Real duration) const
 
 	Real duration_rounded = 0;
 	if (timestep != 0) {
-		duration_rounded = int((duration + timestep) / timestep) * timestep;
+		duration_rounded =
+		    int((duration + timestep) / timestep) * timestep + timestep;
 	}
 	else {
 		duration_rounded = duration;
 	}
-	double duration_pure = 0.0;
+	Real duration_pure = 0.0;
 	if (m_normalised_simulator == "nmmc1") {
 		auto util = py::module::import("spinn_front_end_common.utilities");
 		size_t time_scale = py::cast<size_t>(util.attr("globals_variables")
 		                                         .attr("get_simulator")()
 		                                         .attr("time_scale_factor"));
-		duration_pure = double(time_scale) * duration_rounded / 1000.0;
+		duration_pure = Real(time_scale) * duration_rounded / 1000.0_R;
 	}
 
 	auto buildconn = std::chrono::steady_clock::now();
@@ -2247,6 +2248,6 @@ void PyNN::spikey_run(NetworkBase &source, Real duration, py::module &pynn,
 	                std::chrono::duration<Real>(execrun - buildconn).count(),
 	                std::chrono::duration<Real>(buildconn - start).count(),
 	                std::chrono::duration<Real>(execrun - start).count(),
-	                duration * 1.0e-7});
+	                duration * 1.0e-7_R});
 }
 }  // namespace cypress

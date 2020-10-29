@@ -88,7 +88,7 @@ TEST(delta_sigma, encode)
 	// Expect full spike rate after the step function goes to one
 	const std::vector<Real> spikes =
 	    DeltaSigma::encode(f, wnd, 0.0, 1.0, 0.0, 1.0);
-	EXPECT_LT(499U, spikes.size());
+	EXPECT_LE(499U, spikes.size());
 	for (size_t i = 0; i < spikes.size(); i++) {
 		EXPECT_NEAR((i + 501.0) * 1e-3, spikes[i], 1e-3);
 	}
