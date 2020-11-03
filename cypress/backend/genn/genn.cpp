@@ -168,6 +168,22 @@ inline bool any_record(const PopulationBase &pop, size_t ind)
 	return false;
 }
 
+inline bool any_record_at_all(const std::vector<PopulationBase> &pops,
+                              size_t ind)
+{
+	for (const auto &pop : pops) {
+		if (pop.homogeneous_record() && pop.signals().is_recording(ind)) {
+			return true;
+		}
+	}
+	for (const auto &pop : pops) {
+		if (any_record(pop, ind)) {
+			return true;
+		}
+	}
+	return false;
+}
+
 /**
  * @brief Creates a GeNN neuron group for given population
  *
@@ -1279,8 +1295,12 @@ void do_run_templ(NetworkBase &network, Real duration, ModelSpecInternal &model,
 	model.finalize();
 	auto slm = build_and_make<T>(gpu, model, consoleAppender, execute_all);
 	slm.allocateMem();
+	bool allocated_memory = false;
 	if (recording_buffer_size > 0) {
-		allocate_buffer_memory(slm, recording_buffer_size);
+		if (any_record_at_all(populations, 0)) {
+			allocate_buffer_memory(slm, recording_buffer_size);
+			allocated_memory = true;
+		}
 	}
 	slm.initialize();
 	T *time = static_cast<T *>(slm.getSymbol("t"));
@@ -1392,18 +1412,22 @@ void do_run_templ(NetworkBase &network, Real duration, ModelSpecInternal &model,
 	}
 	auto sim_fin_t = std::chrono::steady_clock::now();
 	if (recording_buffer_size != 0) {
-		size_t left_over = counter % recording_buffer_size;
-		if (left_over != 0) {
-			slm.pullRecordingBuffersFromDevice();
-			for (auto id : record_full_spike) {
-				convert_spike_buffer(spike_data[id], populations[id].size(),
-				                     spike_rec_ptrs[id], left_over, timestep,
-				                     double(counter - left_over) * timestep);
-			}
-			for (auto id : record_part_spike) {
-				convert_spike_buffer(spike_data[id], populations[id],
-				                     spike_rec_ptrs[id], left_over, timestep,
-				                     double(counter - left_over) * timestep);
+		if (allocated_memory) {
+			size_t left_over = counter % recording_buffer_size;
+			if (left_over != 0) {
+				slm.pullRecordingBuffersFromDevice();
+				for (auto id : record_full_spike) {
+					convert_spike_buffer(
+					    spike_data[id], populations[id].size(),
+					    spike_rec_ptrs[id], left_over, timestep,
+					    double(counter - left_over) * timestep);
+				}
+				for (auto id : record_part_spike) {
+					convert_spike_buffer(
+					    spike_data[id], populations[id], spike_rec_ptrs[id],
+					    left_over, timestep,
+					    double(counter - left_over) * timestep);
+				}
 			}
 		}
 	}
