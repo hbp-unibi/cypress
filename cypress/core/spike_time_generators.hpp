@@ -27,6 +27,7 @@
 #ifndef CYPRESS_CORE_SPIKE_TIME_GENERATORS
 #define CYPRESS_CORE_SPIKE_TIME_GENERATORS
 
+#include <cstddef>
 #include <cypress/core/types.hpp>
 #include <vector>
 
@@ -34,13 +35,13 @@ namespace cypress {
 namespace spikes {
 
 std::vector<Real> poisson(Real t_start, Real t_end, Real rate,
-                          size_t seed = 0.0);
+                          std::size_t seed = 0.0);
 
 std::vector<Real> constant_interval(Real t_start, Real t_end, Real interval,
-                                    Real sigma = 0.0, size_t seed = 0);
+                                    Real sigma = 0.0, std::size_t seed = 0);
 
 std::vector<Real> constant_frequency(Real t_start, Real t_end, Real frequency,
-                                     Real sigma = 0.0, size_t seed = 0);
+                                     Real sigma = 0.0, std::size_t seed = 0);
 }  // namespace spikes
 }  // namespace cypress
 
