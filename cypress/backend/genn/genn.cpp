@@ -169,14 +169,20 @@ inline bool any_record(const PopulationBase &pop, size_t ind)
 }
 
 inline bool any_record_at_all(const std::vector<PopulationBase> &pops,
-                              size_t ind)
+                              size_t ind, bool count_sources)
 {
 	for (const auto &pop : pops) {
+		if (!count_sources && pop.type().spike_source) {
+			continue;
+		}
 		if (pop.homogeneous_record() && pop.signals().is_recording(ind)) {
 			return true;
 		}
 	}
 	for (const auto &pop : pops) {
+		if (!count_sources && pop.type().spike_source) {
+			continue;
+		}
 		if (any_record(pop, ind)) {
 			return true;
 		}
@@ -1297,7 +1303,7 @@ void do_run_templ(NetworkBase &network, Real duration, ModelSpecInternal &model,
 	slm.allocateMem();
 	bool allocated_memory = false;
 	if (recording_buffer_size > 0) {
-		if (any_record_at_all(populations, 0)) {
+		if (any_record_at_all(populations, 0, false)) {
 			allocate_buffer_memory(slm, recording_buffer_size);
 			allocated_memory = true;
 		}
@@ -1331,7 +1337,7 @@ void do_run_templ(NetworkBase &network, Real duration, ModelSpecInternal &model,
 	resolve_ptrs<T>(spike_ptrs, spike_cnt_ptrs, v_ptrs, record_full_spike,
 	                record_full_v, record_part_spike, record_part_v,
 	                spike_rec_ptrs, populations, slm,
-	                recording_buffer_size > 0);
+	                allocated_memory);
 
 	auto spike_data = prepare_spike_storage(populations);
 	auto v_data =
@@ -1347,7 +1353,7 @@ void do_run_templ(NetworkBase &network, Real duration, ModelSpecInternal &model,
 		}
 		slm.stepTime();
 
-		if (recording_buffer_size == 0) {
+		if (!allocated_memory) {
 			// Fully recorded spikes
 			for (auto id : record_full_spike) {
 				slm.pullCurrentSpikesFromDevice("pop_" + std::to_string(id));

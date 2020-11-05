@@ -90,7 +90,7 @@ TEST(spike_source, seed)
 	    net, 10, SpikeSourcePoissonParameters().start(5).duration(100).rate(50),
 	    SpikeSourcePoissonSignals().record_spikes());
 
-	net.run("genn={\"recording_buffer_size\": 0}");
+	net.run("genn");
 	auto spikes1 = pop1[0].signals().get_spikes();
 	auto spikes12 = pop1[1].signals().get_spikes();
 	auto spikes2 = pop2[0].signals().get_spikes();
@@ -135,7 +135,7 @@ TEST(spike_source, seed)
 	        1234),
 	    SpikeSourcePoissonSignals().record_spikes());
 
-	net2.run("genn={\"recording_buffer_size\": 0}");
+	net2.run("genn");
 	auto spikes1_1 = pop1_1[0].signals().get_spikes();
 	EXPECT_EQ(spikes1.size(), spikes1_1.size());
 	if (spikes1.size() == spikes1_1.size()) {
@@ -150,7 +150,7 @@ TEST(spike_source, seed)
 	    SpikeSourcePoissonParameters().start(5).duration(100).rate(50),
 	    SpikeSourcePoissonSignals().record_spikes());
 	RNG::instance().seed(1234);
-	net3.run("genn={\"recording_buffer_size\": 0}");
+	net3.run("genn");
 	auto spikes2_1 = pop2_1[0].signals().get_spikes();
 	EXPECT_EQ(spikes1.size(), spikes2_1.size());
 	if (spikes1.size() == spikes2_1.size()) {
@@ -165,7 +165,7 @@ TEST(spike_source, seed)
 	    SpikeSourcePoissonParameters().start(5).duration(100).rate(50),
 	    SpikeSourcePoissonSignals().record_spikes());
 	RNG::instance().seed(1236);
-	net4.run("genn={\"recording_buffer_size\": 0}");
+	net4.run("genn");
 	auto spikes3_1 = pop3_1[0].signals().get_spikes();
 	EXPECT_FALSE(spikes1[0] == spikes3_1[0]);
 	EXPECT_FALSE(spikes1[1] == spikes3_1[1]);
