@@ -278,17 +278,6 @@ public:
 	                     std::vector<LocalConnection> &tar) const = 0;
 
 	/**
-	 * Flag that allows to use the backend connection descriptor instead of a
-	 * list connector. Returns true if backend connector should be used (if
-	 * available)
-	 *
-	 * @param descr is the connection descriptor containing the data detailing
-	 * the connection.
-	 * @return true if connection is valid and makes sense
-	 */
-	virtual bool group_connect(const ConnectionDescriptor &descr) const = 0;
-
-	/**
 	 * Returns true if the connector can create the connections for the given
 	 * connection descriptor. While most connectors will always be able to
 	 * create a connection, for example a one-to-one connector
@@ -901,11 +890,6 @@ public:
 	void connect(const ConnectionDescriptor &descr,
 	             std::vector<LocalConnection> &tar) const override;
 
-	bool group_connect(const ConnectionDescriptor &) const override
-	{
-		return true;
-	}
-
 	bool valid(const ConnectionDescriptor &) const override { return true; }
 
 	size_t size(size_t size_src_pop, size_t size_target_pop) const override
@@ -928,11 +912,6 @@ public:
 
 	void connect(const ConnectionDescriptor &descr,
 	             std::vector<LocalConnection> &tar) const override;
-
-	bool group_connect(const ConnectionDescriptor &) const override
-	{
-		return true;
-	}
 
 	bool valid(const ConnectionDescriptor &descr) const override
 	{
@@ -998,8 +977,6 @@ public:
 	void connect(const ConnectionDescriptor &descr,
 	             std::vector<LocalConnection> &tar) const override;
 
-	bool group_connect(const ConnectionDescriptor &) const override;
-
 	bool valid(const ConnectionDescriptor &) const override { return true; }
 
 	size_t size(size_t, size_t) const override { return m_connections.size(); }
@@ -1022,11 +999,6 @@ protected:
 
 public:
 	std::string name() const override { return "FunctorConnector"; }
-
-	bool group_connect(const ConnectionDescriptor &) const override
-	{
-		return false;
-	}
 };
 
 template <typename Callback>
@@ -1068,11 +1040,6 @@ public:
 	using UniformConnector::UniformConnector;
 
 	std::string name() const override { return "UniformFunctorConnector"; }
-
-	bool group_connect(const ConnectionDescriptor &) const override
-	{
-		return false;
-	}
 
 	size_t size(size_t size_src_pop, size_t size_target_pop) const override
 	{
@@ -1176,11 +1143,6 @@ public:
 		}
 	}
 
-	bool group_connect(const ConnectionDescriptor &) const override
-	{
-		return false;
-	}
-
 	bool valid(const ConnectionDescriptor &descr) const override
 	{
 		return m_connector->valid(descr);
@@ -1218,14 +1180,6 @@ public:
 	          self_connections)
 	{
 		FixedProbabilityConnectorBase::name_string = "RandomConnector";
-	}
-
-	bool group_connect(const ConnectionDescriptor &) const override
-	{
-		if (Base::m_seed_given) {
-			return false;
-		}
-		return true;
 	}
 
 	std::string name() const override { return "RandomConnector"; }
@@ -1355,14 +1309,6 @@ public:
 		}
 	}
 
-	bool group_connect(const ConnectionDescriptor &) const override
-	{
-		if (Base::m_seed_given) {
-			return false;
-		}
-		return true;
-	};
-
 	/**
 	 * Checks the validity of the connection. For the FixedFanInConnector to be
 	 * valid, the number of neurons in the source population must be at least
@@ -1431,15 +1377,6 @@ public:
 			    true);
 		}
 	}
-
-	bool group_connect(const ConnectionDescriptor &) const override
-	{
-		return false;
-		/*if (Base::m_seed_given) {
-		    return false;
-		}
-		return true;*/
-	};
 
 	/**
 	 * Checks the validity of the connection. For the FixedFanOutConnector,

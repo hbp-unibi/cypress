@@ -111,11 +111,6 @@ void FromListConnector::connect(const ConnectionDescriptor &descr,
 	}
 }
 
-bool FromListConnector::group_connect(const ConnectionDescriptor &) const
-{
-	return false;
-}
-
 void FromListConnector::update_learned_weights()
 {
 	if (!m_synapse->learning()) {

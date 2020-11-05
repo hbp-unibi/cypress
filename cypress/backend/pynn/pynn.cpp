@@ -1719,8 +1719,7 @@ void PyNN::do_run(NetworkBase &source, Real duration) const
 		const auto &conn = source.connections()[i];
 		auto it = SUPPORTED_CONNECTIONS.find(conn.connector().name());
 
-		if (it != SUPPORTED_CONNECTIONS.end() &&
-		    conn.connector().group_connect(conn)) {
+		if (it != SUPPORTED_CONNECTIONS.end()) {
 			// Group connections
 			auto proj =
 			    group_connect(populations, pypopulations, conn, pynn,
@@ -2173,7 +2172,6 @@ void PyNN::spikey_run(NetworkBase &source, Real duration, py::module &pynn,
 		auto it = SUPPORTED_CONNECTIONS.find(conn.connector().name());
 
 		if (it != SUPPORTED_CONNECTIONS.end() &&
-		    conn.connector().group_connect(conn) &&
 		    check_full_pop(conn, populations)) {
 			// Group connections
 			auto proj = group_connect7(populations, pypopulations, conn, pynn);
