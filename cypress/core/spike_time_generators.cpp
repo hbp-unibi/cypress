@@ -18,19 +18,17 @@
 
 #include <algorithm>
 #include <cypress/core/spike_time_generators.hpp>
+#include <cypress/util/rng.hpp>
 #include <random>
 
 namespace cypress {
 namespace spikes {
 
-std::vector<Real> poisson(Real t_start, Real t_end, Real rate, size_t seed)
+std::vector<Real> poisson(Real t_start, Real t_end, Real rate)
 {
+    auto& re = RNG::instance().get();
 	std::vector<Real> result;
 	if (rate > 0.0) {
-		std::default_random_engine re(std::random_device{}());
-		if (seed != 0) {
-			re = std::default_random_engine(seed);
-		}
 		std::exponential_distribution<Real> dist(rate / 1000.0);
 		Real t = t_start;
 		while (true) {
@@ -47,12 +45,9 @@ std::vector<Real> poisson(Real t_start, Real t_end, Real rate, size_t seed)
 }
 
 std::vector<Real> constant_interval(Real t_start, Real t_end, Real interval,
-                                    Real sigma, size_t seed)
+                                    Real sigma)
 {
-	std::default_random_engine re(std::random_device{}());
-	if (seed != 0) {
-		re = std::default_random_engine(seed);
-	}
+    auto& re = RNG::instance().get();
 	std::normal_distribution<Real> distribution(0.0, sigma);
 
 	const size_t n_samples = (t_end - t_start) / interval;
@@ -65,9 +60,9 @@ std::vector<Real> constant_interval(Real t_start, Real t_end, Real interval,
 }
 
 std::vector<Real> constant_frequency(Real t_start, Real t_end, Real frequency,
-                                     Real sigma, size_t seed)
+                                     Real sigma)
 {
-	return constant_interval(t_start, t_end, 1000.0 / frequency, sigma, seed);
+	return constant_interval(t_start, t_end, 1000.0 / frequency, sigma);
 }
 }  // namespace spikes
 }  // namespace cypress

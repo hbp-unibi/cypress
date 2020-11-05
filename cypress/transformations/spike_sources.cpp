@@ -18,6 +18,7 @@
 
 #include <cypress/core/spike_time_generators.hpp>
 #include <cypress/transformations/spike_sources.hpp>
+#include <cypress/util/rng.hpp>
 
 namespace cypress {
 namespace transformations {
@@ -67,13 +68,15 @@ void CFToCI::do_transform_signals(const SpikeSourceConstFreqSignals &src,
 void PoissonToSA::do_transform_parameters(
     const SpikeSourcePoissonParameters &src, SpikeSourceArrayParameters tar)
 {
-	tar.spike_times(spikes::poisson(src.start(), src.start() + src.duration(),
-	                                src.rate(), src.seed()));
+	tar.spike_times(
+	    spikes::poisson(src.start(), src.start() + src.duration(), src.rate()));
 }
 
 bool PoissonToSA::do_dehomogenise_parameters(
-    const SpikeSourcePoissonParameters &)
+    const SpikeSourcePoissonParameters &src)
 {
+    if(src.seed()){
+	RNG::instance().seed(src.seed());}
 	return true;
 }
 
@@ -89,14 +92,16 @@ void PoissonToSA::do_transform_signals(const SpikeSourcePoissonSignals &src,
 void CFToSA::do_transform_parameters(const SpikeSourceConstFreqParameters &src,
                                      SpikeSourceArrayParameters tar)
 {
-	tar.spike_times(
-	    spikes::constant_frequency(src.start(), src.start() + src.duration(),
-	                               src.rate(), src.sigma(), src.seed()));
+	tar.spike_times(spikes::constant_frequency(
+	    src.start(), src.start() + src.duration(), src.rate(), src.sigma()));
 }
 
 bool CFToSA::do_dehomogenise_parameters(
     const SpikeSourceConstFreqParameters &src)
 {
+    if(src.seed()){
+	RNG::instance().seed(src.seed());
+    }
 	return src.sigma() > 0.0;
 }
 

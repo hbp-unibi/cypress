@@ -92,6 +92,7 @@ TEST(spike_source, seed)
 
 	net.run("genn={\"recording_buffer_size\": 0}");
 	auto spikes1 = pop1[0].signals().get_spikes();
+	auto spikes12 = pop1[1].signals().get_spikes();
 	auto spikes2 = pop2[0].signals().get_spikes();
 	auto spikes3 = pop3[0].signals().get_spikes();
 	auto spikes4 = pop4[0].signals().get_spikes();
@@ -102,6 +103,11 @@ TEST(spike_source, seed)
 			EXPECT_FLOAT_EQ(spikes1[i], spikes2[i]);
 		}
 	}
+	EXPECT_FALSE(spikes1[0] == spikes12[0]);
+	EXPECT_FALSE(spikes1[1] == spikes12[1]);
+	EXPECT_FALSE(spikes1[2] == spikes12[2]);
+	EXPECT_FALSE(spikes1[3] == spikes12[3]);
+
 	EXPECT_FALSE(spikes1[0] == spikes3[0]);
 	EXPECT_FALSE(spikes1[1] == spikes3[1]);
 	EXPECT_FALSE(spikes1[2] == spikes3[2]);
@@ -121,5 +127,49 @@ TEST(spike_source, seed)
 	EXPECT_FALSE(spikes4[1] == spikes5[1]);
 	EXPECT_FALSE(spikes4[2] == spikes5[2]);
 	EXPECT_FALSE(spikes4[3] == spikes5[3]);
+
+	Network net2;
+	Population<SpikeSourcePoisson> pop1_1(
+	    net2, 10,
+	    SpikeSourcePoissonParameters().start(5).duration(100).rate(50).seed(
+	        1234),
+	    SpikeSourcePoissonSignals().record_spikes());
+
+	net2.run("genn={\"recording_buffer_size\": 0}");
+	auto spikes1_1 = pop1_1[0].signals().get_spikes();
+	EXPECT_EQ(spikes1.size(), spikes1_1.size());
+	if (spikes1.size() == spikes1_1.size()) {
+		for (size_t i = 0; i < spikes1.size(); i++) {
+			EXPECT_FLOAT_EQ(spikes1[i], spikes1_1[i]);
+		}
+	}
+
+	Network net3;
+	Population<SpikeSourcePoisson> pop2_1(
+	    net3, 10,
+	    SpikeSourcePoissonParameters().start(5).duration(100).rate(50),
+	    SpikeSourcePoissonSignals().record_spikes());
+	RNG::instance().seed(1234);
+	net3.run("genn={\"recording_buffer_size\": 0}");
+	auto spikes2_1 = pop2_1[0].signals().get_spikes();
+	EXPECT_EQ(spikes1.size(), spikes2_1.size());
+	if (spikes1.size() == spikes2_1.size()) {
+		for (size_t i = 0; i < spikes2_1.size(); i++) {
+			EXPECT_FLOAT_EQ(spikes1[i], spikes2_1[i]);
+		}
+	}
+
+	Network net4;
+	Population<SpikeSourcePoisson> pop3_1(
+	    net4, 10,
+	    SpikeSourcePoissonParameters().start(5).duration(100).rate(50),
+	    SpikeSourcePoissonSignals().record_spikes());
+	RNG::instance().seed(1236);
+	net4.run("genn={\"recording_buffer_size\": 0}");
+	auto spikes3_1 = pop3_1[0].signals().get_spikes();
+	EXPECT_FALSE(spikes1[0] == spikes3_1[0]);
+	EXPECT_FALSE(spikes1[1] == spikes3_1[1]);
+	EXPECT_FALSE(spikes1[2] == spikes3_1[2]);
+	EXPECT_FALSE(spikes1[3] == spikes3_1[3]);
 }
 }  // namespace cypress

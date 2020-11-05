@@ -6,7 +6,13 @@ This page (at the moment) can be used to search for extended functionality of cy
 
 Note: all config parameters that are introduced in the following are provided via 'simulator={\"option\" : value, \"option2\" : value2}' (in all examples via the cli) at runtime.
 
-\section GeNN
+\subsection sec0_1 Random number generation and seeds
+There are two possible scenarios for random number generation: random input/source spikes and probability-based connectors.
+ - Connectors provide a seed option, as well as choosing the RNG algorithm and have to be fixed connector wise
+ - Spikes can be seeded connector wise (it a parameter of the neuron model), or globally using `cypress::RNG::instance().seed(1234)`, where `1234` has to be replaced with your seed. 
+
+\section sec1_1 Backend specific details
+\subsection sec1_2 GeNN
 
 When building cypress, GeNN is automatically download and installed. Currently, the backend implemntation does not allow to set individual neuron parameters. Only population wise varying parameters are allowed. 
 GeNN is only build once. Make sure to have the correct CUDA_PATH defined at built time, otherwise GeNN is built without GPU support. See also <a href="http://genn-team.github.io/genn/">GeNN documentation</a> for more detailed information. The cypress backend is loaded at runtime, so building new applications it is irrelevant whether CUDA_PATH is defined or not. 
@@ -16,7 +22,7 @@ At runtime, you have the following options:
  - `gpu`: True to actually use an nvidia gpu, false for CPU simulation. Failure on missing Cuda, missing Cuda at first built of cypress or no supported card available. Default: false
  - `double`: False for using floats internally, True for double. Default: false
 
-\section NEST
+\subsection sec2_2 NEST
 Install using the <a href="https://github.com/hbp-unibi/cypress_example/blob/master/virtualenvs.sh">Setup script</a>. It will install everything to `~/venvs/nest`. Activate the environment via `source ~/venvs/nest/bin/activate`.
 
 Runtime configuration options are e.g. 
@@ -30,7 +36,7 @@ NEST actually comes with two backends, one via Python (using pyNN --> `pynn.nest
 
 NOTE: Spike values that are smaller than your timestep will be ignored! To be safe, use the simulators only after a few ms!
 
-\section Spikey
+\subsection sec2_3 Spikey
 
 For software installation to standard directory `~/venvs/spikey/` refer to <a href="https://github.com/hbp-unibi/cypress_example/blob/master/virtualenvs.sh">Setup script</a>. Uncomment the last code part by removing  the : " and ". If you do not want to install nest, do not forget to comment out the middle part of the script. Afterwards, execute the script to install the Spikey software. If you stumble upon some errors about missing packages, please refer to the <a href="https://electronicvisions.github.io/hbp-sp9-guidebook/pm/spikey/appendix.html#setup-software">guidebook</a>. After installation, activate the virtual environment via `source ~/venvs/spikey/bin/activate` before working with Spikey.
 
@@ -53,7 +59,7 @@ Furthermore:
 
 Keep an eye at the logs, if the system reports that spike buffers are almost full, you might have lost some of the spikes. Either, spike rate is too high, or simulation time to long!
 
-\section SpiNNaker
+\subsection sec2_4 SpiNNaker
 
 SpiNNaker is connected via LAN. I recommend to use a usb-lan dongle if no lan port is free on your system. Please set a manual IP address like 192.168.240.99 and a sub-mask 255.255.255.0. The small SpiNN3/large SpiNN5 boards will have the IP 192.168.240.253/192.168.240.1. This IP must be set in `~/.spynnaker.cfg` (created after first try to simulate something on SpiNNaker) as `machineName`, as well as the `version` (3 or 5).
 
@@ -65,7 +71,7 @@ Issues might relate to overloaded cores, not finished cores, or dropped packages
 
 Another issue is related to a fixed overhead of projections/connections. If you encounter a situation where the system is running out of memory before actually running the simulation, although the network should map to the hardware (less neurons than number of cores times 255, where SpiNN3 has 16*4 and SpiNN5 16*49 cores for simulation of neurons), you can try to merge your connections in a single FromListConnector. Note also, that every high-level population is mapped to at least on core, and there is at most one population per core, such that you cannot have more populations than cores.
 
-\section BrainScaleS
+\subsection sec2_5 BrainScaleS
 The BrainScaleS interface library  <a href="https://github.com/hbp-unibi/BS2Cypress">BS2Cypress</a> is loaded dynamically at runtime. For more details on the hardware system, you should consider <a href="https://arxiv.org/abs/1703.01909">the paper</a> or take a look at the <a href="https://electronicvisions.github.io/hbp-sp9-guidebook/pm/pm.html"> guidebook</a>. The backend supports the following runtime configurations:
 
  - `neuron_size` Number of neuron circuits combined to one neuron. Possible values: 2,4,6,...; Default: 4
