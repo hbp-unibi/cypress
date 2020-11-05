@@ -15,7 +15,7 @@
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 # Download the JSON library
-message(STATUS "Download https://github.com/nlohmann/json/releases/download/v3.8.0/json.hpp")
+message(STATUS "Download https://github.com/nlohmann/json/releases/download/v3.9.1/json.hpp")
 file(DOWNLOAD
 	https://github.com/nlohmann/json/releases/download/v3.9.1/json.hpp
 	${CMAKE_BINARY_DIR}/include/cypress/json.hpp
