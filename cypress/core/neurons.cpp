@@ -42,9 +42,9 @@ const SpikeSourceArray &SpikeSourceArray::inst()
  */
 
 SpikeSourcePoisson::SpikeSourcePoisson()
-    : NeuronTypeBase("SpikeSourceArray", {"rate", "start", "duration"},
-                     {"Hz", "ms", "ms"}, {{0.0, 0.0, 1e3}}, {"spikes"}, {"ms"},
-                     false, true)
+    : NeuronTypeBase("SpikeSourceArray", {"rate", "start", "duration", "seed"},
+                     {"Hz", "ms", "ms", ""}, {{0.0, 0.0, 1e3, 0.0}}, {"spikes"},
+                     {"ms"}, false, true)
 {
 }
 
@@ -60,8 +60,8 @@ const SpikeSourcePoisson &SpikeSourcePoisson::inst()
 
 SpikeSourceConstFreq::SpikeSourceConstFreq()
     : NeuronTypeBase("SpikeSourceConstFreq",
-                     {"rate", "start", "duration", "sigma"},
-                     {"Hz", "ms", "ms", "ms"}, {{0.0, 0.0, 1e3, 0.0}},
+                     {"rate", "start", "duration", "sigma", "seed"},
+                     {"Hz", "ms", "ms", "ms", ""}, {{0.0, 0.0, 1e3, 0.0, 0.0}},
                      {"spikes"}, {"ms"}, false, true)
 {
 }
@@ -78,8 +78,8 @@ const SpikeSourceConstFreq &SpikeSourceConstFreq::inst()
 
 SpikeSourceConstInterval::SpikeSourceConstInterval()
     : NeuronTypeBase("SpikeSourceConstFreq",
-                     {"interval", "start", "duration", "sigma"},
-                     {"ms", "ms", "ms", "ms"}, {{0.0, 0.0, 1e3, 0.0}},
+                     {"interval", "start", "duration", "sigma", "seed"},
+                     {"ms", "ms", "ms", "ms", ""}, {{0.0, 0.0, 1e3, 0.0, 0.0}},
                      {"spikes"}, {"ms"}, false, true)
 {
 }

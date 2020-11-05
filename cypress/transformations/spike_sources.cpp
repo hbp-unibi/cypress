@@ -50,7 +50,8 @@ void CFToCI::do_transform_parameters(const SpikeSourceConstFreqParameters &src,
 {
 	tar.interval(1000.0 / src.rate())
 	    .start(src.start())
-	    .duration(src.duration());
+	    .duration(src.duration())
+	    .seed(src.seed());
 }
 
 void CFToCI::do_transform_signals(const SpikeSourceConstFreqSignals &src,
@@ -66,8 +67,8 @@ void CFToCI::do_transform_signals(const SpikeSourceConstFreqSignals &src,
 void PoissonToSA::do_transform_parameters(
     const SpikeSourcePoissonParameters &src, SpikeSourceArrayParameters tar)
 {
-	tar.spike_times(
-	    spikes::poisson(src.start(), src.start() + src.duration(), src.rate()));
+	tar.spike_times(spikes::poisson(src.start(), src.start() + src.duration(),
+	                                src.rate(), src.seed()));
 }
 
 bool PoissonToSA::do_dehomogenise_parameters(
@@ -88,8 +89,9 @@ void PoissonToSA::do_transform_signals(const SpikeSourcePoissonSignals &src,
 void CFToSA::do_transform_parameters(const SpikeSourceConstFreqParameters &src,
                                      SpikeSourceArrayParameters tar)
 {
-	tar.spike_times(spikes::constant_frequency(
-	    src.start(), src.start() + src.duration(), src.rate(), src.sigma()));
+	tar.spike_times(
+	    spikes::constant_frequency(src.start(), src.start() + src.duration(),
+	                               src.rate(), src.sigma(), src.seed()));
 }
 
 bool CFToSA::do_dehomogenise_parameters(
@@ -103,6 +105,5 @@ void CFToSA::do_transform_signals(const SpikeSourceConstFreqSignals &src,
 {
 	tar.record_spikes(src.is_recording_spikes());
 }
-}
-}
-
+}  // namespace transformations
+}  // namespace cypress

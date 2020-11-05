@@ -24,7 +24,7 @@ namespace cypress {
 
 TEST(v_init, v_init)
 {
-	auto v_rest = [](size_t i) { return -80.0f + i * 2.0f;};
+	auto v_rest = [](size_t i) { return -80.0f + i * 2.0f; };
 
 	auto run = [v_rest](const std::string &sim) {
 		std::cout << "v_init integration test running on " << sim << std::endl;
@@ -55,7 +55,7 @@ TEST(v_init, v_init)
 	};
 
 	// Run on all available PyNN platforms
-	for (const std::string &sim: PyNN::simulators()) {
+	for (const std::string &sim : PyNN::simulators()) {
 		run("pynn." + sim);
 	}
 
@@ -64,4 +64,62 @@ TEST(v_init, v_init)
 		run("nest");
 	}
 }
+TEST(spike_source, seed)
+{
+	Network net;
+	net.logger().min_level(LogSeverity::DEBUG);
+	Population<SpikeSourcePoisson> pop1(
+	    net, 10,
+	    SpikeSourcePoissonParameters().start(5).duration(100).rate(50).seed(
+	        1234),
+	    SpikeSourcePoissonSignals().record_spikes());
+	Population<SpikeSourcePoisson> pop2(
+	    net, 10,
+	    SpikeSourcePoissonParameters().start(5).duration(100).rate(50).seed(
+	        1234),
+	    SpikeSourcePoissonSignals().record_spikes());
+	Population<SpikeSourcePoisson> pop3(
+	    net, 10,
+	    SpikeSourcePoissonParameters().start(5).duration(100).rate(50).seed(
+	        1236),
+	    SpikeSourcePoissonSignals().record_spikes());
+	Population<SpikeSourcePoisson> pop4(
+	    net, 10, SpikeSourcePoissonParameters().start(5).duration(100).rate(50),
+	    SpikeSourcePoissonSignals().record_spikes());
+	Population<SpikeSourcePoisson> pop5(
+	    net, 10, SpikeSourcePoissonParameters().start(5).duration(100).rate(50),
+	    SpikeSourcePoissonSignals().record_spikes());
+
+	net.run("genn={\"recording_buffer_size\": 0}");
+	auto spikes1 = pop1[0].signals().get_spikes();
+	auto spikes2 = pop2[0].signals().get_spikes();
+	auto spikes3 = pop3[0].signals().get_spikes();
+	auto spikes4 = pop4[0].signals().get_spikes();
+	auto spikes5 = pop5[0].signals().get_spikes();
+	EXPECT_EQ(spikes1.size(), spikes2.size());
+	if (spikes1.size() == spikes2.size()) {
+		for (size_t i = 0; i < spikes1.size(); i++) {
+			EXPECT_FLOAT_EQ(spikes1[i], spikes2[i]);
+		}
+	}
+	EXPECT_FALSE(spikes1[0] == spikes3[0]);
+	EXPECT_FALSE(spikes1[1] == spikes3[1]);
+	EXPECT_FALSE(spikes1[2] == spikes3[2]);
+	EXPECT_FALSE(spikes1[3] == spikes3[3]);
+
+	EXPECT_FALSE(spikes1[0] == spikes4[0]);
+	EXPECT_FALSE(spikes1[1] == spikes4[1]);
+	EXPECT_FALSE(spikes1[2] == spikes4[2]);
+	EXPECT_FALSE(spikes1[3] == spikes4[3]);
+
+	EXPECT_FALSE(spikes1[0] == spikes5[0]);
+	EXPECT_FALSE(spikes1[1] == spikes5[1]);
+	EXPECT_FALSE(spikes1[2] == spikes5[2]);
+	EXPECT_FALSE(spikes1[3] == spikes5[3]);
+
+	EXPECT_FALSE(spikes4[0] == spikes5[0]);
+	EXPECT_FALSE(spikes4[1] == spikes5[1]);
+	EXPECT_FALSE(spikes4[2] == spikes5[2]);
+	EXPECT_FALSE(spikes4[3] == spikes5[3]);
 }
+}  // namespace cypress

@@ -194,15 +194,16 @@ public:
  */
 class SpikeSourcePoissonParameters final
     : public ConstantSizeNeuronParametersBase<SpikeSourcePoissonParameters,
-                                              SpikeSourcePoisson, 3> {
+                                              SpikeSourcePoisson, 4> {
 public:
 	using ConstantSizeNeuronParametersBase<SpikeSourcePoissonParameters,
 	                                       SpikeSourcePoisson,
-	                                       3>::ConstantSizeNeuronParametersBase;
+	                                       4>::ConstantSizeNeuronParametersBase;
 
 	NAMED_PARAMETER(rate, 0);      // The spike rate in Hz
 	NAMED_PARAMETER(start, 1);     // The start time in ms
 	NAMED_PARAMETER(duration, 2);  // Duration of the spike sequence
+	NAMED_PARAMETER(seed, 3);      // Seed for the random generator
 };
 
 /**
@@ -243,16 +244,17 @@ public:
  */
 class SpikeSourceConstFreqParameters final
     : public ConstantSizeNeuronParametersBase<SpikeSourceConstFreqParameters,
-                                              SpikeSourceConstFreq, 4> {
+                                              SpikeSourceConstFreq, 5> {
 public:
 	using ConstantSizeNeuronParametersBase<SpikeSourceConstFreqParameters,
 	                                       SpikeSourceConstFreq,
-	                                       4>::ConstantSizeNeuronParametersBase;
+	                                       5>::ConstantSizeNeuronParametersBase;
 
 	NAMED_PARAMETER(rate, 0);      // The spike rate in Hz
 	NAMED_PARAMETER(start, 1);     // The start time in ms
 	NAMED_PARAMETER(duration, 2);  // Duration of the spike sequence
 	NAMED_PARAMETER(sigma, 3);     // Gaussian spike time standard deviation
+	NAMED_PARAMETER(seed, 4);      // Seed for the random generator
 };
 
 /**
@@ -294,16 +296,17 @@ public:
  */
 class SpikeSourceConstIntervalParameters final
     : public ConstantSizeNeuronParametersBase<
-          SpikeSourceConstIntervalParameters, SpikeSourceConstInterval, 4> {
+          SpikeSourceConstIntervalParameters, SpikeSourceConstInterval, 5> {
 public:
 	using ConstantSizeNeuronParametersBase<SpikeSourceConstIntervalParameters,
 	                                       SpikeSourceConstInterval,
-	                                       4>::ConstantSizeNeuronParametersBase;
+	                                       5>::ConstantSizeNeuronParametersBase;
 
 	NAMED_PARAMETER(interval, 0);  // The interval between spikes in ms
 	NAMED_PARAMETER(start, 1);     // The start time in ms
 	NAMED_PARAMETER(duration, 2);  // Duration of the spike sequence
 	NAMED_PARAMETER(sigma, 3);     // Gaussian spike time standard deviation
+	NAMED_PARAMETER(seed, 4);      // Seed for the random generator
 };
 
 /**
