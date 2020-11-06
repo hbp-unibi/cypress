@@ -67,27 +67,27 @@ TEST(v_init, v_init)
 TEST(spike_source, seed)
 {
 	Network net;
-	net.logger().min_level(LogSeverity::DEBUG);
+	net.logger().min_level(LogSeverity::WARNING);
 	Population<SpikeSourcePoisson> pop1(
 	    net, 10,
-	    SpikeSourcePoissonParameters().start(5).duration(100).rate(50).seed(
+	    SpikeSourcePoissonParameters().start(5).duration(500).rate(50).seed(
 	        1234),
 	    SpikeSourcePoissonSignals().record_spikes());
 	Population<SpikeSourcePoisson> pop2(
 	    net, 10,
-	    SpikeSourcePoissonParameters().start(5).duration(100).rate(50).seed(
+	    SpikeSourcePoissonParameters().start(5).duration(500).rate(50).seed(
 	        1234),
 	    SpikeSourcePoissonSignals().record_spikes());
 	Population<SpikeSourcePoisson> pop3(
 	    net, 10,
-	    SpikeSourcePoissonParameters().start(5).duration(100).rate(50).seed(
+	    SpikeSourcePoissonParameters().start(5).duration(500).rate(50).seed(
 	        1236),
 	    SpikeSourcePoissonSignals().record_spikes());
 	Population<SpikeSourcePoisson> pop4(
-	    net, 10, SpikeSourcePoissonParameters().start(5).duration(100).rate(50),
+	    net, 10, SpikeSourcePoissonParameters().start(5).duration(500).rate(50),
 	    SpikeSourcePoissonSignals().record_spikes());
 	Population<SpikeSourcePoisson> pop5(
-	    net, 10, SpikeSourcePoissonParameters().start(5).duration(100).rate(50),
+	    net, 10, SpikeSourcePoissonParameters().start(5).duration(500).rate(50),
 	    SpikeSourcePoissonSignals().record_spikes());
 
 	net.run("genn");
@@ -131,7 +131,7 @@ TEST(spike_source, seed)
 	Network net2;
 	Population<SpikeSourcePoisson> pop1_1(
 	    net2, 10,
-	    SpikeSourcePoissonParameters().start(5).duration(100).rate(50).seed(
+	    SpikeSourcePoissonParameters().start(5).duration(500).rate(50).seed(
 	        1234),
 	    SpikeSourcePoissonSignals().record_spikes());
 
@@ -147,7 +147,7 @@ TEST(spike_source, seed)
 	Network net3;
 	Population<SpikeSourcePoisson> pop2_1(
 	    net3, 10,
-	    SpikeSourcePoissonParameters().start(5).duration(100).rate(50),
+	    SpikeSourcePoissonParameters().start(5).duration(500).rate(50),
 	    SpikeSourcePoissonSignals().record_spikes());
 	RNG::instance().seed(1234);
 	net3.run("genn");
@@ -162,7 +162,7 @@ TEST(spike_source, seed)
 	Network net4;
 	Population<SpikeSourcePoisson> pop3_1(
 	    net4, 10,
-	    SpikeSourcePoissonParameters().start(5).duration(100).rate(50),
+	    SpikeSourcePoissonParameters().start(5).duration(500).rate(50),
 	    SpikeSourcePoissonSignals().record_spikes());
 	RNG::instance().seed(1236);
 	net4.run("genn");
