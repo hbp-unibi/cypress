@@ -550,6 +550,30 @@ Real NetworkBase::duration() const
 				}
 			}
 		}
+		else if (&population.type() == &SpikeSourcePoisson::inst()) {
+			const NeuronIndex nid_end =
+			    population.homogeneous_parameters() ? 1 : population.size();
+			for (NeuronIndex nid = 0; nid < nid_end; nid++) {
+				auto &params = population[nid].parameters().parameters();
+                res = std::max(res, params[2]);
+			}
+        }
+		else if (&population.type() == &SpikeSourceConstFreq::inst()) {
+			const NeuronIndex nid_end =
+			    population.homogeneous_parameters() ? 1 : population.size();
+			for (NeuronIndex nid = 0; nid < nid_end; nid++) {
+				auto &params = population[nid].parameters().parameters();
+                res = std::max(res, params[2]);
+			}
+        }
+		else if (&population.type() == &SpikeSourceConstInterval::inst()) {
+			const NeuronIndex nid_end =
+			    population.homogeneous_parameters() ? 1 : population.size();
+			for (NeuronIndex nid = 0; nid < nid_end; nid++) {
+				auto &params = population[nid].parameters().parameters();
+                res = std::max(res, params[2]);
+			}
+        }
 	}
 	return res;
 }
