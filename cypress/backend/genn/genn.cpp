@@ -509,8 +509,8 @@ SynapseGroup *connect(const std::vector<PopulationBase> &pops,
 {
 	bool cond_based = pops[conn.pid_tar()].type().conductance_based;
 	T weight = T(conn.connector().synapse()->parameters()[0]);
-	unsigned int delay =
-	    (unsigned int)(conn.connector().synapse()->parameters()[1] / timestep);
+	unsigned int delay = (unsigned int)(std::ceil(
+	    conn.connector().synapse()->parameters()[1] / timestep));
 	bool full_pops = (conn.nid_src0() == 0) &&
 	                 (size_t(conn.nid_src1()) == pops[conn.pid_src()].size()) &&
 	                 (conn.nid_tar0() == 0) &&
@@ -1340,8 +1340,7 @@ void do_run_templ(NetworkBase &network, Real duration, ModelSpecInternal &model,
 	    record_part_v;
 	resolve_ptrs<T>(spike_ptrs, spike_cnt_ptrs, v_ptrs, record_full_spike,
 	                record_full_v, record_part_spike, record_part_v,
-	                spike_rec_ptrs, populations, slm,
-	                allocated_memory);
+	                spike_rec_ptrs, populations, slm, allocated_memory);
 
 	auto spike_data = prepare_spike_storage(populations);
 	auto v_data =
