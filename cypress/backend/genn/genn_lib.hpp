@@ -51,13 +51,10 @@ private:
 	{
 		m_lib = dlopen("./libgennbck.so", RTLD_LAZY);
 		if (m_lib == NULL) {
-            global_logger().debug("cypress",
-		                      "Installed GeNN lib will be used before "
-		                      "subproject executable");
 			m_lib = dlopen("libgennbck.so",
 			               RTLD_LAZY);  // if used in subproject
 			if (m_lib == NULL) {
-                m_lib = dlopen(GENN_LIBRARY_PATH,
+				m_lib = dlopen(GENN_LIBRARY_PATH,
 				               RTLD_LAZY);  // in LD_LIBRARY_PATH
 				if (m_lib == NULL) {
 					throw std::runtime_error(
@@ -67,7 +64,16 @@ private:
 					    "libgennbck lib is available either in this folder or "
 					    "in LD_LIBRARY_PATH!");
 				}
+				global_logger().debug("cypress", "Using " GENN_LIBRARY_PATH);
 			}
+			else {
+				global_logger().debug(
+				    "cypress",
+				    "Using libgennbck.so, might include LD_LIBRARY_PATH");
+			}
+		}
+		else {
+			global_logger().debug("cypress", "Using ./libgennbck.so");
 		}
 	};
 
