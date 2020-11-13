@@ -606,10 +606,14 @@ list_connect_pre(const std::vector<PopulationBase> pops,
 		global_logger().info(
 		    "GeNN",
 		    "List connections only allow one delay per connector! We will use "
-		    "the delay provided by the default synapse object!");
+		    "the delay provided by the first synapse object!");
 	}
 	auto conns_full = std::make_shared<std::vector<LocalConnection>>();
 	conn.connect(*conns_full);
+
+	if (conns_full->size() == 0) {
+		return std::make_tuple(nullptr, nullptr, std::move(conns_full));
+	}
 
 	size_t num_inh = 0;
 	for (auto &i : *conns_full) {
@@ -620,8 +624,8 @@ list_connect_pre(const std::vector<PopulationBase> pops,
 
 	bool cond_based = pops[conn.pid_tar()].type().conductance_based;
 
-	unsigned int delay =
-	    (unsigned int)(conn.connector().synapse()->parameters()[1] / timestep);
+	unsigned int delay = (unsigned int)(std::ceil(
+	    (*conns_full)[0].SynapseParameters[1] / timestep));
 	SynapseGroup *synex = nullptr, *synin = nullptr;
 
 	if (conns_full->size() - num_inh > 0 || full) {
