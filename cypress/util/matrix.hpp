@@ -363,6 +363,21 @@ public:
 	}
 
 	/**
+	 * Reshapes the matrix if rows * cols does not change. Otherwise flushes all
+	 * previously stored data, does nothing if the dimensions do not change.
+	 */
+	void reshape(size_t rows, size_t cols)
+	{
+		if (rows * cols == m_rows * m_cols) {
+			m_rows = rows;
+			m_cols = cols;
+		}
+		else {
+			resize(rows, cols);
+		}
+	}
+
+	/**
 	 * Returns a pointer at the raw data buffer.
 	 */
 	T *data() { return m_buf; }
@@ -392,6 +407,96 @@ public:
 	 * Returns true if the matrix contains no data.
 	 */
 	bool empty() const { return size() == 0; }
+
+	Matrix submatrix(size_t row, size_t col) const
+	{
+		if (m_rows <= 1 || m_cols <= 1) {
+			throw std::invalid_argument(
+			    "For calculation of a submatrix the dimension must be at least "
+			    "2x2!");
+		}
+		if (m_rows <= row || m_cols <= col) {
+			throw std::invalid_argument(
+			    "Matrix too small for calculating the submatrix with given row "
+			    "and column!");
+		}
+		Matrix<T> subm(m_rows - 1, m_cols - 1);
+
+		size_t subi = 0;
+		for (size_t i = 0; i < m_rows; i++) {
+			if (i == row) {
+				continue;
+			}
+			int subj = 0;
+			for (size_t j = 0; j < m_cols; j++) {
+				if (j == col) {
+					continue;
+				}
+				subm(subi, subj) = *(m_buf + i * m_cols + j);
+				subj++;
+			}
+			subi++;
+		}
+		return subm;
+	}
+
+	T determinant() const
+	{
+		assert(m_rows * m_cols > 0);
+		assert(m_rows == m_cols);
+		size_t dim = m_rows;
+		if (dim == 1) {
+			return *(m_buf);
+		}
+		else if (dim == 2) {
+			return (*(m_buf)) * (*(m_buf + 3)) -
+			       (*(m_buf + 1)) * (*(m_buf + 2));
+		}
+		Matrix<T> subm(dim - 1, dim - 1);
+		T res = 0;
+		for (size_t x = 0; x < dim; x++) {
+			T tmp = (*(m_buf + x));  // mat(0.x)
+			if (tmp) {
+				T sign = x % 2 ? -1 : 1;
+				res += sign * tmp * submatrix(0, x).determinant();
+			}
+		}
+		return res;
+	}
+
+	Matrix adjoint() const
+	{
+		assert(m_rows * m_cols > 0);
+		assert(m_rows == m_cols);
+		size_t dim = m_rows;
+		if (dim == 1) {
+			return Matrix(*this);
+		}
+		Matrix<T> res(m_rows, m_cols);
+		for (size_t x = 0; x < dim; x++) {
+			for (size_t y = 0; y < dim; y++) {
+				T sign = (x + y) % 2 ? -1 : 1;
+				res(x, y) = sign * submatrix(y, x).determinant();
+			}
+		}
+		return res;
+	}
+	Matrix<double> inverse() const
+	{
+		assert(m_rows * m_cols > 0);
+		assert(m_rows == m_cols);
+		auto det = determinant();
+		if (det == 0) {
+			throw std::invalid_argument(
+			    "Could not calculate the inverse, as the determinant is zero!");
+		}
+		auto adj = adjoint();
+		Matrix<double> res(adj.rows(), adj.cols());
+		for (size_t i = 0; i < res.size(); i++) {
+			res[i] = double(adj[i]) / double(det);
+		}
+		return res;
+	}
 };
 
 template <typename T, size_t Rows, size_t Cols>

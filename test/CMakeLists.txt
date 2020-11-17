@@ -62,6 +62,7 @@ add_executable(test_cypress_util
 	util/test_comperator
 	util/test_filesystem
 	util/test_json
+	util/test_matrix
 	util/test_process
 	util/test_range
 	util/test_resource
