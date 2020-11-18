@@ -408,6 +408,13 @@ public:
 	 */
 	bool empty() const { return size() == 0; }
 
+	/**
+	 * @brief Returns the submatrix not containing specified row and column
+	 *
+	 * @param row row to delete
+	 * @param col column to delete
+	 * @return Matrix< T > submatrix with deleted row and column
+	 */
 	Matrix submatrix(size_t row, size_t col) const
 	{
 		if (m_rows <= 1 || m_cols <= 1) {
@@ -440,10 +447,20 @@ public:
 		return subm;
 	}
 
+	/**
+	 * @brief Calculate the determinant of this matrix. Note that the type of
+	 * the returned value is of the same type as the matrix, which might be a
+	 * problem for unsigned types! Only valid for squared matrices!
+	 *
+	 * @return Value of the determinant.
+	 */
 	T determinant() const
 	{
-		assert(m_rows * m_cols > 0);
-		assert(m_rows == m_cols);
+		if (m_rows * m_cols == 0 || m_rows != m_cols) {
+			throw std::invalid_argument(
+			    "Calculation of the determinant only valid for squared "
+			    "matrices with dimension >=1!");
+		}
 		size_t dim = m_rows;
 		if (dim == 1) {
 			return *(m_buf);
@@ -464,10 +481,20 @@ public:
 		return res;
 	}
 
-	Matrix adjoint() const
+	/**
+	 * @brief Calculates the adjugate/adjunct matrix. As for the determinant,
+	 * this runs into issues with unsigned types and works only for squared
+	 * matrices!
+	 *
+	 * @return Matrix< T > Adjugate matrix.
+	 */
+	Matrix adjugate() const
 	{
-		assert(m_rows * m_cols > 0);
-		assert(m_rows == m_cols);
+		if (m_rows * m_cols == 0 || m_rows != m_cols) {
+			throw std::invalid_argument(
+			    "Calculation of the determinant only valid for squared "
+			    "matrices with dimension >=1!");
+		}
 		size_t dim = m_rows;
 		if (dim == 1) {
 			return Matrix(*this);
@@ -481,16 +508,23 @@ public:
 		}
 		return res;
 	}
+
+	/**
+	 * @brief Calculates the inverse of the matrix. As for the determinant, this
+	 * runs into issues with unsigned types and works only for squared matrices!
+	 * Note that the type of the returned matrix is always double!
+	 * Throws if matrix is not invertible!
+	 *
+	 * @return cypress::Matrix< double > The inverse.
+	 */
 	Matrix<double> inverse() const
 	{
-		assert(m_rows * m_cols > 0);
-		assert(m_rows == m_cols);
 		auto det = determinant();
 		if (det == 0) {
 			throw std::invalid_argument(
 			    "Could not calculate the inverse, as the determinant is zero!");
 		}
-		auto adj = adjoint();
+		auto adj = adjugate();
 		Matrix<double> res(adj.rows(), adj.cols());
 		for (size_t i = 0; i < res.size(); i++) {
 			res[i] = double(adj[i]) / double(det);

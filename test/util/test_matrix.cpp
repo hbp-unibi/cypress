@@ -86,16 +86,14 @@ TEST(Matrix, determinant)
 	EXPECT_EQ(-18, mat.determinant());
 	mat = Matrix<int>({1, 2, 3, 4, 5, 6, 7, 8});
 	mat.reshape(2, 4);
-	ASSERT_DEBUG_DEATH(mat.determinant(), "");
-
-	// TODO test in debug
+	EXPECT_ANY_THROW(mat.determinant());
 }
 
-TEST(Matrix, adjoint)
+TEST(Matrix, adjugate)
 {
 	auto mat = Matrix<int>({1, 2, 3, 2, 3, 1, 3, 1, 2});
 	mat.reshape(3, 3);
-	auto mat2 = mat.adjoint();
+	auto mat2 = mat.adjugate();
 	EXPECT_EQ(5, mat2(0, 0));
 	EXPECT_EQ(-1, mat2(0, 1));
 	EXPECT_EQ(-7, mat2(0, 2));
@@ -108,14 +106,14 @@ TEST(Matrix, adjoint)
 
 	mat = Matrix<int>({1, 2, 2, 3});
 	mat.reshape(2, 2);
-	mat2 = mat.adjoint();
+	mat2 = mat.adjugate();
 	EXPECT_EQ(3, mat2(0, 0));
 	EXPECT_EQ(-2, mat2(0, 1));
 	EXPECT_EQ(-2, mat2(1, 0));
 	EXPECT_EQ(1, mat2(1, 1));
 
 	mat.reshape(2, 4);
-	ASSERT_DEBUG_DEATH(mat.adjoint(), "");
+	EXPECT_ANY_THROW(mat.adjugate());
 }
 
 TEST(Matrix, inverse)
@@ -141,10 +139,8 @@ TEST(Matrix, inverse)
 	EXPECT_FLOAT_EQ(-2. / -1., mat2(1, 0));
 	EXPECT_FLOAT_EQ(1. / -1., mat2(1, 1));
 
-#ifndef NDEBUG
 	mat.reshape(2, 4);
-	ASSERT_DEBUG_DEATH(mat.inverse(), "");
-#endif
+	EXPECT_ANY_THROW(mat.inverse());
 	mat = Matrix<int>({1, 2, 3, 4, 5, 6, 7, 8, 9});
 	mat.reshape(3, 3);
 	EXPECT_ANY_THROW(mat.inverse());
