@@ -1371,11 +1371,16 @@ void PyNN::fetch_data_spinnaker(const std::vector<PopulationBase> &populations,
 			if (is_recording) {
 				py::object data =
 				    pypopulations[i].attr("spinnaker_get_data")(signals[j]);
+				if (py::cast<int>(data.attr("size")) == 0) {
+					continue;
+				}
 				Matrix<double> datac = matrix_from_numpy<double>(data);
 
 				if (signals[j] == "spikes") {
 					size_t counter = 0;
 					for (size_t k = 0; k < populations[i].size(); k++) {
+						if (counter >= datac.rows())
+							break;
 						if (size_t(datac(counter, 0)) != k) {
 							continue;
 						}
