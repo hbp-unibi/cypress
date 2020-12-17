@@ -2067,14 +2067,26 @@ std::vector<LocalConnection> spikey_get_weights(py::object &proj,
 	py::list delays = proj.attr("getDelays")();
 
 	py::object connections = proj.attr("connections")();
-	for (size_t connect_id = 0; connect_id < pyweights.size(); connect_id++) {
-		py::list conn = connections.attr("next")();
-		weights.push_back(LocalConnection(py::cast<NeuronIndex>(conn[0]),
-		                                  py::cast<NeuronIndex>(conn[1]),
-		                                  py::cast<Real>(pyweights[connect_id]),
-		                                  py::cast<Real>(delays[connect_id])));
+	try {
+		for (size_t connect_id = 0; connect_id < pyweights.size();
+		     connect_id++) {
+			py::list conn = connections.attr("next")();
+			weights.push_back(LocalConnection(
+			    py::cast<NeuronIndex>(conn[0]), py::cast<NeuronIndex>(conn[1]),
+			    py::cast<Real>(pyweights[connect_id]),
+			    py::cast<Real>(delays[connect_id])));
+		}
 	}
-
+	catch (...) {
+		for (size_t connect_id = 0; connect_id < pyweights.size();
+		     connect_id++) {
+			py::list conn = connections.attr("__next__")();
+			weights.push_back(LocalConnection(
+			    py::cast<NeuronIndex>(conn[0]), py::cast<NeuronIndex>(conn[1]),
+			    py::cast<Real>(pyweights[connect_id]),
+			    py::cast<Real>(delays[connect_id])));
+		}
+	}
 	int64_t first_id = py::cast<int64_t>(py::list(pypop_src)[0]);
 	if (first_id > 0) {
 		for (auto &w : weights) {
