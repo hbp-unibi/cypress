@@ -478,6 +478,11 @@ std::unique_ptr<Backend> NetworkBase::make_backend(std::string backend_id,
 		return std::unique_ptr<Backend>(
 		    GENN_Lib::instance().create_genn_backend(setup));
 	}
+	else if (elems[0] == "genn_gpu") {
+		setup["gpu"] = true;
+		return std::unique_ptr<Backend>(
+		    GENN_Lib::instance().create_genn_backend(setup));
+	}
 	else if (elems[0] == "json") {
 		elems.erase(elems.begin());
 		return std::make_unique<ToJson>(join(elems, '.'), setup);
