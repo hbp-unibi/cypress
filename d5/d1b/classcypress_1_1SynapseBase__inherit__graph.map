@@ -1,0 +1,6 @@
+<map id="cypress::SynapseBase" name="cypress::SynapseBase">
+<area shape="rect" id="node2" href="$df/d96/classcypress_1_1SpikePairRuleAdditive.html" title="cypress::SpikePairRuleAdditive" alt="" coords="229,5,436,32"/>
+<area shape="rect" id="node3" href="$df/d07/classcypress_1_1SpikePairRuleMultiplicative.html" title="cypress::SpikePairRuleMultiplicative" alt="" coords="215,56,450,83"/>
+<area shape="rect" id="node4" href="$d0/dc2/classcypress_1_1StaticSynapse.html" title="cypress::StaticSynapse" alt="" coords="252,107,413,133"/>
+<area shape="rect" id="node5" href="$d0/d34/classcypress_1_1TsodyksMarkramMechanism.html" title="cypress::TsodyksMarkramMechanism" alt="" coords="211,157,455,184"/>
+</map>
