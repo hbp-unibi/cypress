@@ -526,6 +526,8 @@ void NetworkBase::run(const Backend &backend, Real duration)
 
 	// Print some execution summary
 	auto rt = runtime();
+	rt.duration = duration;
+	runtime(rt);
 	std::stringstream ss;
 	ss << "Done. Execution took " << rt.total << "s (simulation " << rt.sim
 	   << "s, initialization " << rt.initialize << "s, finalization "
