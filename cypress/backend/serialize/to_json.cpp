@@ -710,6 +710,7 @@ void from_json(const Json &json, NetworkRuntime &runtime)
 	runtime.finalize = json["finalize"].get<Real>();
 	runtime.initialize = json["initialize"].get<Real>();
 	runtime.sim_pure = json["sim_pure"].get<Real>();
+	runtime.duration = json["duration"].get<Real>();
 }
 
 void to_json(Json &json, const NetworkRuntime &runtime)
@@ -719,6 +720,7 @@ void to_json(Json &json, const NetworkRuntime &runtime)
 	json["finalize"] = runtime.finalize;
 	json["initialize"] = runtime.initialize;
 	json["sim_pure"] = runtime.sim_pure;
+	json["duration"] = runtime.duration;
 }
 
 void to_json(Json &result, const Network &network)

@@ -851,7 +851,7 @@ TEST(Matrix2Json, roundtrip)
 
 TEST(Runtime2Json, runtime2json)
 {
-	NetworkRuntime runtime{1, 2, 3, 4, 5};
+	NetworkRuntime runtime{1, 2, 3, 4, 5, 6};
 	Json json(runtime);
 	NetworkRuntime runtime2 = json.get<NetworkRuntime>();
 	Json json2(runtime2);

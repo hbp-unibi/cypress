@@ -104,7 +104,7 @@ struct NetworkRuntime {
 	/**
 	 * biological runtime in ms
 	 */
-	Real duration;
+	Real duration = 0;
 };
 
 /**
