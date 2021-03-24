@@ -1824,16 +1824,19 @@ void PyNN::do_run(NetworkBase &source, Real duration) const
 
 	auto finished = std::chrono::steady_clock::now();
 
-	source.runtime({std::chrono::duration<Real>(finished - start).count(),
-	                std::chrono::duration<Real>(execrun - buildconn).count(),
-	                std::chrono::duration<Real>(buildconn - start).count(),
-	                std::chrono::duration<Real>(finished - execrun).count(),
-	                duration_pure, duration});
+    auto rt = source.runtime();
+    rt.total = std::chrono::duration<Real>(finished - start).count();
+    rt.sim = std::chrono::duration<Real>(execrun - buildconn).count();
+    rt.initialize = std::chrono::duration<Real>(buildconn - start).count();
+    rt.finalize = std::chrono::duration<Real>(finished - execrun).count();
+    rt.sim_pure = duration_pure;
+    rt.duration = duration;
+	source.runtime(rt);
 
 	/*
 	// Remove the log file
 	if (!m_keep_log) {
-	    unlink(log_path.c_str());
+// 	    unlink(log_path.c_str());
 	}*/
 }
 
@@ -2258,11 +2261,14 @@ void PyNN::spikey_run(NetworkBase &source, Real duration, py::module &pynn,
 
 	pynn.attr("end")();
 	auto finished = std::chrono::system_clock::now();
-
-	source.runtime({std::chrono::duration<Real>(finished - start).count(),
-	                std::chrono::duration<Real>(execrun - buildconn).count(),
-	                std::chrono::duration<Real>(buildconn - start).count(),
-	                std::chrono::duration<Real>(execrun - start).count(),
-	                duration * 1.0e-7_R, duration});
+    
+    auto rt = source.runtime();
+    rt.total = std::chrono::duration<Real>(finished - start).count();
+    rt.sim = std::chrono::duration<Real>(execrun - buildconn).count();
+    rt.initialize = std::chrono::duration<Real>(buildconn - start).count();
+    rt.finalize = std::chrono::duration<Real>(finished - execrun).count();
+    rt.sim_pure = duration * 1.0e-7_R;
+    rt.duration = duration;
+	source.runtime(rt);
 }
 }  // namespace cypress

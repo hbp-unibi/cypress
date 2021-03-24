@@ -673,12 +673,14 @@ void read_response(std::istream &is, NetworkBase &net)
 	flush_message();
 
 	// Set the network benchmark
-	net.runtime({to_seconds(t_setup, t_done),
-	             to_seconds(t_simulate_start, t_simulate_stop),
-	             to_seconds(t_setup, t_simulate_start),
-	             to_seconds(t_simulate_stop, t_done),
-	             to_seconds(t_simulate_start, t_simulate_stop), 0.0});
-    // runtime duration is set in network_base
+    auto rt = net.runtime();
+    rt.total = to_seconds(t_setup, t_done);
+    rt.sim = to_seconds(t_simulate_start, t_simulate_stop);
+    rt.initialize = to_seconds(t_setup, t_simulate_start);
+    rt.finalize = to_seconds(t_simulate_stop, t_done);
+    rt.sim_pure = to_seconds(t_simulate_start, t_simulate_stop);
+    rt.duration = 0.0;  // runtime duration is set in network_base
+	net.runtime(rt);
 }
 }  // namespace sli
 }  // namespace cypress

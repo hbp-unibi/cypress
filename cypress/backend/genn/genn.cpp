@@ -1618,12 +1618,15 @@ void do_run_templ(NetworkBase &network, Real duration, ModelSpecInternal &model,
 		                std::to_string(*(slm.template getScalar<double>(
 		                    "synapseDynamicsTime"))));
 	}
-	network.runtime({std::chrono::duration<Real>(end_t - start_t).count(),
-	                 std::chrono::duration<Real>(sim_fin_t - built_t).count(),
-	                 std::chrono::duration<Real>(built_t - start_t).count(),
-	                 std::chrono::duration<Real>(end_t - sim_fin_t).count(),
-	                 std::chrono::duration<Real>(sim_fin_t - built_t).count(),
-	                 duration});
+    
+    auto rt = network.runtime();
+    rt.total = std::chrono::duration<Real>(end_t - start_t).count();
+    rt.sim = std::chrono::duration<Real>(sim_fin_t - built_t).count();
+    rt.initialize = std::chrono::duration<Real>(built_t - start_t).count();
+    rt.finalize = std::chrono::duration<Real>(end_t - sim_fin_t).count();
+    rt.sim_pure = std::chrono::duration<Real>(sim_fin_t - built_t).count();
+    rt.duration = duration;
+	network.runtime(rt);
 }
 template <typename T>
 void convert_learned_weights(size_t src_size, size_t tar_size,
