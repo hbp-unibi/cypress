@@ -1828,7 +1828,7 @@ void PyNN::do_run(NetworkBase &source, Real duration) const
 	                std::chrono::duration<Real>(execrun - buildconn).count(),
 	                std::chrono::duration<Real>(buildconn - start).count(),
 	                std::chrono::duration<Real>(finished - execrun).count(),
-	                duration_pure});
+	                duration_pure, duration});
 
 	/*
 	// Remove the log file
@@ -2263,6 +2263,6 @@ void PyNN::spikey_run(NetworkBase &source, Real duration, py::module &pynn,
 	                std::chrono::duration<Real>(execrun - buildconn).count(),
 	                std::chrono::duration<Real>(buildconn - start).count(),
 	                std::chrono::duration<Real>(execrun - start).count(),
-	                duration * 1.0e-7_R});
+	                duration * 1.0e-7_R, duration});
 }
 }  // namespace cypress

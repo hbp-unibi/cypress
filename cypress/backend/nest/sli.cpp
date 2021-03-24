@@ -677,7 +677,8 @@ void read_response(std::istream &is, NetworkBase &net)
 	             to_seconds(t_simulate_start, t_simulate_stop),
 	             to_seconds(t_setup, t_simulate_start),
 	             to_seconds(t_simulate_stop, t_done),
-	             to_seconds(t_simulate_start, t_simulate_stop)});
+	             to_seconds(t_simulate_start, t_simulate_stop), 0.0});
+    // runtime duration is set in network_base
 }
 }  // namespace sli
 }  // namespace cypress

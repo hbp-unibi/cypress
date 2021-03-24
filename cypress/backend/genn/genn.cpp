@@ -1622,7 +1622,8 @@ void do_run_templ(NetworkBase &network, Real duration, ModelSpecInternal &model,
 	                 std::chrono::duration<Real>(sim_fin_t - built_t).count(),
 	                 std::chrono::duration<Real>(built_t - start_t).count(),
 	                 std::chrono::duration<Real>(end_t - sim_fin_t).count(),
-	                 std::chrono::duration<Real>(sim_fin_t - built_t).count()});
+	                 std::chrono::duration<Real>(sim_fin_t - built_t).count(),
+	                 duration});
 }
 template <typename T>
 void convert_learned_weights(size_t src_size, size_t tar_size,
