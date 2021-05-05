@@ -66,7 +66,7 @@ int neo_version = 0;
 
 TEST(pynn, get_import)
 {
-	for (const std::string sim : PyNN::simulators()) {
+	for (const std::string& sim : PyNN::simulators()) {
 		try {
 			auto res = PYNN_UTIL.lookup_simulator(sim);
 			auto normalised_simulator = res.first;
