@@ -1713,7 +1713,13 @@ void PyNN::do_run(NetworkBase &source, Real duration) const
 		timestep = py::cast<Real>(pynn.attr("get_time_step")());
 		if (m_normalised_simulator == "nmmc1") {
 			// timestep to milliseconds
-			timestep = timestep * 1000.0;
+			auto spy = py::module::import("spynnaker");
+			int major = std::stoi(py::cast<std::string>(py::list(
+			    py::list(spy.attr("__version__").attr("split")("!"))[1].attr(
+			        "split")("."))[0]));
+			if (major < 6) {
+				timestep = timestep * 1000.0;
+			}
 		}
 	}
 
@@ -1824,13 +1830,13 @@ void PyNN::do_run(NetworkBase &source, Real duration) const
 
 	auto finished = std::chrono::steady_clock::now();
 
-    auto rt = source.runtime();
-    rt.total = std::chrono::duration<Real>(finished - start).count();
-    rt.sim = std::chrono::duration<Real>(execrun - buildconn).count();
-    rt.initialize = std::chrono::duration<Real>(buildconn - start).count();
-    rt.finalize = std::chrono::duration<Real>(finished - execrun).count();
-    rt.sim_pure = duration_pure;
-    rt.duration = duration;
+	auto rt = source.runtime();
+	rt.total = std::chrono::duration<Real>(finished - start).count();
+	rt.sim = std::chrono::duration<Real>(execrun - buildconn).count();
+	rt.initialize = std::chrono::duration<Real>(buildconn - start).count();
+	rt.finalize = std::chrono::duration<Real>(finished - execrun).count();
+	rt.sim_pure = duration_pure;
+	rt.duration = duration;
 	source.runtime(rt);
 
 	/*
@@ -2261,14 +2267,14 @@ void PyNN::spikey_run(NetworkBase &source, Real duration, py::module &pynn,
 
 	pynn.attr("end")();
 	auto finished = std::chrono::system_clock::now();
-    
-    auto rt = source.runtime();
-    rt.total = std::chrono::duration<Real>(finished - start).count();
-    rt.sim = std::chrono::duration<Real>(execrun - buildconn).count();
-    rt.initialize = std::chrono::duration<Real>(buildconn - start).count();
-    rt.finalize = std::chrono::duration<Real>(finished - execrun).count();
-    rt.sim_pure = duration * 1.0e-7_R;
-    rt.duration = duration;
+
+	auto rt = source.runtime();
+	rt.total = std::chrono::duration<Real>(finished - start).count();
+	rt.sim = std::chrono::duration<Real>(execrun - buildconn).count();
+	rt.initialize = std::chrono::duration<Real>(buildconn - start).count();
+	rt.finalize = std::chrono::duration<Real>(finished - execrun).count();
+	rt.sim_pure = duration * 1.0e-7_R;
+	rt.duration = duration;
 	source.runtime(rt);
 }
 }  // namespace cypress
