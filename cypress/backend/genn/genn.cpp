@@ -1492,14 +1492,14 @@ void do_run_templ(NetworkBase &network, Real duration, ModelSpecInternal &model,
 
 	for (auto pop : populations) {
 		bool record_condutance = false;
-		if (pop.signals().size() > 1) {
+		if (pop.signals().size() > 2) {
 			for (auto neuron : pop) {
 				if (neuron.signals().is_recording(2)) {
 					neuron.signals().data(2, std::make_shared<Matrix<Real>>(
 					                             2, 2, MatrixFlags::ZEROS));
 					record_condutance = true;
 				}
-				if (neuron.signals().size() > 2 &&
+				if (neuron.signals().size() > 3 &&
 				    neuron.signals().is_recording(3)) {
 					neuron.signals().data(3, std::make_shared<Matrix<Real>>(
 					                             2, 2, MatrixFlags::ZEROS));
