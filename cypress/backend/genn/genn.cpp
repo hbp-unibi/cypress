@@ -778,7 +778,7 @@ GeNNModels::SharedLibraryModel_<T> build_and_make(
 			prefs.generateEmptyStatePushPull = false;
 			prefs.logLevel = get_log_level();
 			auto bck = CodeGenerator::CUDA::Optimiser::createBackend(
-			    model, share_path, fs_path, prefs.logLevel, &logger, prefs);
+			    model, fs_path, prefs.logLevel, &logger, prefs);
 			auto moduleNames = CodeGenerator::generateAll(
 			    model, bck, share_path, fs_path, false);
 			std::ofstream makefile(path + "Makefile");
